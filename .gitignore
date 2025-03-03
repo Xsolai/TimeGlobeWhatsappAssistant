@@ -2,4 +2,3 @@ __pycache__/
 .env
 project_venv/
 env/
-app.log
