@@ -25,7 +25,7 @@ class TwilioService:
         print(f"account_id {settings.account_sid} auth_token {settings.auth_token}")
         # print(f"record==>> {to} and message is {message}")
         return self.client.messages.create(
-            to=f"whatsapp:{to}",
+            to=to,
             from_=f"whatsapp:{settings.from_whatsapp_number}",
             body=message,
         )

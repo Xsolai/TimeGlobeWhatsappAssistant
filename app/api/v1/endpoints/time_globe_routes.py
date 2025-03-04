@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from ....services.time_globe_service import TimeGlobeService
-from ....core.dependencies import get_time_globe_service
 
 router = APIRouter()
 

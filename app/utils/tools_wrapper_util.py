@@ -62,15 +62,22 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(site_code, customer_code="demo", order_id=None):
+def cancel_appointment(order_id):
     """Cancel an existing appointment"""
     try:
         if not order_id:
             return {"status": "error", "message": "order_id is required"}
-        result = time_globe_service.cancel_appointment(
-            site_code, customer_code, order_id
-        )
-        return {"status": "success", "cancellation_result": result}
+        result = time_globe_service.cancel_appointment(order_id)
+        if result.get("code") == 0:
+            return {
+                "status": "success",
+                "message": "your appointment has been cancelled.",
+            }
+        else:
+            return {
+                "status": "success",
+                "cancellation_result": "The provided id is not valid appointment id",
+            }
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

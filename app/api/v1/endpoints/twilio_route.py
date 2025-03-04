@@ -22,15 +22,17 @@ async def whatsapp_wbhook(request: Request):
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
     """
-    await validate_twilio_request(request)
     form_data = await request.form()
-    incoming_msg = request.values.get("Body", "").lower()  # The incoming message body
-    sender_number = request.values.get("From", "")  # Sender's WhatsApp number
+    print("res==>>", form_data)
+    # await validate_twilio_request(request)
+
+    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
+    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
     number = "".join(filter(str.isdigit, sender_number))
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
         # Get response from the assistant function
-        response = get_response_from_gpt(incoming_msg, number)
+        response = get_response_from_gpt(incoming_msg, sender_number)
         response = format_response(response)
 
         logging.info(f"Response generated for {sender_number}: {response}")
@@ -38,10 +40,12 @@ async def whatsapp_wbhook(request: Request):
         logging.error(f"Error generating response for {sender_number}: {e}")
         response = "I'm sorry, something went wrong while processing your message."
     # # Send the response back to the incoming message
+    print(f"Response ==>> {sender_number} with: {response}")
+
     resp = MessagingResponse()
     resp.message(response)
     logging.info(f"Responded to {sender_number} with: {response}")
-
+    print("Resp", str(resp))
     return str(resp)  # Respond to Twilio's webhook with the message
 
 

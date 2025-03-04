@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from .api.v1.endpoints import twilio_webhook, time_globe_routes
+from .api.v1.endpoints import twilio_route, time_globe_routes
 import logging
 
 app = FastAPI(
@@ -15,9 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(
-    router=twilio_webhook.router, prefix="/api/v1/twilio", tags=["Twilio"]
-)
+app.include_router(router=twilio_route.router, prefix="/api/v1/twilio", tags=["Twilio"])
 app.include_router(
     router=time_globe_routes.router, prefix="/api/v1/time-globe", tags=["Time Globe"]
 )

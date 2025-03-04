@@ -112,17 +112,9 @@ tools = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "site_code": {
-                        "type": "string",
-                        "description": "Site code for the salon",
-                    },
-                    "customer_code": {
-                        "type": "string",
-                        "description": "Customer code. Default is 'demo'",
-                    },
                     "order_id": {
                         "type": "integer",
-                        "description": "ID of the order to cancel",
+                        "description": "ID of the  appointment to cancel",
                     },
                 },
                 "required": ["site_code", "order_id"],

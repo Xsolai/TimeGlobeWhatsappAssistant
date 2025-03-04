@@ -197,11 +197,11 @@ class TimeGlobeService:
         print(f"response===>> {response}")
         return response
 
-    def cancel_appointment(self, site_code: str, customer_code: str, order_id: int):
+    def cancel_appointment(self, order_id: int):
         """Cancels an existing appointment."""
         payload = {
-            "customerCd": customer_code,
-            "siteCd": site_code,
+            "customerCd": "demo",
+            "siteCd": self.site_code,
             "orderId": order_id,
         }
         response = self.request("POST", "/book/cancel", data=payload)
