@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     TIME_GLOBE_BASE_URL: str
     OPENAI_ASSISTANT_ID: str
     OPENAI_API_KEY: str
+    TIME_GLOBE_API_KEY: str
     # ACCESS_TOKEN_EXPIRE_TIME: int = 30
     # REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 

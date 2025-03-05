@@ -154,6 +154,8 @@ class AssistantManager:
             book_appointment,
             cancel_appointment,
             get_profile,
+            get_profile_data,
+            store_profile,
             get_orders,
             get_old_orders,
         )
@@ -172,6 +174,8 @@ class AssistantManager:
                     "get_suggestions": lambda: get_suggestions(**arguments),
                     "book_appointment": lambda: book_appointment(**arguments),
                     "cancel_appointment": lambda: cancel_appointment(**arguments),
+                    "get_profile_data": lambda: get_profile_data(**arguments),
+                    "store_profile": lambda: store_profile(**arguments),
                     "get_profile": lambda: (
                         get_profile(**arguments) if arguments else get_profile()
                     ),

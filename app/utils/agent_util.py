@@ -140,6 +140,22 @@ tools = [
     {
         "type": "function",
         "function": {
+            "name": "get_profile_data",
+            "description": "Get user profile information for given phone number",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "mobile_number": {
+                        "type": "string",
+                        "description": "User's mobile number",
+                    }
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_orders",
             "description": "Get a list of open appointments",
             "parameters": {
@@ -167,6 +183,28 @@ tools = [
                     }
                 },
             },
+        },
+    },
+    {
+        "name": "store_profile",
+        "description": "Stores user profile data",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mobile_number": {
+                    "type": "string",
+                    "description": "User's mobile phone number",
+                },
+                "email": {"type": "string", "description": "User's email address"},
+                "gender": {
+                    "type": "string",
+                    "enum": ["M", "F"],
+                    "description": "User's gender ('M' for Male, 'F' for Female)",
+                },
+                "first_name": {"type": "string", "description": "User's first name"},
+                "last_name": {"type": "string", "description": "User's last name"},
+            },
+            "required": ["mobile_number", "email", "gender", "first_name", "last_name"],
         },
     },
 ]

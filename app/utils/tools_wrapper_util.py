@@ -57,7 +57,17 @@ def book_appointment(
             user_date,
             user_time,
         )
-        return {"status": "success", "booking_result": result}
+        if result.get("code") == 90:
+            return {
+                "status": "success",
+                "booking_result": "you already have 2 appointments in future \
+            in order to make another appointment please cancel one of them.",
+            }
+        elif result.get("code") == 0:
+            return {
+                "status": "success",
+                "booking_result": "appointment booked successfully",
+            }
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -82,11 +92,33 @@ def cancel_appointment(order_id):
         return {"status": "error", "message": str(e)}
 
 
-def get_profile(customer_code="demo"):
-    """Get user profile information"""
+def get_profile_data(mobile_number: str):
+    """Get the profile data for a given phone number"""
+    try:
+        profile = time_globe_service.get_profile_data(mobile_number)
+        if profile.get("code") == 0:
+            return {"status": "success", "profile": profile}
+        elif profile.get("code") == -3:
+            return {
+                "status": "success",
+                "message": "user with this number does not exist",
+            }
+        else:
+            return {"status": "success", "message": "there is erro getting user info"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def get_profile(customer_code: str = "demo"):
+    """Get user profile"""
     try:
         profile = time_globe_service.get_profile(customer_code)
-        return {"status": "success", "profile": profile}
+        if profile.get("code") == 0:
+            return {"status": "success", "profile": profile}
+        else:
+            return {"status": "success", "message": "there is error getting user info"}
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -105,6 +137,27 @@ def get_old_orders(customer_code="demo"):
     try:
         old_orders = time_globe_service.get_old_orders(customer_code)
         return {"status": "success", "old_orders": old_orders}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def store_profile(
+    mobile_number: str,
+    email: str,
+    gender: str,
+    first_name: str,
+    last_name: str,
+):
+    """store user profile"""
+    try:
+        response = time_globe_service.store_profile(
+            mobile_number, email, gender, first_name, last_name
+        )
+        if response.get("code") == 0:
+            return {"status": "success", "message": "profile created successfully"}
+        else:
+            return {"status": "success", "message": "There is error creating profile"}
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

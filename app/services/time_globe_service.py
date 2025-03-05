@@ -16,6 +16,7 @@ class TimeGlobeService:
         self.item_no = 100  # None
         self.employee_id = 40
         self.item_name = "Waschen, Schneiden, Styling"
+        self.mobile_number = None
 
     def login(self) -> None:
         """Authenticate and retrieve a new JWT token."""
@@ -26,10 +27,6 @@ class TimeGlobeService:
             "password": self.password,
         }
         response = requests.post(url=self.base_url + "/auth/login", json=payload)
-        print(
-            "response==>>",
-            f"status_code {response.status_code} \n body: {response.json()}",
-        )
         if response.status_code == 200:
             self.token = response.json().get("jwt")
             self.expire_time = time.time() + 3600  # 1 hour
@@ -44,19 +41,33 @@ class TimeGlobeService:
             self.login()
         return self.token
 
-    def request(self, method: str, endpoint: str, data=None, params=None):
+    def request(self, method: str, endpoint: str, data=None, use_auth_key=False):
         """Generic method to make authenticated requests."""
-        print("token==>>", self.get_token())
+        print("hello")
         headers = {"Authorization": f"Bearer {self.get_token()}"}
+        if use_auth_key:
+            headers.update(
+                {
+                    "Content-Type": "application/json",
+                    "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
+                    "x-book-login-nm": self.mobile_number,
+                }
+            )
+        print("header===>>", headers)
         url = f"{self.base_url}{endpoint}"
-        print("type==>>", type(data))
         print(data)
-        response = requests.request(method=method, url=url, json=data, headers=headers)
+        if data:
+            response = requests.request(
+                method=method, url=url, json=data, headers=headers
+            )
+        else:
+            response = requests.request(method=method, url=url, headers=headers)
+
         print("resquest==>>", response.request.body)
         if response.status_code == 401:  # token expire or invalid, refresh token
             self.login()
             response = requests.request(
-                method=method, url=url, json=data, params=params, headers=headers
+                method=method, url=url, json=data, headers=headers
             )
         print(f"response===>> {response.text}")
         return response.json()
@@ -119,8 +130,17 @@ class TimeGlobeService:
         response = self.request("POST", "/account/getProfile", data=payload)
         print(f"response===>> {response}")
         return response
-        # if response.get('code')==0:
-        #     return response
+
+    def get_profile_data(self, mobile_number: str):
+        """Retrieves the profile data for a given phone number"""
+        self.mobile_number = mobile_number
+        print("get_profile_data")
+        print("get_profile_data")
+        response = self.request(
+            method="POST", endpoint="/bot/getProfile", use_auth_key=True
+        )
+        print(f"response===>> {response}")
+        return response
 
     def get_orders(self, customer_code: str = "demo"):
         """Retrieves a list of open appointments."""
@@ -162,13 +182,11 @@ class TimeGlobeService:
         # current_time_stamp = datetime.now(timezone.utc).strftime(
         #     "%Y-%m-%dT%H:%M:%S.%fZ"
         # )
-        print("hello")
         formatted_datetime = tools_wrapper_util.format_datetime(user_date, user_time)
 
         print("date and time ===>>", date_and_time)
         date_and_time = date_and_time.strip()
 
-        print("now==>>", date_and_time)
         print("duration==>>", duration)
         payload = {
             "customerCd": "demo",
@@ -206,4 +224,29 @@ class TimeGlobeService:
         }
         response = self.request("POST", "/book/cancel", data=payload)
         print(f"response ===>> {response}")
+        return response
+
+    def store_profile(
+        self,
+        mobile_number: str,
+        email: str,
+        gender: str,
+        first_name: str,
+        last_name: str,
+    ):
+        """Store user profile"""
+        self.mobile_number = mobile_number
+        full_name = first_name + " " + last_name
+        print(first_name)
+        payload = {
+            "salutationCd": gender,
+            "email": email,
+            "fullNm": full_name,
+            "firstNm": first_name,
+            "lastNm": last_name,
+        }
+        response = self.request(
+            "POST", "/bot/storeProfileData", data=payload, use_auth_key=True
+        )
+        print("response===>>", response)
         return response
