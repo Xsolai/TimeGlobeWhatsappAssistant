@@ -24,7 +24,7 @@ tools = [
                 "properties": {
                     "site_code": {
                         "type": "string",
-                        "description": "Site code for the salon. Default is 'chatbot'",
+                        "description": "Site code for the salon. Default is 'bonn'",
                     }
                 },
             },
@@ -76,31 +76,20 @@ tools = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "firstname": {
-                        "type": "string",
-                        "description": "Customer's first name",
+                    "duration": {
+                        "type": "integer",
+                        "description": "Duration of the appointment in milliseconds (e.g., 45 minutes = 2700000ms)",
                     },
-                    "lastname": {
+                    "user_date": {
                         "type": "string",
-                        "description": "Customer's last name",
+                        "description": "Appointment date in format (e.g., 'March 4, 2025')",
                     },
-                    "gender": {"type": "string", "description": "Customer's gender"},
-                    "mobile_number": {
+                    "user_time": {
                         "type": "string",
-                        "description": "Customer's mobile number (format: +4915167973449)",
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "Customer's email address",
+                        "description": "Appointment time in format (e.g., '08:00 AM')",
                     },
                 },
-                "required": [
-                    "firstname",
-                    "lastname",
-                    "gender",
-                    "mobile_number",
-                    "email",
-                ],
+                "required": ["user_date", "user_time"],
             },
         },
     },
@@ -208,6 +197,3 @@ tools = [
         },
     },
 ]
-
-
-prompt = ""

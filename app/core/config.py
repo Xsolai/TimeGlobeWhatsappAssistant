@@ -3,8 +3,8 @@ import secrets
 
 
 class Settings(BaseSettings):
-    # DATABASE_URL: str = "sqlite:///./app.db"
-    # SECRETE_KEY = secrets.token_urlsafe(32)
+    DATABASE_URL: str = "sqlite:///./time_globe_assistant.db"
+    SECRETE_KEY: str = secrets.token_urlsafe(32)
     from_whatsapp_number: str
     account_sid: str
     auth_token: str
@@ -13,11 +13,11 @@ class Settings(BaseSettings):
     TIME_GLOBE_LOGIN_USERNAME: str
     TIME_GLOBE_LOGIN_PASSWORD: str
     TIME_GLOBE_BASE_URL: str
+    TWILIO_MESSAGING_SERVICE_SID: str
     OPENAI_ASSISTANT_ID: str
     OPENAI_API_KEY: str
     TIME_GLOBE_API_KEY: str
-    # ACCESS_TOKEN_EXPIRE_TIME: int = 30
-    # REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_TIME: int = 30
 
     class Config:
         env_file = ".env"

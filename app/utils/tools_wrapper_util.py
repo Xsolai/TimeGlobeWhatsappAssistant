@@ -1,6 +1,12 @@
 import re
 from datetime import datetime
 from ..services.time_globe_service import TimeGlobeService
+from ..agent import AssistantManager
+from ..core.config import settings
+
+assistant_manager = AssistantManager(
+    settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID
+)
 
 # Initialize the TimeGlobeService
 time_globe_service = TimeGlobeService()
@@ -15,7 +21,7 @@ def get_sites():
         return {"status": "error", "message": str(e)}
 
 
-def get_products(site_code="chatbot"):
+def get_products(site_code="bonn"):
     """Get a list of available services for a specific salon"""
     try:
         products = time_globe_service.get_products(site_code)
@@ -42,17 +48,10 @@ def get_suggestions(employee_id):
         return {"status": "error", "message": str(e)}
 
 
-def book_appointment(
-    firstname, lastname, gender, mobile_number, email, duration, user_date, user_time
-):
+def book_appointment(duration, user_date, user_time):
     """Book an appointment with the selected parameters"""
     try:
         result = time_globe_service.book_appointment(
-            firstname,
-            lastname,
-            gender,
-            mobile_number,
-            email,
             duration,
             user_date,
             user_time,
@@ -207,3 +206,9 @@ def format_datetime(user_date: str, user_time: str) -> str:
 
     # Convert to ISO format (2025-03-03T16:15:00.000Z)
     return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def get_response_from_gpt(msg, user_id):
+    response = assistant_manager.run_conversation(user_id, msg)
+    print(f"Response for user {user_id}: {response}")
+    return response

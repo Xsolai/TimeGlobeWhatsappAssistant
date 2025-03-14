@@ -5,20 +5,19 @@ from openai import OpenAI
 import os
 import json
 from dotenv import load_dotenv
-from .utils.tools_wrapper_util import time_globe_service
-
+from .core.config import settings
 
 # from tools.tools import check_profile, create_profile
 
 load_dotenv()
 
 
-print("Testing TimeGlobeService connection...")
-try:
-    sites = time_globe_service.get_sites()
-    print(f"Successfully retrieved sites: {sites}")
-except Exception as e:
-    print(f"Error connecting to TimeGlobeService: {e}")
+# print("Testing TimeGlobeService connection...")
+# try:
+#     sites = time_globe_service.get_sites()
+#     print(f"Successfully retrieved sites: {sites}")
+# except Exception as e:
+#     print(f"Error connecting to TimeGlobeService: {e}")
 
 
 class AssistantManager:
@@ -237,15 +236,14 @@ class AssistantManager:
 # Test function for basic chatbot interaction
 def test_chatbot():
     """Function to test chatbot without any tool integration."""
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = settings.OPENAI_API_KEY
+    print("key=======>>>>", api_key)
     if not api_key:
         print("Error: OPENAI_API_KEY environment variable not set")
         return
 
-    assistant_id = os.getenv("OPENAI_ASSISTANT_ID")
+    assistant_id = settings.OPENAI_ASSISTANT_ID
     assistant_manager = AssistantManager(api_key, assistant_id)
-    from .utils import tools_wrapper_util
-
     while True:
         try:
             question = input("\nYou: ").strip()

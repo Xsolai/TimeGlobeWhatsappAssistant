@@ -1,30 +1,36 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
-from ....core.twilio_validation import validate_twilio_request
-from ....services.twilio_service import TwilioService
-from ....schemas.twilio_sender import (
+from ..services.twilio_service import TwilioService
+from ..schemas.twilio_sender import (
     SenderRequest,
     VerificationRequest,
     SenderId,
     UpdateSenderRequest,
 )
-from ....assistant import get_response_from_gpt
-from ....utils.tools_wrapper_util import format_response
+from ..schemas.auth import User
+from ..utils.tools_wrapper_util import get_response_from_gpt
+from ..utils.tools_wrapper_util import format_response
 import logging
 from twilio.twiml.messaging_response import MessagingResponse
-
+from ..core.dependencies import (
+    get_twilio_service,
+    validate_twilio_request,
+    get_current_user,
+)
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
 
 @router.post("/incoming-whatsapp")
-async def whatsapp_wbhook(request: Request):
+async def whatsapp_wbhook(
+    request: Request, tiwilio_service: TwilioService = Depends(get_twilio_service)
+):
     """
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
     """
     form_data = await request.form()
-    print("res==>>", form_data)
-    # await validate_twilio_request(request)
+    await validate_twilio_request(request)
 
     incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
     sender_number = form_data.get("From", "")  # Sender's WhatsApp number
@@ -42,50 +48,70 @@ async def whatsapp_wbhook(request: Request):
     # # Send the response back to the incoming message
     print(f"Response ==>> {sender_number} with: {response}")
 
-    resp = MessagingResponse()
-    resp.message(response)
-    logging.info(f"Responded to {sender_number} with: {response}")
+    # resp = MessagingResponse()
+    # resp.message(response)
+    resp = tiwilio_service.send_whatsapp(sender_number, response)
+    # logging.info(f"Responded to {sender_number} with: {response}")
     print("Resp", str(resp))
     return str(resp)  # Respond to Twilio's webhook with the message
 
 
-@router.post("/register-whatsapp-sender", status_code=status.HTTP_200_OK)
+@router.post(
+    "/register-whatsapp-sender",
+    status_code=status.HTTP_200_OK,
+    response_class=JSONResponse,
+)
 async def register_whatsapp(
     sender_request: SenderRequest,
-    twilio_service: TwilioService = Depends(TwilioService),
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    current_user: User = Depends(get_current_user),
 ):
     """Register Whatsapp"""
-    return twilio_service.register_whatsapp(sender_request)
+    return twilio_service.register_whatsapp(sender_request, current_user)
 
 
-@router.post("/verify-sender/{sender_id}", status_code=status.HTTP_200_OK)
+@router.post(
+    "/verify-sender/{sender_id}",
+    status_code=status.HTTP_200_OK,
+    response_class=JSONResponse,
+)
 async def verification_sender(
     sender_id: str,
     verification_request: VerificationRequest,
-    twilio_service: TwilioService = Depends(TwilioService),
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    current_user: User = Depends(get_current_user),
 ):
     """Verify WhatsApp Sender"""
     return twilio_service.verify_sender(verification_request)
 
 
-@router.get("/sender/{sender_id}", status_code=status.HTTP_200_OK)
+@router.get(
+    "/sender/{sender_id}", status_code=status.HTTP_200_OK, response_class=JSONResponse
+)
 async def get_whatsapp_sender(
-    sender_id: str, twilio_service: TwilioService = Depends(TwilioService)
+    sender_id: str,
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    current_user: User = Depends(get_current_user),
 ):
     return twilio_service.get_whatsapp_sender(sender_id)
 
 
-@router.post("/update-sender", status_code=status.HTTP_200_OK)
+@router.post(
+    "/update-sender", status_code=status.HTTP_200_OK, response_class=JSONResponse
+)
 async def update_whatsapp_sender(
     update_sender: UpdateSenderRequest,
-    twilio_service: TwilioService = Depends(TwilioService),
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    current_user: User = Depends(get_current_user),
 ):
 
     return twilio_service.update_whatsapp_sender(update_sender)
 
 
-@router.delete("/sender", status_code=status.HTTP_200_OK)
+@router.delete("/sender", status_code=status.HTTP_200_OK, response_class=JSONResponse)
 async def delete_whatsapp_sender(
-    sender_id: SenderId, twilio_service: TwilioService = Depends(TwilioService)
+    sender_id: SenderId,
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    current_user: User = Depends(get_current_user),
 ):
     return twilio_service.delete_whatsapp_sender(sender_id)
