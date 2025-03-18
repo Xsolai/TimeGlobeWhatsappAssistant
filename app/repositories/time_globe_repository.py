@@ -20,14 +20,15 @@ class TimeGlobeRepository:
         except Exception as e:
             raise Exception(f"Database Error {str(e)}")
 
-    def create_customer(self, customer_data: dict):
+    def create_customer(self, customer_data: dict, mobile_number: str):
         try:
-            customer = self.get_customer(customer_data.get("mobile_number"))
+            customer = self.get_customer(mobile_number)
+            print("****", customer)
             if not customer:
                 new_cusomter = CustomerModel(
                     first_name=customer_data.get("firstNm"),
                     last_name=customer_data.get("lastNm"),
-                    mobile_number=customer_data.get("mobile_number"),
+                    mobile_number=mobile_number,
                     email=customer_data.get("email"),
                     gender=customer_data.get("salutationCd"),
                 )
@@ -43,24 +44,15 @@ class TimeGlobeRepository:
 
     def save_book_appointement(self, booking_details: dict):
         try:
-            print("save_book")
-            customer_cd = booking_details.get("customerCd")
+            customer = self.get_customer(booking_details.get("mobile_number"))
             site_cd = booking_details.get("siteCd")
-            print(customer_cd, site_cd)
-            book_appointement = (
-                self.db.query(BookModel)
-                .filter(BookModel.customer_cd == customer_cd)
-                .filter(BookModel.site_cd == site_cd)
-                .first()
+            book_appointement = BookModel(
+                order_id=booking_details.get("order_id"),
+                site_cd=site_cd,
+                customer_id=customer.id,
             )
-            print(book_appointement)
-            if not book_appointement:
-                book_appointement = BookModel(
-                    customer_cd=customer_cd,
-                    site_cd=site_cd,
-                )
-                self.db.add(book_appointement)
-                self.db.commit()
+            self.db.add(book_appointement)
+            self.db.commit()
 
             for position in booking_details.get("positions", []):
                 print(position)
@@ -81,3 +73,20 @@ class TimeGlobeRepository:
             print(f"exception==>> {str(e)}")
             self.db.rollback()
             raise Exception(f"Database error {str(e)}")
+
+    def delete_booking(self, order_id: int):
+        try:
+            booking = (
+                self.db.query(BookModel).filter(BookModel.order_id == order_id).first()
+            )
+            if not booking:
+                raise Exception("Booking not found")
+            self.db.query(BookingDetail).filter(
+                BookingDetail.book_id == booking.id
+            ).delete()
+            self.db.delete(booking)
+            self.db.commit()
+
+        except Exception as e:
+            self.db.rollback()
+            raise Exception(f"Database error: {str(e)}")

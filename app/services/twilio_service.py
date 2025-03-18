@@ -118,7 +118,7 @@ class TwilioService:
     def get_whatsapp_sender(self, sender_id: SenderId):
         """Fetch a Whatsapp Sender by providing sender id"""
         url = f"{settings.TWILIO_API_URL}/{sender_id}"
-        # self.twilio_repository.get_sender(sender_id)
+        self.twilio_repository.get_sender(sender_id)
         return self._make_request(
             "GET",
             payload=None,

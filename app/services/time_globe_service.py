@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from ..utils import tools_wrapper_util
 from ..repositories.time_globe_repository import TimeGlobeRepository
 from ..db.session import get_db
+import copy
 
 
 class TimeGlobeService:
@@ -44,11 +45,11 @@ class TimeGlobeService:
             self.login()
         return self.token
 
-    def request(self, method: str, endpoint: str, data=None):
+    def request(self, method: str, endpoint: str, data=None, is_header=False):
         """Generic method to make authenticated requests."""
+        # "Authorization": f"Bearer {self.get_token()}",
 
         headers = {
-            "Authorization": f"Bearer {self.get_token()}",
             "Content-Type": "application/json",
             "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
             "x-book-login-nm": self.mobile_number,
@@ -57,14 +58,20 @@ class TimeGlobeService:
         print(data)
         if data:
             response = requests.request(
-                method=method, url=url, json=data, headers=headers
+                method=method,
+                url=url,
+                json=data,
+                headers=headers if is_header else None,
             )
+
         else:
-            response = requests.request(method=method, url=url, headers=headers)
+            response = requests.request(
+                method=method, url=url, headers=headers if is_header else None
+            )
 
         print("resquest==>>", response.request.body)
         if response.status_code in [401, 500]:  # token expire or invalid, refresh token
-            self.login()
+            # self.login()
             response = requests.request(
                 method=method, url=url, json=data, headers=headers
             )
@@ -94,7 +101,7 @@ class TimeGlobeService:
         print("response==>>", response)
         return response
 
-    def get_employee(self, item_no: str, item_name: str):
+    def get_employee(self, item_no: str, item_name):
         """Retrieves a list of available employees for a studio."""
         payload = {
             "customerCd": "demo",
@@ -107,34 +114,40 @@ class TimeGlobeService:
         response = self.request("POST", "/browse/getEmployees", data=payload)
         return response
 
-    def get_suggestions(self, employee_id: int):
+    def get_suggestions(self, employee_id: int, item_no: int):
         """Retrieves available appointment slots for selected services."""
         self.employee_id = employee_id
         payload = {
             "customerCd": "demo",
             "siteCd": self.site_code,
             "week": 0,
-            "positions": [{"itemNo": self.item_no, "employeeId": employee_id}],
+            "positions": [{"itemNo": item_no, "employeeId": employee_id}],
         }
         response = self.request("POST", "/browse/getSuggestions", data=payload)
         return response
 
-    def get_profile(self, customer_code: str = "demo"):
-        """Retrieves user profile"""
-        payload = {"customerCd": customer_code}
-        response = self.request("POST", "/account/getProfile", data=payload)
-        return response
+    # def get_profile(self, customer_code: str = "demo"):
+    #     """Retrieves user profile"""
+    #     payload = {"customerCd": customer_code}
+    #     response = self.request("POST", "/account/getProfile", data=payload)
+    #     return response
 
-    def get_profile_data(self, mobile_number: str):
+    def get_profile(self, mobile_number: str):
         """Retrieves the profile data for a given phone number"""
         self.mobile_number = mobile_number
-        response = self.request(method="POST", endpoint="/bot/getProfile")
+        response = self.request(
+            method="POST", endpoint="/bot/getProfile", is_header=True
+        )
+
+        if response and response.get("code") != -3:
+            self.time_globe_repo.create_customer(response, mobile_number)
+
         return response
 
-    def get_orders(self, customer_code: str = "demo"):
+    def get_orders(self):
         """Retrieves a list of open appointments."""
-        payload = {"customerCd": customer_code}
-        response = self.request("POST", "/book/getOrders", data=payload)
+        # payload = {"customerCd": customer_code}
+        response = self.request("POST", "/bot/getOrders", is_header=True)
         return response
 
     def get_old_orders(self, customer_code: str = "demo"):
@@ -158,7 +171,6 @@ class TimeGlobeService:
         """
         formatted_datetime = tools_wrapper_util.format_datetime(user_date, user_time)
         payload = {
-            "customerCd": "demo",
             "siteCd": self.site_code,
             "reminderSms": True,
             "reminderEmail": True,
@@ -173,18 +185,27 @@ class TimeGlobeService:
                 }
             ],
         }
-        self.time_globe_repo.save_book_appointement(payload)
-        response = self.request("POST", "/book/book", data=payload)
+        response = self.request("POST", "/bot/book", data=payload, is_header=True)
+        if response.get("code") == 0:
+            payload.update(
+                {
+                    "mobile_number": self.mobile_number,
+                    "order_id": response.get("orderId"),
+                }
+            )
+            self.time_globe_repo.save_book_appointement(payload)
+
         return response
 
     def cancel_appointment(self, order_id: int):
         """Cancels an existing appointment."""
         payload = {
-            "customerCd": "demo",
             "siteCd": self.site_code,
             "orderId": order_id,
         }
-        response = self.request("POST", "/book/cancel", data=payload)
+        response = self.request("POST", "/bot/cancel", data=payload, is_header=True)
+        if response.get("code") == 0:
+            self.time_globe_repo.delete_booking(order_id)
         return response
 
     def store_profile(
@@ -205,9 +226,9 @@ class TimeGlobeService:
             "firstNm": first_name,
             "lastNm": last_name,
         }
-        response = self.request("POST", "/bot/storeProfileData", data=payload)
-        # self.time_globe_repo.create_customer(
-        #     payload.update(["mobile_number", self.mobile_number])
-        # )
-
+        response = self.request(
+            "POST", "/bot/storeProfileData", data=payload, is_header=True
+        )
+        if response:
+            self.time_globe_repo.create_customer(payload, mobile_number)
         return response

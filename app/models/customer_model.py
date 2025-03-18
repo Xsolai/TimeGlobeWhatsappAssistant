@@ -1,5 +1,6 @@
 from .base import Base
 from sqlalchemy import Column, String, Integer
+from sqlalchemy.orm import relationship
 
 
 class CustomerModel(Base):
@@ -10,3 +11,4 @@ class CustomerModel(Base):
     mobile_number = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True, nullable=True)
     gender = Column(String, nullable=True)
+    appointments = relationship("BookModel", back_populates="customer")

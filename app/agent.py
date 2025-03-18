@@ -14,7 +14,7 @@ load_dotenv()
 
 # print("Testing TimeGlobeService connection...")
 # try:
-#     sites = time_globe_service.get_sites()
+#     sites = get_sites()
 #     print(f"Successfully retrieved sites: {sites}")
 # except Exception as e:
 #     print(f"Error connecting to TimeGlobeService: {e}")
@@ -153,12 +153,14 @@ class AssistantManager:
             book_appointment,
             cancel_appointment,
             get_profile,
-            get_profile_data,
             store_profile,
             get_orders,
             get_old_orders,
         )
 
+        # from .services.time_globe_service import TimeGlobeService
+
+        # time_globe_service = TimeGlobeService()
         for tool_call in tool_calls:
             try:
                 function_name = tool_call.function.name
@@ -167,18 +169,19 @@ class AssistantManager:
 
                 # Map function names to actual functions
                 function_mapping = {
-                    "get_sites": lambda: get_sites(),
-                    "get_products": lambda: get_products(**arguments),
-                    "get_employee": lambda: get_employee(**arguments),
-                    "get_suggestions": lambda: get_suggestions(**arguments),
-                    "book_appointment": lambda: book_appointment(**arguments),
-                    "cancel_appointment": lambda: cancel_appointment(**arguments),
-                    "get_profile_data": lambda: get_profile_data(**arguments),
-                    "store_profile": lambda: store_profile(**arguments),
-                    "get_profile": lambda: (
-                        get_profile(**arguments) if arguments else get_profile()
+                    "getSites": lambda: get_sites(),
+                    "getProducts": lambda: get_products(**arguments),
+                    "getEmployees": lambda: get_employee(**arguments),
+                    "AppointmentSuggestion": lambda: get_suggestions(**arguments),
+                    "bookAppointment": lambda: book_appointment(**arguments),
+                    "cancelAppointment": lambda: cancel_appointment(**arguments),
+                    "updateProfile": lambda: store_profile(**arguments),
+                    "getProfile": lambda: (
+                        get_profile(**arguments)
+                        if arguments
+                        else get_profile(user_id[9:])
                     ),
-                    "get_orders": lambda: (
+                    "getOrders": lambda: (
                         get_orders(**arguments) if arguments else get_orders()
                     ),
                     "get_old_orders": lambda: (

@@ -39,10 +39,10 @@ def get_employee(item_no, item_name):
         return {"status": "error", "message": str(e)}
 
 
-def get_suggestions(employee_id):
+def get_suggestions(employee_id, item_no):
     """Get available appointment slots for a selected employee and service"""
     try:
-        suggestions = time_globe_service.get_suggestions(employee_id)
+        suggestions = time_globe_service.get_suggestions(employee_id, item_no)
         return {"status": "success", "suggestions": suggestions}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -63,9 +63,10 @@ def book_appointment(duration, user_date, user_time):
             in order to make another appointment please cancel one of them.",
             }
         elif result.get("code") == 0:
+            order_id = result.get("orderId")
             return {
                 "status": "success",
-                "booking_result": "appointment booked successfully",
+                "booking_result": f"appointment booked successfully orderID is {order_id}",
             }
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -91,10 +92,10 @@ def cancel_appointment(order_id):
         return {"status": "error", "message": str(e)}
 
 
-def get_profile_data(mobile_number: str):
+def get_profile(mobile_number: str):
     """Get the profile data for a given phone number"""
     try:
-        profile = time_globe_service.get_profile_data(mobile_number)
+        profile = time_globe_service.get_profile(mobile_number)
         if profile.get("code") == 0:
             return {"status": "success", "profile": profile}
         elif profile.get("code") == -3:
@@ -109,23 +110,23 @@ def get_profile_data(mobile_number: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_profile(customer_code: str = "demo"):
-    """Get user profile"""
-    try:
-        profile = time_globe_service.get_profile(customer_code)
-        if profile.get("code") == 0:
-            return {"status": "success", "profile": profile}
-        else:
-            return {"status": "success", "message": "there is error getting user info"}
+# def get_profile(customer_code: str = "demo"):
+#     """Get user profile"""
+#     try:
+#         profile = time_globe_service.get_profile(customer_code)
+#         if profile.get("code") == 0:
+#             return {"status": "success", "profile": profile}
+#         else:
+#             return {"status": "success", "message": "there is error getting user info"}
 
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+#     except Exception as e:
+#         return {"status": "error", "message": str(e)}
 
 
-def get_orders(customer_code="demo"):
+def get_orders():
     """Get a list of open appointments"""
     try:
-        orders = time_globe_service.get_orders(customer_code)
+        orders = time_globe_service.get_orders()
         return {"status": "success", "orders": orders}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -193,18 +194,18 @@ def remove_small_brackets(text):
 
 
 def format_datetime(user_date: str, user_time: str) -> str:
-    """Converts user-selected date and time to ISO 8601 format (YYYY-MM-DDTHH:MM:SS.000Z)."""
+    """Converts user-selected date (YYYY-MM-DD) and time (HH:MM or HH:MM AM/PM) to ISO 8601 format."""
     try:
-        # Try parsing in 12-hour format first
-        dt = datetime.strptime(f"{user_date} {user_time}", "%B %d, %Y %I:%M %p")
+        # Try parsing in 24-hour format first
+        dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
     except ValueError:
         try:
-            # If it fails, try parsing in 24-hour format
-            dt = datetime.strptime(f"{user_date} {user_time}", "%B %d, %Y %H:%M")
+            # If it fails, try parsing in 12-hour format
+            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
         except ValueError:
             raise ValueError(f"Invalid date-time format: {user_date} {user_time}")
 
-    # Convert to ISO format (2025-03-03T16:15:00.000Z)
+    # Convert to ISO 8601 format
     return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
