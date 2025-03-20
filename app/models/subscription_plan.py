@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean
 from .base import Base
+from sqlalchemy.orm import relationship
 
 
 class SubscriptionPlan(Base):
@@ -11,3 +12,4 @@ class SubscriptionPlan(Base):
     duration_in_days = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
     trial_days = Column(Integer, default=0)
+    users = relationship("UserSubscription", back_populates="subscription")

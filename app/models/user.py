@@ -18,3 +18,4 @@ class UserModel(Base):
         back_populates="user",
         cascade="all,delete",
     )
+    subscriptions = relationship("UserSubscription", back_populates="user")

@@ -1,5 +1,6 @@
 from ..services.twilio_service import TwilioService
 from ..services.auth_service import AuthService, oauth2_scheme
+from ..services.subscription_service import SubscriptionPlanService
 from ..repositories.user_repository import UserRepository
 from sqlalchemy.orm import Session
 from fastapi import Depends, Request, HTTPException
@@ -32,6 +33,10 @@ def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ):
     return get_auth_service(db).get_current_user(token)
+
+
+def get_subscription_service(db: Session = Depends(get_db)):
+    return SubscriptionPlanService(db)
 
 
 # def get_time_globe_service() -> TimeGlobeService:

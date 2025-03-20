@@ -4,11 +4,10 @@ from fastapi import HTTPException, status
 from ..utils import tools_wrapper_util
 from ..repositories.time_globe_repository import TimeGlobeRepository
 from ..db.session import get_db
-import copy
+from ..logger import main_logger
 
 
 class TimeGlobeService:
-
     def __init__(self):
         self.base_url = settings.TIME_GLOBE_BASE_URL
         self.username = settings.TIME_GLOBE_LOGIN_USERNAME
@@ -24,7 +23,7 @@ class TimeGlobeService:
 
     def login(self) -> None:
         """Authenticate and retrieve a new JWT token."""
-
+        main_logger.debug("Attempting to log in to Time Globe API")
         payload = {
             "customerCd": "demo",
             "loginNm": self.username,
@@ -34,28 +33,32 @@ class TimeGlobeService:
         if response.status_code == 200:
             self.token = response.json().get("jwt")
             self.expire_time = time.time() + 3600  # 1 hour
+            main_logger.info("Successfully logged in to Time Globe API")
         else:
+            main_logger.error("Failed to log in to Time Globe API")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to login"
             )
 
     def get_token(self) -> str:
-        """Return a valid token, refreshing if expired"""
+        """Return a valid token, refreshing if expired."""
+        main_logger.debug("Checking token validity")
         if not self.token or time.time() > self.expire_time:
+            main_logger.info("Token expired or missing, refreshing token")
             self.login()
         return self.token
 
     def request(self, method: str, endpoint: str, data=None, is_header=False):
         """Generic method to make authenticated requests."""
-        # "Authorization": f"Bearer {self.get_token()}",
-
+        main_logger.debug(f"Making {method} request to {endpoint}")
         headers = {
             "Content-Type": "application/json",
             "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
             "x-book-login-nm": self.mobile_number,
         }
         url = f"{self.base_url}{endpoint}"
-        print(data)
+        main_logger.debug(f"Request payload: {data}")
+
         if data:
             response = requests.request(
                 method=method,
@@ -63,27 +66,26 @@ class TimeGlobeService:
                 json=data,
                 headers=headers if is_header else None,
             )
-
         else:
             response = requests.request(
                 method=method, url=url, headers=headers if is_header else None
             )
 
-        print("resquest==>>", response.request.body)
-        if response.status_code in [401, 500]:  # token expire or invalid, refresh token
-            # self.login()
+        main_logger.debug(f"Response status code: {response.status_code}")
+        main_logger.debug(f"Response body: {response.text}")
+
+        if response.status_code in [401, 500]:  # token expired or invalid
+            main_logger.warning("Token expired or invalid, attempting to refresh token")
+            self.login()
             response = requests.request(
                 method=method, url=url, json=data, headers=headers
             )
-        print(f"response===>> {response.text}")
+
         return response.json()
 
     def get_sites(self):
-        """get the available salon
-
-        Returns:
-            an array with available salons
-        """
+        """Get the available salons."""
+        main_logger.debug("Fetching available salons")
         payload = {"customerCd": "demo"}
         response = self.request("POST", "/browse/getSites", data=payload)
         sites = []
@@ -91,18 +93,21 @@ class TimeGlobeService:
             sites.append(
                 {"salon name": item.get("siteNm"), "siteCd": item.get("siteCd")}
             )
+        main_logger.info(f"Successfully fetched {len(sites)} salons")
         return sites
 
     def get_products(self, site_code: str = "bonn"):
-        """Retrieves a list of available services for a studio"""
+        """Retrieve a list of available services for a studio."""
+        main_logger.debug(f"Fetching products for site: {site_code}")
         self.site_code = site_code
         payload = {"customerCd": "demo", "siteCd": site_code}
         response = self.request("POST", "/browse/getProducts", data=payload)
-        print("response==>>", response)
+        main_logger.info(f"Successfully fetched products for site: {site_code}")
         return response
 
     def get_employee(self, item_no: str, item_name):
-        """Retrieves a list of available employees for a studio."""
+        """Retrieve a list of available employees for a studio."""
+        main_logger.debug(f"Fetching employees for item: {item_no}")
         payload = {
             "customerCd": "demo",
             "siteCd": self.site_code,
@@ -112,10 +117,12 @@ class TimeGlobeService:
         self.item_no = item_no
         self.item_name = item_name
         response = self.request("POST", "/browse/getEmployees", data=payload)
+        main_logger.info(f"Successfully fetched employees for item: {item_no}")
         return response
 
     def get_suggestions(self, employee_id: int, item_no: int):
-        """Retrieves available appointment slots for selected services."""
+        """Retrieve available appointment slots for selected services."""
+        main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
         self.employee_id = employee_id
         payload = {
             "customerCd": "demo",
@@ -124,36 +131,40 @@ class TimeGlobeService:
             "positions": [{"itemNo": item_no, "employeeId": employee_id}],
         }
         response = self.request("POST", "/browse/getSuggestions", data=payload)
+        main_logger.info(
+            f"Successfully fetched suggestions for employee: {employee_id}"
+        )
         return response
 
-    # def get_profile(self, customer_code: str = "demo"):
-    #     """Retrieves user profile"""
-    #     payload = {"customerCd": customer_code}
-    #     response = self.request("POST", "/account/getProfile", data=payload)
-    #     return response
-
     def get_profile(self, mobile_number: str):
-        """Retrieves the profile data for a given phone number"""
+        """Retrieve the profile data for a given phone number."""
+        main_logger.debug(f"Fetching profile for mobile number: {mobile_number}")
         self.mobile_number = mobile_number
         response = self.request(
             method="POST", endpoint="/bot/getProfile", is_header=True
         )
 
         if response and response.get("code") != -3:
+            main_logger.info(f"Profile found for mobile number: {mobile_number}")
             self.time_globe_repo.create_customer(response, mobile_number)
+        else:
+            main_logger.warning(f"No profile found for mobile number: {mobile_number}")
 
         return response
 
     def get_orders(self):
-        """Retrieves a list of open appointments."""
-        # payload = {"customerCd": customer_code}
+        """Retrieve a list of open appointments."""
+        main_logger.debug("Fetching open orders")
         response = self.request("POST", "/bot/getOrders", is_header=True)
+        main_logger.info("Successfully fetched open orders")
         return response
 
     def get_old_orders(self, customer_code: str = "demo"):
-        """Retrieves a list of past appointments."""
+        """Retrieve a list of past appointments."""
+        main_logger.debug("Fetching old orders")
         payload = {"customerCd": customer_code}
         response = self.request("POST", "/book/getOldOrders", data=payload)
+        main_logger.info("Successfully fetched old orders")
         return response
 
     def book_appointment(
@@ -162,13 +173,8 @@ class TimeGlobeService:
         user_date: str,
         user_time: str,
     ):
-        """Books an appointment
-
-        Args:
-            duration (integer):when user select the duration convert this to milisecond and then pass it.
-            user_date (str): required
-            user_time (str):required
-        """
+        """Book an appointment."""
+        main_logger.debug("Booking appointment")
         formatted_datetime = tools_wrapper_util.format_datetime(user_date, user_time)
         payload = {
             "siteCd": self.site_code,
@@ -187,6 +193,7 @@ class TimeGlobeService:
         }
         response = self.request("POST", "/bot/book", data=payload, is_header=True)
         if response.get("code") == 0:
+            main_logger.info("Appointment booked successfully")
             payload.update(
                 {
                     "mobile_number": self.mobile_number,
@@ -194,18 +201,23 @@ class TimeGlobeService:
                 }
             )
             self.time_globe_repo.save_book_appointement(payload)
-
+        else:
+            main_logger.error("Failed to book appointment")
         return response
 
     def cancel_appointment(self, order_id: int):
-        """Cancels an existing appointment."""
+        """Cancel an existing appointment."""
+        main_logger.debug(f"Canceling appointment with order ID: {order_id}")
         payload = {
             "siteCd": self.site_code,
             "orderId": order_id,
         }
         response = self.request("POST", "/bot/cancel", data=payload, is_header=True)
         if response.get("code") == 0:
+            main_logger.info(f"Appointment canceled successfully: {order_id}")
             self.time_globe_repo.delete_booking(order_id)
+        else:
+            main_logger.error(f"Failed to cancel appointment: {order_id}")
         return response
 
     def store_profile(
@@ -216,7 +228,8 @@ class TimeGlobeService:
         first_name: str,
         last_name: str,
     ):
-        """Store user profile"""
+        """Store user profile."""
+        main_logger.debug(f"Storing profile for mobile number: {mobile_number}")
         self.mobile_number = mobile_number
         full_name = first_name + " " + last_name
         payload = {
@@ -230,5 +243,8 @@ class TimeGlobeService:
             "POST", "/bot/storeProfileData", data=payload, is_header=True
         )
         if response:
+            main_logger.info(f"Profile stored successfully: {mobile_number}")
             self.time_globe_repo.create_customer(payload, mobile_number)
+        else:
+            main_logger.error(f"Failed to store profile: {mobile_number}")
         return response

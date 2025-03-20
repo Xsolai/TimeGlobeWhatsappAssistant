@@ -1,0 +1,9 @@
+2025-03-20 15:07:04,622 - app - INFO - Login attempt for abdullahmustafa2435@gmail.com
+2025-03-20 15:07:04,661 - app - INFO - User fetched successfully: abdullahmustafa2435@gmail.com
+2025-03-20 15:07:05,068 - app - INFO - User authenticated successfully: abdullahmustafa2435@gmail.com
+2025-03-20 15:07:05,068 - app - INFO - Token created for user: abdullahmustafa2435@gmail.com
+2025-03-20 15:07:05,068 - app - INFO - User abdullahmustafa2435@gmail.com logged in successfully
+2025-03-20 15:08:42,848 - app - INFO - Registering new user: yellowhunter007@gmail.com
+2025-03-20 15:08:42,848 - app - WARNING - User not found with email: yellowhunter007@gmail.com
+2025-03-20 15:08:42,876 - app - INFO - OTP sent to yellowhunter007@gmail.com
+2025-03-20 15:08:42,883 - app - INFO - User registered successfully: yellowhunter007@gmail.com
