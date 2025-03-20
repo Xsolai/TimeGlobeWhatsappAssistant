@@ -207,12 +207,21 @@ class AssistantManager:
                 "getProfile": lambda args: get_profile(
                     args.get("mobile_number", user_id[9:] if user_id.startswith("whatsapp:") else "")
                 ),
+                # Support both function names for store_profile
                 "updateProfile": lambda args: store_profile(
-                    args.get("mobile_number"),
-                    args.get("email"),
-                    args.get("gender"),
-                    args.get("first_name"),
-                    args.get("last_name")
+                    args.get("mobile_number", ""),
+                    args.get("email", ""),
+                    args.get("gender", ""),
+                    args.get("first_name", ""),
+                    args.get("last_name", "")
+                ),
+                # Add direct mapping for store_profile (same function, different name)
+                "store_profile": lambda args: store_profile(
+                    args.get("mobile_number", ""),
+                    args.get("email", ""),
+                    args.get("gender", ""),
+                    args.get("first_name", ""),
+                    args.get("last_name", "")
                 ),
             }
         
@@ -240,6 +249,10 @@ class AssistantManager:
                 function_name = tool_call.function.name
                 raw_args = tool_call.function.arguments
                 
+                # Debug log for function name
+                logger.info(f"Function name requested: '{function_name}'")
+                logger.info(f"Available functions: {list(function_mapping.keys())}")
+                
                 # Safely parse arguments
                 try:
                     arguments = json.loads(raw_args) if raw_args else {}
@@ -263,8 +276,30 @@ class AssistantManager:
                         logger.error(f"Parameter mismatch in {function_name}: {e}")
                         result = {"status": "error", "message": f"Parameter error: {str(e)}"}
                 else:
-                    result = {"error": f"Function {function_name} not implemented"}
-                    logger.warning(f"Tool {idx+1}/{total_tool_calls}: Unimplemented function called: {function_name}")
+                    # Check for case-insensitive matches
+                    case_insensitive_match = next(
+                        (k for k in function_mapping.keys() if k.lower() == function_name.lower()), 
+                        None
+                    )
+                    
+                    if case_insensitive_match:
+                        logger.warning(f"Case mismatch in function name. Using '{case_insensitive_match}' instead of '{function_name}'")
+                        try:
+                            result = function_mapping[case_insensitive_match](arguments)
+                            tool_execution_time = time.time() - tool_start_time
+                            logger.info(f"Tool {idx+1}/{total_tool_calls}: {case_insensitive_match} completed in {tool_execution_time:.2f}s")
+                        except Exception as e:
+                            logger.error(f"Error executing case-insensitive match {case_insensitive_match}: {e}")
+                            result = {"status": "error", "message": f"Error: {str(e)}"}
+                    else:
+                        result = {"error": f"Function {function_name} not implemented"}
+                        logger.warning(f"Tool {idx+1}/{total_tool_calls}: Unimplemented function called: {function_name}")
+                        
+                        # Suggest alternatives for typos
+                        similar_functions = [k for k in function_mapping.keys() 
+                                            if any(c in k.lower() for c in function_name.lower())]
+                        if similar_functions:
+                            logger.info(f"Similar functions that might match: {similar_functions}")
                 
                 # Log result summary if not too large
                 if isinstance(result, dict):

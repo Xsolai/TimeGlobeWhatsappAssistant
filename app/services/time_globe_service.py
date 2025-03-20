@@ -4,6 +4,24 @@ from fastapi import HTTPException, status
 from ..repositories.time_globe_repository import TimeGlobeRepository
 from ..db.session import get_db
 from ..logger import main_logger
+from datetime import datetime
+
+
+# Add a local format_datetime function to avoid circular imports
+def format_datetime(user_date: str, user_time: str) -> str:
+    """Converts user-selected date (YYYY-MM-DD) and time (HH:MM or HH:MM AM/PM) to ISO 8601 format."""
+    try:
+        # Try parsing in 24-hour format first
+        dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        try:
+            # If it fails, try parsing in 12-hour format
+            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
+        except ValueError:
+            raise ValueError(f"Invalid date-time format: {user_date} {user_time}")
+
+    # Convert to ISO 8601 format
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 class TimeGlobeService:
@@ -174,7 +192,7 @@ class TimeGlobeService:
     ):
         """Book an appointment."""
         main_logger.debug("Booking appointment")
-        formatted_datetime = tools_wrapper_util.format_datetime(user_date, user_time)
+        formatted_datetime = format_datetime(user_date, user_time)
         payload = {
             "siteCd": self.site_code,
             "reminderSms": True,

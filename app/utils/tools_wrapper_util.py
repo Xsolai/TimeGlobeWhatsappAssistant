@@ -223,6 +223,28 @@ def store_profile(
     last_name: str,
 ):
     """store user profile"""
+    # Handle missing parameters
+    if not mobile_number:
+        logger.error("store_profile() called without mobile_number")
+        return {"status": "error", "message": "Mobile number is required"}
+    
+    # Provide default values for optional parameters
+    if not email:
+        logger.warning("store_profile() called without email, using default")
+        email = ""
+    
+    if not gender:
+        logger.warning("store_profile() called without gender, using default")
+        gender = "M"  # Default to Male
+    
+    if not first_name:
+        logger.warning("store_profile() called without first_name, using default")
+        first_name = "User"
+    
+    if not last_name:
+        logger.warning("store_profile() called without last_name, using default")
+        last_name = ""
+    
     logger.info(f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})")
     start_time = time.time()
     try:
