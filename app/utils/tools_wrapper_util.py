@@ -2,19 +2,32 @@ import re
 import logging
 import time
 from datetime import datetime
-from ..services.time_globe_service import TimeGlobeService
-from ..agent import AssistantManager
 from ..core.config import settings
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-assistant_manager = AssistantManager(
-    settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID
-)
+# Remove circular imports - use lazy loading instead
+_assistant_manager = None
+_time_globe_service = None
 
-# Initialize the TimeGlobeService
-time_globe_service = TimeGlobeService()
+def _get_assistant_manager():
+    """Lazy initialization of the AssistantManager to avoid circular imports"""
+    global _assistant_manager
+    if _assistant_manager is None:
+        from ..agent import AssistantManager
+        _assistant_manager = AssistantManager(
+            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID
+        )
+    return _assistant_manager
+
+def _get_time_globe_service():
+    """Lazy initialization of the TimeGlobeService to avoid circular imports"""
+    global _time_globe_service
+    if _time_globe_service is None:
+        from ..services.time_globe_service import TimeGlobeService
+        _time_globe_service = TimeGlobeService()
+    return _time_globe_service
 
 
 def get_sites():
@@ -22,7 +35,7 @@ def get_sites():
     logger.info("Tool called: get_sites()")
     start_time = time.time()
     try:
-        sites = time_globe_service.get_sites()
+        sites = _get_time_globe_service().get_sites()
         execution_time = time.time() - start_time
         logger.info(f"get_sites() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "sites": sites}
@@ -37,7 +50,7 @@ def get_products(site_code="bonn"):
     logger.info(f"Tool called: get_products(site_code={site_code})")
     start_time = time.time()
     try:
-        products = time_globe_service.get_products(site_code)
+        products = _get_time_globe_service().get_products(site_code)
         execution_time = time.time() - start_time
         logger.info(f"get_products() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "products": products}
@@ -52,7 +65,7 @@ def get_employee(item_no, item_name):
     logger.info(f"Tool called: get_employee(item_no={item_no}, item_name={item_name})")
     start_time = time.time()
     try:
-        employees = time_globe_service.get_employee(item_no, item_name)
+        employees = _get_time_globe_service().get_employee(item_no, item_name)
         execution_time = time.time() - start_time
         logger.info(f"get_employee() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "employees": employees}
@@ -67,7 +80,7 @@ def get_suggestions(employee_id, item_no):
     logger.info(f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})")
     start_time = time.time()
     try:
-        suggestions = time_globe_service.get_suggestions(employee_id, item_no)
+        suggestions = _get_time_globe_service().get_suggestions(employee_id, item_no)
         execution_time = time.time() - start_time
         logger.info(f"get_suggestions() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "suggestions": suggestions}
@@ -82,7 +95,7 @@ def book_appointment(duration, user_date, user_time):
     logger.info(f"Tool called: book_appointment(duration={duration}, user_date={user_date}, user_time={user_time})")
     start_time = time.time()
     try:
-        result = time_globe_service.book_appointment(
+        result = _get_time_globe_service().book_appointment(
             duration,
             user_date,
             user_time,
@@ -124,7 +137,7 @@ def cancel_appointment(order_id):
             logger.warning("cancel_appointment() called without order_id")
             return {"status": "error", "message": "order_id is required"}
             
-        result = time_globe_service.cancel_appointment(order_id)
+        result = _get_time_globe_service().cancel_appointment(order_id)
         execution_time = time.time() - start_time
         
         if result.get("code") == 0:
@@ -150,7 +163,7 @@ def get_profile(mobile_number: str):
     logger.info(f"Tool called: get_profile(mobile_number={mobile_number})")
     start_time = time.time()
     try:
-        profile = time_globe_service.get_profile(mobile_number)
+        profile = _get_time_globe_service().get_profile(mobile_number)
         execution_time = time.time() - start_time
         
         if profile.get("code") == 0:
@@ -177,7 +190,7 @@ def get_orders():
     logger.info("Tool called: get_orders()")
     start_time = time.time()
     try:
-        orders = time_globe_service.get_orders()
+        orders = _get_time_globe_service().get_orders()
         execution_time = time.time() - start_time
         logger.info(f"get_orders() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "orders": orders}
@@ -192,7 +205,7 @@ def get_old_orders(customer_code="demo"):
     logger.info(f"Tool called: get_old_orders(customer_code={customer_code})")
     start_time = time.time()
     try:
-        old_orders = time_globe_service.get_old_orders(customer_code)
+        old_orders = _get_time_globe_service().get_old_orders(customer_code)
         execution_time = time.time() - start_time
         logger.info(f"get_old_orders() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "old_orders": old_orders}
@@ -213,7 +226,7 @@ def store_profile(
     logger.info(f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})")
     start_time = time.time()
     try:
-        response = time_globe_service.store_profile(
+        response = _get_time_globe_service().store_profile(
             mobile_number, email, gender, first_name, last_name
         )
         execution_time = time.time() - start_time
@@ -299,7 +312,7 @@ def get_response_from_gpt(msg, user_id):
     logger.info(f"Tool called: get_response_from_gpt(user_id={user_id})")
     start_time = time.time()
     try:
-        response = assistant_manager.run_conversation(user_id, msg)
+        response = _get_assistant_manager().run_conversation(user_id, msg)
         execution_time = time.time() - start_time
         logger.info(f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s")
         return response

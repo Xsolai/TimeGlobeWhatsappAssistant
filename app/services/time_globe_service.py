@@ -1,7 +1,6 @@
 from ..core.config import settings
 import requests, time, json
 from fastapi import HTTPException, status
-from ..utils import tools_wrapper_util
 from ..repositories.time_globe_repository import TimeGlobeRepository
 from ..db.session import get_db
 from ..logger import main_logger

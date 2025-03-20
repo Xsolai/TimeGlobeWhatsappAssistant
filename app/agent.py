@@ -92,17 +92,31 @@ class AssistantManager:
         max_retries = 3
         retry_delay = 0.5
 
+        # Debug log OpenAI config
+        logger.info(f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
+        logger.info(f"Assistant ID: {self.assistant_id}")
+        
+        if not settings.OPENAI_API_KEY or not self.assistant_id:
+            logger.error("Missing OpenAI credentials: API key or Assistant ID not configured")
+            return "Configuration error: API credentials missing. Please contact support."
+
         for attempt in range(max_retries):
             try:
                 self.cleanup_active_run(thread_id)
                 # Reduced unnecessary delay
                 self.add_message_to_thread(user_id, question)
 
-                # Start a new run
-                run = self.client.beta.threads.runs.create(
-                    thread_id=thread_id, assistant_id=self.assistant_id
-                )
-                self.active_runs[thread_id] = run.id
+                # Start a new run with detailed logging
+                logger.info(f"Creating new run for thread {thread_id} with assistant {self.assistant_id}")
+                try:
+                    run = self.client.beta.threads.runs.create(
+                        thread_id=thread_id, assistant_id=self.assistant_id
+                    )
+                    logger.info(f"Run created successfully: {run.id}")
+                    self.active_runs[thread_id] = run.id
+                except Exception as run_error:
+                    logger.error(f"Error creating run: {run_error}")
+                    return f"Unable to process your request: {str(run_error)}"
 
                 # More reasonable timeout - 60 seconds instead of 100
                 timeout = 60
@@ -171,17 +185,35 @@ class AssistantManager:
                 get_old_orders,
             )
             
+            # Define properly typed function handlers with correct parameter unpacking
             self._function_mapping = {
-                "getSites": lambda args=None: get_sites(),
+                # Simple functions with one or no parameters
+                "getSites": lambda args: get_sites(),
                 "getProducts": lambda args: get_products(**args) if args else get_products(),
-                "getEmployees": lambda args: get_employee(**args) if args else get_employee(),
-                "AppointmentSuggestion": lambda args: get_suggestions(**args) if args else get_suggestions(),
-                "bookAppointment": lambda args: book_appointment(**args) if args else book_appointment(),
-                "cancelAppointment": lambda args: cancel_appointment(**args) if args else cancel_appointment(),
-                "updateProfile": lambda args: store_profile(**args) if args else store_profile(),
-                "getProfile": lambda args: get_profile(**args) if args else get_profile(user_id[9:]),
-                "getOrders": lambda args: get_orders(**args) if args else get_orders(),
+                "getOrders": lambda args: get_orders(),
                 "get_old_orders": lambda args: get_old_orders(**args) if args else get_old_orders(),
+                
+                # Functions with specific required parameters
+                "getEmployees": lambda args: get_employee(
+                    args.get("item_no"), args.get("item_name")
+                ),
+                "AppointmentSuggestion": lambda args: get_suggestions(
+                    args.get("employee_id"), args.get("item_no")
+                ),
+                "bookAppointment": lambda args: book_appointment(
+                    args.get("duration"), args.get("user_date"), args.get("user_time")
+                ),
+                "cancelAppointment": lambda args: cancel_appointment(args.get("order_id")),
+                "getProfile": lambda args: get_profile(
+                    args.get("mobile_number", user_id[9:] if user_id.startswith("whatsapp:") else "")
+                ),
+                "updateProfile": lambda args: store_profile(
+                    args.get("mobile_number"),
+                    args.get("email"),
+                    args.get("gender"),
+                    args.get("first_name"),
+                    args.get("last_name")
+                ),
             }
         
         return self._function_mapping
@@ -197,26 +229,55 @@ class AssistantManager:
         tool_outputs = []
         function_mapping = self._get_function_mapping(user_id)
         
+        start_time = time.time()
+        total_tool_calls = len(tool_calls)
+        logger.info(f"Processing {total_tool_calls} tool calls for thread {thread_id}")
+        
         # Process all tool calls in parallel (if supported)
-        for tool_call in tool_calls:
+        for idx, tool_call in enumerate(tool_calls):
+            tool_start_time = time.time()
             try:
                 function_name = tool_call.function.name
-                arguments = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
-                logger.info(f"Executing function: {function_name} with arguments: {arguments}")
+                raw_args = tool_call.function.arguments
+                
+                # Safely parse arguments
+                try:
+                    arguments = json.loads(raw_args) if raw_args else {}
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse arguments: {raw_args}")
+                    arguments = {}
+                
+                # Log tool call details
+                arg_string = ", ".join([f"{k}={v}" for k, v in arguments.items()])
+                logger.info(f"Tool {idx+1}/{total_tool_calls}: Executing {function_name}({arg_string})")
 
                 handler = function_mapping.get(function_name)
                 if handler:
-                    result = handler(arguments)
+                    try:
+                        result = handler(arguments)
+                        tool_execution_time = time.time() - tool_start_time
+                        result_status = result.get("status", "unknown")
+                        logger.info(f"Tool {idx+1}/{total_tool_calls}: {function_name} completed with status '{result_status}' in {tool_execution_time:.2f}s")
+                    except TypeError as e:
+                        # Handle parameter mismatches more gracefully
+                        logger.error(f"Parameter mismatch in {function_name}: {e}")
+                        result = {"status": "error", "message": f"Parameter error: {str(e)}"}
                 else:
                     result = {"error": f"Function {function_name} not implemented"}
-                    logger.warning(f"Unimplemented function called: {function_name}")
+                    logger.warning(f"Tool {idx+1}/{total_tool_calls}: Unimplemented function called: {function_name}")
+                
+                # Log result summary if not too large
+                if isinstance(result, dict):
+                    result_keys = list(result.keys())
+                    logger.debug(f"Tool {idx+1} result keys: {result_keys}")
                 
                 tool_outputs.append(
                     {"tool_call_id": tool_call.id, "output": json.dumps(result)}
                 )
 
             except Exception as e:
-                logger.error(f"Error in tool call {tool_call.function.name}: {str(e)}")
+                tool_execution_time = time.time() - tool_start_time
+                logger.error(f"Tool {idx+1}/{total_tool_calls}: Error in {tool_call.function.name}: {str(e)} after {tool_execution_time:.2f}s")
                 tool_outputs.append(
                     {
                         "tool_call_id": tool_call.id,
@@ -225,16 +286,22 @@ class AssistantManager:
                 )
 
         try:
+            submission_start = time.time()
             self.client.beta.threads.runs.submit_tool_outputs(
                 thread_id=thread_id, run_id=run_id, tool_outputs=tool_outputs
             )
+            submission_time = time.time() - submission_start
+            total_time = time.time() - start_time
+            logger.info(f"Tool outputs submitted successfully in {submission_time:.2f}s (total tool handling: {total_time:.2f}s)")
         except Exception as e:
-            logger.error(f"Error submitting tool outputs: {e}")
+            total_time = time.time() - start_time
+            logger.error(f"Error submitting tool outputs after {total_time:.2f}s: {e}")
             # Attempt to cancel the run if submitting tool outputs fails
             try:
                 self.client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
-            except:
-                pass  # Already logged the primary error
+                logger.info(f"Run {run_id} cancelled after tool output submission failure")
+            except Exception as cancel_error:
+                logger.error(f"Failed to cancel run after submission error: {cancel_error}")
 
     def get_latest_assistant_response(self, user_id: str) -> str:
         """Get the latest assistant response with error handling."""
