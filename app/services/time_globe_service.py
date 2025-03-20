@@ -192,35 +192,42 @@ class TimeGlobeService:
     ):
         """Book an appointment."""
         main_logger.debug("Booking appointment")
-        formatted_datetime = format_datetime(user_date, user_time)
-        payload = {
-            "siteCd": self.site_code,
-            "reminderSms": True,
-            "reminderEmail": True,
-            "positions": [
-                {
-                    "ordinalPosition": 1,
-                    "beginTs": formatted_datetime,  # "2025-02-25T12:00:00.000Z"
-                    "durationMillis": duration,
-                    "employeeId": self.employee_id,
-                    "itemNo": self.item_no,
-                    "itemNm": self.item_name,
-                }
-            ],
-        }
-        response = self.request("POST", "/bot/book", data=payload, is_header=True)
-        if response.get("code") == 0:
-            main_logger.info("Appointment booked successfully")
-            payload.update(
-                {
-                    "mobile_number": self.mobile_number,
-                    "order_id": response.get("orderId"),
-                }
-            )
-            self.time_globe_repo.save_book_appointement(payload)
-        else:
-            main_logger.error("Failed to book appointment")
-        return response
+        try:
+            main_logger.debug(f"Formatting date/time: {user_date} {user_time}")
+            formatted_datetime = format_datetime(user_date, user_time)
+            main_logger.debug(f"Formatted datetime: {formatted_datetime}")
+            
+            payload = {
+                "siteCd": self.site_code,
+                "reminderSms": True,
+                "reminderEmail": True,
+                "positions": [
+                    {
+                        "ordinalPosition": 1,
+                        "beginTs": formatted_datetime,  # "2025-02-25T12:00:00.000Z"
+                        "durationMillis": duration,
+                        "employeeId": self.employee_id,
+                        "itemNo": self.item_no,
+                        "itemNm": self.item_name,
+                    }
+                ],
+            }
+            response = self.request("POST", "/bot/book", data=payload, is_header=True)
+            if response.get("code") == 0:
+                main_logger.info("Appointment booked successfully")
+                payload.update(
+                    {
+                        "mobile_number": self.mobile_number,
+                        "order_id": response.get("orderId"),
+                    }
+                )
+                self.time_globe_repo.save_book_appointement(payload)
+            else:
+                main_logger.error(f"Failed to book appointment: {response}")
+            return response
+        except Exception as e:
+            main_logger.error(f"Error in book_appointment: {str(e)}")
+            raise
 
     def cancel_appointment(self, order_id: int):
         """Cancel an existing appointment."""

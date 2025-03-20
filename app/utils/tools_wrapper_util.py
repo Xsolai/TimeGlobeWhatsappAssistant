@@ -95,6 +95,15 @@ def book_appointment(duration, user_date, user_time):
     logger.info(f"Tool called: book_appointment(duration={duration}, user_date={user_date}, user_time={user_time})")
     start_time = time.time()
     try:
+        # Try our own date parsing in case there's any issue with the format
+        # Used for debug, not actual conversion since time_globe_service has its own format_datetime
+        if not isinstance(user_date, str) or not isinstance(user_time, str):
+            logger.warning(f"Invalid date/time types: date={type(user_date)}, time={type(user_time)}")
+            return {"status": "error", "message": "Date and time must be strings"}
+            
+        logger.info(f"Processing appointment with date={user_date}, time={user_time}")
+        
+        # Call the service function which has a local format_datetime
         result = _get_time_globe_service().book_appointment(
             duration,
             user_date,
