@@ -169,7 +169,8 @@ def format_response(text):
     final_response = remove_small_brackets(
         final_response
     )  # removing small brackets from link
-
+    # remove all ### from the response
+    final_response=final_response.replace("### ","")
     return final_response
 
 
