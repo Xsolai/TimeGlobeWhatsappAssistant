@@ -37,17 +37,21 @@ class TimeGlobeRepository:
             main_logger.info(
                 f"Creating/updating customer with mobile number: {mobile_number}"
             )
-            
+
             # Normalize mobile number for consistency
             if mobile_number:
-                mobile_number = ''.join(c for c in mobile_number if c.isdigit() or c == '+')
-            
+                mobile_number = "".join(
+                    c for c in mobile_number if c.isdigit() or c == "+"
+                )
+
             main_logger.info(f"Fetching customer with mobile number: {mobile_number}")
             customer = self.get_customer(mobile_number)
 
             if not customer:
-                main_logger.warning(f"No customer found with mobile number: {mobile_number}")
-                
+                main_logger.warning(
+                    f"No customer found with mobile number: {mobile_number}"
+                )
+
                 # Extract required fields with defaults to avoid KeyErrors
                 new_customer = CustomerModel(
                     first_name=customer_data.get("firstNm", ""),
@@ -56,9 +60,9 @@ class TimeGlobeRepository:
                     email=customer_data.get("email", ""),
                     gender=customer_data.get("salutationCd", "M"),
                 )
-                
+
                 main_logger.debug(f"Creating new customer with data: {customer_data}")
-                
+
                 try:
                     self.db.add(new_customer)
                     self.db.commit()
@@ -67,11 +71,13 @@ class TimeGlobeRepository:
                     return new_customer
                 except Exception as db_error:
                     self.db.rollback()
-                    main_logger.error(f"DB error while inserting customer: {str(db_error)}")
+                    main_logger.error(
+                        f"DB error while inserting customer: {str(db_error)}"
+                    )
                     raise Exception(f"Database insert error: {str(db_error)}")
             else:
                 main_logger.info(f"Updating existing customer: {customer.id}")
-                
+
                 # Update fields if provided
                 if customer_data.get("firstNm"):
                     customer.first_name = customer_data.get("firstNm")
@@ -81,7 +87,7 @@ class TimeGlobeRepository:
                     customer.email = customer_data.get("email")
                 if customer_data.get("salutationCd"):
                     customer.gender = customer_data.get("salutationCd")
-                    
+
                 try:
                     self.db.commit()
                     self.db.refresh(customer)
@@ -89,12 +95,16 @@ class TimeGlobeRepository:
                     return customer
                 except Exception as db_error:
                     self.db.rollback()
-                    main_logger.error(f"DB error while updating customer: {str(db_error)}")
+                    main_logger.error(
+                        f"DB error while updating customer: {str(db_error)}"
+                    )
                     raise Exception(f"Database update error: {str(db_error)}")
 
         except Exception as e:
             self.db.rollback()
-            main_logger.error(f"Database error while creating/updating customer: {str(e)}")
+            main_logger.error(
+                f"Database error while creating/updating customer: {str(e)}"
+            )
             raise Exception(f"Database Error {str(e)}")
 
     def save_book_appointment(self, booking_details: dict):
@@ -164,4 +174,4 @@ class TimeGlobeRepository:
         except Exception as e:
             self.db.rollback()
             main_logger.error(f"Database error while deleting booking: {str(e)}")
-            raise Exception(f"Database error: {str(e)}")
+            # raise Exception(f"Database error: {str(e)}")

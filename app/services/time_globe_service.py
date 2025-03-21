@@ -5,23 +5,158 @@ from ..repositories.time_globe_repository import TimeGlobeRepository
 from ..db.session import get_db
 from ..logger import main_logger
 from datetime import datetime
+import re
 
 
 # Add a local format_datetime function to avoid circular imports
-def format_datetime(user_date: str, user_time: str) -> str:
-    """Converts user-selected date (YYYY-MM-DD) and time (HH:MM or HH:MM AM/PM) to ISO 8601 format."""
-    try:
-        # Try parsing in 24-hour format first
-        dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
-    except ValueError:
-        try:
-            # If it fails, try parsing in 12-hour format
-            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
-        except ValueError:
-            raise ValueError(f"Invalid date-time format: {user_date} {user_time}")
+def format_datetime(user_date_time: str) -> str:
+    """
+    Converts various user date-time formats to ISO 8601 format.
+    Handles formats like:
+    - YYYY-MM-DD HH:MM
+    - YYYY-MM-DD HH:MM AM/PM
+    - Month DD, YYYY HH:MM AM/PM
+    - Already ISO 8601 formatted strings (returns as-is)
 
-    # Convert to ISO 8601 format
-    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    Args:
+        user_date_time: A string containing date and time
+
+    Returns:
+        ISO 8601 formatted string (YYYY-MM-DDT00:00:00.000Z)
+
+    Raises:
+        ValueError: If the date-time format cannot be parsed
+    """
+    start_time = time.time()
+    main_logger.info(f"format_datetime() called with input: {user_date_time}")
+
+    # Check if input is already in ISO 8601 format
+    iso_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$"
+    if re.match(iso_pattern, user_date_time):
+        # Validate it's a real date by parsing and reformatting
+        try:
+            dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+            main_logger.info(f"Input already in ISO format: {user_date_time}")
+            return user_date_time
+        except ValueError:
+            try:
+                dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%SZ")
+                main_logger.info(f"Input already in ISO format: {user_date_time}")
+                return user_date_time
+            except ValueError:
+                main_logger.debug(
+                    "Input matched ISO pattern but failed validation, trying other formats"
+                )
+                pass  # Not a valid ISO format, continue with other formats
+
+    formats = [
+        # YYYY-MM-DD formats
+        "%Y-%m-%d %H:%M",  # 2025-03-21 14:00
+        "%Y-%m-%d %I:%M %p",  # 2025-03-21 02:00 PM
+        # Month name formats
+        "%B %d, %Y %I:%M %p",  # March 21, 2025 10:00 AM
+        "%b %d, %Y %I:%M %p",  # Mar 21, 2025 10:00 AM
+        # Additional formats with various separators
+        "%Y/%m/%d %H:%M",  # 2025/03/21 14:00
+        "%d/%m/%Y %H:%M",  # 21/03/2025 14:00
+        "%m/%d/%Y %I:%M %p",  # 03/21/2025 02:00 PM
+        "%d-%b-%Y %I:%M %p",  # 21-Mar-2025 02:00 PM
+    ]
+
+    # If input contains separate date and time parameters
+    if " " in user_date_time and len(user_date_time.split(" ")) == 2:
+        user_date, user_time = user_date_time.split(" ", 1)
+        main_logger.debug(f"Split input into date: {user_date} and time: {user_time}")
+        # Try both formats from the original function
+        try:
+            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            main_logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError:
+            main_logger.debug(
+                "Failed to parse with format %Y-%m-%d %H:%M, trying %Y-%m-%d %I:%M %p"
+            )
+            try:
+                dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
+                result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                execution_time = time.time() - start_time
+                main_logger.info(
+                    f"format_datetime() completed successfully in {execution_time:.4f}s"
+                )
+                return result
+            except ValueError:
+                main_logger.debug(
+                    "Failed to parse with both initial formats, continuing to other formats"
+                )
+                pass  # Continue to the general case
+
+    # Try all formats
+    for fmt in formats:
+        try:
+            main_logger.debug(f"Trying format: {fmt}")
+            dt = datetime.strptime(user_date_time, fmt)
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            main_logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError:
+            continue
+
+    # If still no match, try to be more flexible by normalizing the input
+    normalized_input = user_date_time.replace(",", "")  # Remove commas
+    main_logger.debug(f"Using normalized input: {normalized_input}")
+
+    # Check for common patterns
+    month_pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (\d{1,2})[\w,]* (\d{4})"
+    time_pattern = r"(\d{1,2}):(\d{2})(?:\s*([AP]M))?"
+
+    month_match = re.search(month_pattern, user_date_time, re.IGNORECASE)
+    time_match = re.search(time_pattern, user_date_time)
+
+    if month_match and time_match:
+        main_logger.debug("Found month and time patterns in the input")
+        month = month_match.group(1)
+        day = month_match.group(2)
+        year = month_match.group(3)
+
+        hour = time_match.group(1)
+        minute = time_match.group(2)
+        ampm = time_match.group(3) if time_match.group(3) else ""
+
+        main_logger.debug(
+            f"Extracted components - Month: {month}, Day: {day}, Year: {year}, Hour: {hour}, Minute: {minute}, AM/PM: {ampm}"
+        )
+
+        try:
+            date_str = f"{month} {day} {year} {hour}:{minute} {ampm}".strip()
+            format_str = "%b %d %Y %I:%M %p" if ampm else "%b %d %Y %H:%M"
+            main_logger.debug(
+                f"Attempting to parse: '{date_str}' with format: '{format_str}'"
+            )
+
+            dt = datetime.strptime(date_str, format_str)
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            main_logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError as e:
+            main_logger.debug(f"Failed to parse extracted components: {e}")
+            pass
+
+    # If we get here, no format matched
+    execution_time = time.time() - start_time
+    main_logger.error(
+        f"Invalid date-time format: {user_date_time} (processing took {execution_time:.4f}s)"
+    )
+    raise ValueError(f"Invalid date-time format: {user_date_time}")
 
 
 class TimeGlobeService:
@@ -187,16 +322,15 @@ class TimeGlobeService:
     def book_appointment(
         self,
         duration: int,
-        user_date: str,
-        user_time: str,
+        user_date_time: str,
     ):
         """Book an appointment."""
         main_logger.debug("Booking appointment")
         try:
-            main_logger.debug(f"Formatting date/time: {user_date} {user_time}")
-            formatted_datetime = format_datetime(user_date, user_time)
+            main_logger.debug(f"Formatting date/time: {user_date_time}")
+            formatted_datetime = format_datetime(user_date_time)
             main_logger.debug(f"Formatted datetime: {formatted_datetime}")
-            
+
             payload = {
                 "siteCd": self.site_code,
                 "reminderSms": True,
@@ -254,17 +388,17 @@ class TimeGlobeService:
     ):
         """Store user profile."""
         main_logger.debug(f"Storing profile for mobile number: {mobile_number}")
-        
+
         # Ensure mobile number is properly formatted (remove leading zeroes, ensure country code, etc.)
-        if mobile_number.startswith('0'):
+        if mobile_number.startswith("0"):
             mobile_number = mobile_number[1:]  # Remove leading zero
-        if not mobile_number.startswith('+'):
+        if not mobile_number.startswith("+"):
             # Add + if missing (commonly expected format for international numbers)
-            mobile_number = '+' + mobile_number
-            
+            mobile_number = "+" + mobile_number
+
         self.mobile_number = mobile_number
         full_name = first_name + " " + last_name
-        
+
         # Create the payload with proper field names
         payload = {
             "salutationCd": gender,
@@ -273,24 +407,26 @@ class TimeGlobeService:
             "firstNm": first_name,
             "lastNm": last_name,
         }
-        
+
         # Add extra debugging
         main_logger.debug(f"Sending profile data to API: {payload}")
-        
+
         try:
             response = self.request(
                 "POST", "/bot/storeProfileData", data=payload, is_header=True
             )
-            
+
             # Check for specific response patterns
             main_logger.debug(f"API response for store_profile: {response}")
-            
+
             if response and isinstance(response, dict):
-                code = response.get('code')
+                code = response.get("code")
                 main_logger.info(f"Profile API response code: {code}")
-                
+
                 if code == 0:
-                    main_logger.info(f"Profile stored successfully in API: {mobile_number}")
+                    main_logger.info(
+                        f"Profile stored successfully in API: {mobile_number}"
+                    )
                     # Make sure customer data has the right field names for the repository
                     customer_data = {
                         "salutationCd": gender,

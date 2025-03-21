@@ -13,7 +13,9 @@ from .core.config import settings
 load_dotenv()
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # print("Testing TimeGlobeService connection...")
@@ -31,7 +33,7 @@ class AssistantManager:
         self.assistant_id = assistant_id
         self.user_threads: Dict[str, str] = {}  # Store thread IDs for each user
         self.active_runs: Dict[str, str] = {}  # Track active runs for each thread
-        
+
         # Cache function mappings to avoid recreating on each tool call
         self._function_mapping = None
 
@@ -62,7 +64,7 @@ class AssistantManager:
     def add_message_to_thread(self, user_id: str, question: str) -> None:
         """Add a message to the user's thread with active run check."""
         thread_id = self.get_or_create_thread(user_id)
-        
+
         # No need to clean up run here as it's already done in run_conversation
         current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         question = f"{question}\n\n(Current Date and Time: {current_datetime})"
@@ -79,11 +81,15 @@ class AssistantManager:
                 return
             except Exception as e:
                 if attempt < max_retries - 1:
-                    logger.warning(f"Retry {attempt + 1}/{max_retries} adding message: {e}")
+                    logger.warning(
+                        f"Retry {attempt + 1}/{max_retries} adding message: {e}"
+                    )
                     time.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
                 else:
-                    logger.error(f"Failed to add message after {max_retries} attempts: {e}")
+                    logger.error(
+                        f"Failed to add message after {max_retries} attempts: {e}"
+                    )
                     raise
 
     def run_conversation(self, user_id: str, question: str) -> str:
@@ -93,12 +99,18 @@ class AssistantManager:
         retry_delay = 0.5
 
         # Debug log OpenAI config
-        logger.info(f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
+        logger.info(
+            f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}"
+        )
         logger.info(f"Assistant ID: {self.assistant_id}")
-        
+
         if not settings.OPENAI_API_KEY or not self.assistant_id:
-            logger.error("Missing OpenAI credentials: API key or Assistant ID not configured")
-            return "Configuration error: API credentials missing. Please contact support."
+            logger.error(
+                "Missing OpenAI credentials: API key or Assistant ID not configured"
+            )
+            return (
+                "Configuration error: API credentials missing. Please contact support."
+            )
 
         for attempt in range(max_retries):
             try:
@@ -107,7 +119,9 @@ class AssistantManager:
                 self.add_message_to_thread(user_id, question)
 
                 # Start a new run with detailed logging
-                logger.info(f"Creating new run for thread {thread_id} with assistant {self.assistant_id}")
+                logger.info(
+                    f"Creating new run for thread {thread_id} with assistant {self.assistant_id}"
+                )
                 try:
                     run = self.client.beta.threads.runs.create(
                         thread_id=thread_id, assistant_id=self.assistant_id
@@ -130,7 +144,7 @@ class AssistantManager:
                         thread_id=thread_id, run_id=run.id
                     )
                     logger.info(f"Run status: {run.status}")
-                    
+
                     if run.status == "completed":
                         del self.active_runs[thread_id]
                         return self.get_latest_assistant_response(user_id)
@@ -146,7 +160,9 @@ class AssistantManager:
                     elif run.status in ["failed", "expired", "cancelled"]:
                         logger.warning(f"Run ended with status: {run.status}")
                         self.cleanup_active_run(thread_id)
-                        error_msg = getattr(run, 'last_error', {'message': f"Run {run.status}"})
+                        error_msg = getattr(
+                            run, "last_error", {"message": f"Run {run.status}"}
+                        )
                         return f"Sorry, I couldn't process your request: {error_msg.get('message', 'Unknown error')}"
 
                     time.sleep(backoff_interval)
@@ -184,15 +200,18 @@ class AssistantManager:
                 get_orders,
                 get_old_orders,
             )
-            
+
             # Define properly typed function handlers with correct parameter unpacking
             self._function_mapping = {
                 # Simple functions with one or no parameters
                 "getSites": lambda args: get_sites(),
-                "getProducts": lambda args: get_products(**args) if args else get_products(),
+                "getProducts": lambda args: (
+                    get_products(**args) if args else get_products()
+                ),
                 "getOrders": lambda args: get_orders(),
-                "get_old_orders": lambda args: get_old_orders(**args) if args else get_old_orders(),
-                
+                "get_old_orders": lambda args: (
+                    get_old_orders(**args) if args else get_old_orders()
+                ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
                     args.get("item_no"), args.get("item_name")
@@ -201,11 +220,16 @@ class AssistantManager:
                     args.get("employee_id"), args.get("item_no")
                 ),
                 "bookAppointment": lambda args: book_appointment(
-                    args.get("duration"), args.get("user_date"), args.get("user_time")
+                    args.get("duration"), args.get("user_date_time")
                 ),
-                "cancelAppointment": lambda args: cancel_appointment(args.get("order_id")),
+                "cancelAppointment": lambda args: cancel_appointment(
+                    args.get("order_id")
+                ),
                 "getProfile": lambda args: get_profile(
-                    args.get("mobile_number", user_id[9:] if user_id.startswith("whatsapp:") else "")
+                    args.get(
+                        "mobile_number",
+                        user_id[9:] if user_id.startswith("whatsapp:") else "",
+                    )
                 ),
                 # Support both function names for store_profile
                 "updateProfile": lambda args: store_profile(
@@ -213,7 +237,7 @@ class AssistantManager:
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("first_name", ""),
-                    args.get("last_name", "")
+                    args.get("last_name", ""),
                 ),
                 # Add direct mapping for store_profile (same function, different name)
                 "store_profile": lambda args: store_profile(
@@ -221,10 +245,10 @@ class AssistantManager:
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("first_name", ""),
-                    args.get("last_name", "")
+                    args.get("last_name", ""),
                 ),
             }
-        
+
         return self._function_mapping
 
     def handle_tool_calls(
@@ -237,32 +261,34 @@ class AssistantManager:
         """Handle tool calls with improved error handling and performance."""
         tool_outputs = []
         function_mapping = self._get_function_mapping(user_id)
-        
+
         start_time = time.time()
         total_tool_calls = len(tool_calls)
         logger.info(f"Processing {total_tool_calls} tool calls for thread {thread_id}")
-        
+
         # Process all tool calls in parallel (if supported)
         for idx, tool_call in enumerate(tool_calls):
             tool_start_time = time.time()
             try:
                 function_name = tool_call.function.name
                 raw_args = tool_call.function.arguments
-                
+
                 # Debug log for function name
                 logger.info(f"Function name requested: '{function_name}'")
                 logger.info(f"Available functions: {list(function_mapping.keys())}")
-                
+
                 # Safely parse arguments
                 try:
                     arguments = json.loads(raw_args) if raw_args else {}
                 except json.JSONDecodeError:
                     logger.error(f"Failed to parse arguments: {raw_args}")
                     arguments = {}
-                
+
                 # Log tool call details
                 arg_string = ", ".join([f"{k}={v}" for k, v in arguments.items()])
-                logger.info(f"Tool {idx+1}/{total_tool_calls}: Executing {function_name}({arg_string})")
+                logger.info(
+                    f"Tool {idx+1}/{total_tool_calls}: Executing {function_name}({arg_string})"
+                )
 
                 handler = function_mapping.get(function_name)
                 if handler:
@@ -270,49 +296,73 @@ class AssistantManager:
                         result = handler(arguments)
                         tool_execution_time = time.time() - tool_start_time
                         result_status = result.get("status", "unknown")
-                        logger.info(f"Tool {idx+1}/{total_tool_calls}: {function_name} completed with status '{result_status}' in {tool_execution_time:.2f}s")
+                        logger.info(
+                            f"Tool {idx+1}/{total_tool_calls}: {function_name} completed with status '{result_status}' in {tool_execution_time:.2f}s"
+                        )
                     except TypeError as e:
                         # Handle parameter mismatches more gracefully
                         logger.error(f"Parameter mismatch in {function_name}: {e}")
-                        result = {"status": "error", "message": f"Parameter error: {str(e)}"}
+                        result = {
+                            "status": "error",
+                            "message": f"Parameter error: {str(e)}",
+                        }
                 else:
                     # Check for case-insensitive matches
                     case_insensitive_match = next(
-                        (k for k in function_mapping.keys() if k.lower() == function_name.lower()), 
-                        None
+                        (
+                            k
+                            for k in function_mapping.keys()
+                            if k.lower() == function_name.lower()
+                        ),
+                        None,
                     )
-                    
+
                     if case_insensitive_match:
-                        logger.warning(f"Case mismatch in function name. Using '{case_insensitive_match}' instead of '{function_name}'")
+                        logger.warning(
+                            f"Case mismatch in function name. Using '{case_insensitive_match}' instead of '{function_name}'"
+                        )
                         try:
                             result = function_mapping[case_insensitive_match](arguments)
                             tool_execution_time = time.time() - tool_start_time
-                            logger.info(f"Tool {idx+1}/{total_tool_calls}: {case_insensitive_match} completed in {tool_execution_time:.2f}s")
+                            logger.info(
+                                f"Tool {idx+1}/{total_tool_calls}: {case_insensitive_match} completed in {tool_execution_time:.2f}s"
+                            )
                         except Exception as e:
-                            logger.error(f"Error executing case-insensitive match {case_insensitive_match}: {e}")
+                            logger.error(
+                                f"Error executing case-insensitive match {case_insensitive_match}: {e}"
+                            )
                             result = {"status": "error", "message": f"Error: {str(e)}"}
                     else:
                         result = {"error": f"Function {function_name} not implemented"}
-                        logger.warning(f"Tool {idx+1}/{total_tool_calls}: Unimplemented function called: {function_name}")
-                        
+                        logger.warning(
+                            f"Tool {idx+1}/{total_tool_calls}: Unimplemented function called: {function_name}"
+                        )
+
                         # Suggest alternatives for typos
-                        similar_functions = [k for k in function_mapping.keys() 
-                                            if any(c in k.lower() for c in function_name.lower())]
+                        similar_functions = [
+                            k
+                            for k in function_mapping.keys()
+                            if any(c in k.lower() for c in function_name.lower())
+                        ]
                         if similar_functions:
-                            logger.info(f"Similar functions that might match: {similar_functions}")
-                
+                            logger.info(
+                                f"Similar functions that might match: {similar_functions}"
+                            )
+
                 # Log result summary if not too large
                 if isinstance(result, dict):
                     result_keys = list(result.keys())
                     logger.debug(f"Tool {idx+1} result keys: {result_keys}")
-                
+
                 tool_outputs.append(
                     {"tool_call_id": tool_call.id, "output": json.dumps(result)}
                 )
 
             except Exception as e:
                 tool_execution_time = time.time() - tool_start_time
-                logger.error(f"Tool {idx+1}/{total_tool_calls}: Error in {tool_call.function.name}: {str(e)} after {tool_execution_time:.2f}s")
+                logger.error(
+                    f"Tool {idx+1}/{total_tool_calls}: Error in {tool_call.function.name}: {str(e)} after {tool_execution_time:.2f}s"
+                )
                 tool_outputs.append(
                     {
                         "tool_call_id": tool_call.id,
@@ -327,16 +377,22 @@ class AssistantManager:
             )
             submission_time = time.time() - submission_start
             total_time = time.time() - start_time
-            logger.info(f"Tool outputs submitted successfully in {submission_time:.2f}s (total tool handling: {total_time:.2f}s)")
+            logger.info(
+                f"Tool outputs submitted successfully in {submission_time:.2f}s (total tool handling: {total_time:.2f}s)"
+            )
         except Exception as e:
             total_time = time.time() - start_time
             logger.error(f"Error submitting tool outputs after {total_time:.2f}s: {e}")
             # Attempt to cancel the run if submitting tool outputs fails
             try:
                 self.client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
-                logger.info(f"Run {run_id} cancelled after tool output submission failure")
+                logger.info(
+                    f"Run {run_id} cancelled after tool output submission failure"
+                )
             except Exception as cancel_error:
-                logger.error(f"Failed to cancel run after submission error: {cancel_error}")
+                logger.error(
+                    f"Failed to cancel run after submission error: {cancel_error}"
+                )
 
     def get_latest_assistant_response(self, user_id: str) -> str:
         """Get the latest assistant response with error handling."""
@@ -348,19 +404,19 @@ class AssistantManager:
             messages = self.client.beta.threads.messages.list(
                 thread_id=thread_id, order="desc", limit=1
             )
-            
+
             for msg in messages:
                 if msg.role == "assistant":
                     # Handle different content types properly
                     for content_item in msg.content:
                         if content_item.type == "text":
                             return content_item.text.value
-                    
+
                     # If we get here, no text content was found
                     return "Assistant responded but no text content was found."
-            
+
             return "No response from assistant."
-            
+
         except Exception as e:
             logger.error(f"Error retrieving assistant response: {e}")
             return "Error retrieving response."
@@ -371,7 +427,7 @@ def test_chatbot():
     """Function to test chatbot without any tool integration."""
     api_key = settings.OPENAI_API_KEY
     logger.info(f"API key available: {bool(api_key)}")
-    
+
     if not api_key:
         logger.error("Error: OPENAI_API_KEY environment variable not set")
         return
@@ -380,7 +436,7 @@ def test_chatbot():
     if not assistant_id:
         logger.error("Error: OPENAI_ASSISTANT_ID not set")
         return
-        
+
     assistant_manager = AssistantManager(api_key, assistant_id)
     while True:
         try:

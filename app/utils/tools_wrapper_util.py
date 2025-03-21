@@ -11,21 +11,25 @@ logger = logging.getLogger(__name__)
 _assistant_manager = None
 _time_globe_service = None
 
+
 def _get_assistant_manager():
     """Lazy initialization of the AssistantManager to avoid circular imports"""
     global _assistant_manager
     if _assistant_manager is None:
         from ..agent import AssistantManager
+
         _assistant_manager = AssistantManager(
             settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID
         )
     return _assistant_manager
+
 
 def _get_time_globe_service():
     """Lazy initialization of the TimeGlobeService to avoid circular imports"""
     global _time_globe_service
     if _time_globe_service is None:
         from ..services.time_globe_service import TimeGlobeService
+
         _time_globe_service = TimeGlobeService()
     return _time_globe_service
 
@@ -77,42 +81,47 @@ def get_employee(item_no, item_name):
 
 def get_suggestions(employee_id, item_no):
     """Get available appointment slots for a selected employee and service"""
-    logger.info(f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})")
+    logger.info(
+        f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})"
+    )
     start_time = time.time()
     try:
         suggestions = _get_time_globe_service().get_suggestions(employee_id, item_no)
         execution_time = time.time() - start_time
-        logger.info(f"get_suggestions() completed successfully in {execution_time:.2f}s")
+        logger.info(
+            f"get_suggestions() completed successfully in {execution_time:.2f}s"
+        )
         return {"status": "success", "suggestions": suggestions}
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in get_suggestions(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(
+            f"Error in get_suggestions(): {str(e)} - took {execution_time:.2f}s"
+        )
         return {"status": "error", "message": str(e)}
 
 
-def book_appointment(duration, user_date, user_time):
+def book_appointment(duration, user_date_time):
     """Book an appointment with the selected parameters"""
-    logger.info(f"Tool called: book_appointment(duration={duration}, user_date={user_date}, user_time={user_time})")
+    logger.info(
+        f"Tool called: book_appointment(duration={duration}, user_date_time={user_date_time})"
+    )
     start_time = time.time()
     try:
         # Try our own date parsing in case there's any issue with the format
         # Used for debug, not actual conversion since time_globe_service has its own format_datetime
-        if not isinstance(user_date, str) or not isinstance(user_time, str):
-            logger.warning(f"Invalid date/time types: date={type(user_date)}, time={type(user_time)}")
+        if not isinstance(user_date_time, str):
+            logger.warning(f"Invalid date/time types: date={type(user_date_time)}")
             return {"status": "error", "message": "Date and time must be strings"}
-            
-        logger.info(f"Processing appointment with date={user_date}, time={user_time}")
-        
+
+        logger.info(f"Processing appointment with date and time={user_date_time}")
+
         # Call the service function which has a local format_datetime
-        result = _get_time_globe_service().book_appointment(
-            duration,
-            user_date,
-            user_time,
-        )
+        result = _get_time_globe_service().book_appointment(duration, user_date_time)
         execution_time = time.time() - start_time
-        
         if result.get("code") == 90:
-            logger.info(f"book_appointment() - user already has 2 appointments - took {execution_time:.2f}s")
+            logger.info(
+                f"book_appointment() - user already has 2 appointments - took {execution_time:.2f}s"
+            )
             return {
                 "status": "success",
                 "booking_result": "you already have 2 appointments in future \
@@ -120,20 +129,26 @@ def book_appointment(duration, user_date, user_time):
             }
         elif result.get("code") == 0:
             order_id = result.get("orderId")
-            logger.info(f"book_appointment() - appointment booked successfully (orderID: {order_id}) - took {execution_time:.2f}s")
+            logger.info(
+                f"book_appointment() - appointment booked successfully (orderID: {order_id}) - took {execution_time:.2f}s"
+            )
             return {
                 "status": "success",
                 "booking_result": f"appointment booked successfully orderID is {order_id}",
             }
         else:
-            logger.warning(f"book_appointment() - unexpected code: {result.get('code')} - took {execution_time:.2f}s")
+            logger.warning(
+                f"book_appointment() - unexpected code: {result.get('code')} - took {execution_time:.2f}s"
+            )
             return {
                 "status": "error",
                 "message": f"Unexpected response code: {result.get('code')}",
             }
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(
+            f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s"
+        )
         return {"status": "error", "message": str(e)}
 
 
@@ -145,25 +160,31 @@ def cancel_appointment(order_id):
         if not order_id:
             logger.warning("cancel_appointment() called without order_id")
             return {"status": "error", "message": "order_id is required"}
-            
+
         result = _get_time_globe_service().cancel_appointment(order_id)
         execution_time = time.time() - start_time
-        
+
         if result.get("code") == 0:
-            logger.info(f"cancel_appointment() - appointment cancelled successfully - took {execution_time:.2f}s")
+            logger.info(
+                f"cancel_appointment() - appointment cancelled successfully - took {execution_time:.2f}s"
+            )
             return {
                 "status": "success",
                 "message": "your appointment has been cancelled.",
             }
         else:
-            logger.warning(f"cancel_appointment() - invalid appointment ID - took {execution_time:.2f}s")
+            logger.warning(
+                f"cancel_appointment() - invalid appointment ID - took {execution_time:.2f}s"
+            )
             return {
                 "status": "success",
                 "cancellation_result": "The provided id is not valid appointment id",
             }
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in cancel_appointment(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(
+            f"Error in cancel_appointment(): {str(e)} - took {execution_time:.2f}s"
+        )
         return {"status": "error", "message": str(e)}
 
 
@@ -174,18 +195,24 @@ def get_profile(mobile_number: str):
     try:
         profile = _get_time_globe_service().get_profile(mobile_number)
         execution_time = time.time() - start_time
-        
+
         if profile.get("code") == 0:
-            logger.info(f"get_profile() - profile retrieved successfully - took {execution_time:.2f}s")
+            logger.info(
+                f"get_profile() - profile retrieved successfully - took {execution_time:.2f}s"
+            )
             return {"status": "success", "profile": profile}
         elif profile.get("code") == -3:
-            logger.info(f"get_profile() - user does not exist - took {execution_time:.2f}s")
+            logger.info(
+                f"get_profile() - user does not exist - took {execution_time:.2f}s"
+            )
             return {
                 "status": "success",
                 "message": "user with this number does not exist",
             }
         else:
-            logger.warning(f"get_profile() - error getting user info, code: {profile.get('code')} - took {execution_time:.2f}s")
+            logger.warning(
+                f"get_profile() - error getting user info, code: {profile.get('code')} - took {execution_time:.2f}s"
+            )
             return {"status": "success", "message": "there is error getting user info"}
 
     except Exception as e:
@@ -220,7 +247,9 @@ def get_old_orders(customer_code="demo"):
         return {"status": "success", "old_orders": old_orders}
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in get_old_orders(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(
+            f"Error in get_old_orders(): {str(e)} - took {execution_time:.2f}s"
+        )
         return {"status": "error", "message": str(e)}
 
 
@@ -236,51 +265,60 @@ def store_profile(
     if not mobile_number:
         logger.error("store_profile() called without mobile_number")
         return {"status": "error", "message": "Mobile number is required"}
-    
+
     # Normalize mobile number format - remove spaces and any special chars except +
     if mobile_number:
-        mobile_number = ''.join(c for c in mobile_number if c.isdigit() or c == '+')
-        
+        mobile_number = "".join(c for c in mobile_number if c.isdigit() or c == "+")
+
         # Ensure proper international formatting
-        if mobile_number.startswith('00'):  # Common format for international numbers
-            mobile_number = '+' + mobile_number[2:]
-        elif not mobile_number.startswith('+'):
+        if mobile_number.startswith("00"):  # Common format for international numbers
+            mobile_number = "+" + mobile_number[2:]
+        elif not mobile_number.startswith("+"):
             # Add + if doesn't have country code indicator
-            mobile_number = '+' + mobile_number
-    
+            mobile_number = "+" + mobile_number
+
     # Provide default values for optional parameters
     if not email:
         logger.warning("store_profile() called without email, using default")
         email = ""
-    
+
     if not gender:
         logger.warning("store_profile() called without gender, using default")
         gender = "M"  # Default to Male
-    
+
     if not first_name:
         logger.warning("store_profile() called without first_name, using default")
         first_name = "User"
-    
+
     if not last_name:
         logger.warning("store_profile() called without last_name, using default")
         last_name = ""
-    
-    logger.info(f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})")
+
+    logger.info(
+        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})"
+    )
     start_time = time.time()
     try:
         response = _get_time_globe_service().store_profile(
             mobile_number, email, gender, first_name, last_name
         )
         execution_time = time.time() - start_time
-        
+
         if response.get("code") == 0:
-            logger.info(f"store_profile() - profile created successfully - took {execution_time:.2f}s")
+            logger.info(
+                f"store_profile() - profile created successfully - took {execution_time:.2f}s"
+            )
             return {"status": "success", "message": "profile created successfully"}
         else:
             error_code = response.get("code", "unknown")
             error_msg = response.get("message", "Unknown error")
-            logger.warning(f"store_profile() - error creating profile, code: {error_code}, message: {error_msg} - took {execution_time:.2f}s")
-            return {"status": "error", "message": f"Error creating profile: {error_msg}"}
+            logger.warning(
+                f"store_profile() - error creating profile, code: {error_code}, message: {error_msg} - took {execution_time:.2f}s"
+            )
+            return {
+                "status": "error",
+                "message": f"Error creating profile: {error_msg}",
+            }
 
     except Exception as e:
         execution_time = time.time() - start_time
@@ -294,19 +332,23 @@ def format_response(text):
     try:
         final_response = replace_double_with_single_asterisks(text)  # removing single *
         final_response = remove_sources(final_response)  # removing sources if any
-        final_response = remove_brackets(final_response)  # removing brackets before linke
+        final_response = remove_brackets(
+            final_response
+        )  # removing brackets before linke
         final_response = remove_small_brackets(
             final_response
         )  # removing small brackets from link
         # remove all ### from the response
-        final_response=final_response.replace("### ","")
-        
+        final_response = final_response.replace("### ", "")
+
         execution_time = time.time() - start_time
         logger.debug(f"format_response() completed in {execution_time:.4f}s")
         return final_response
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in format_response(): {str(e)} - took {execution_time:.4f}s")
+        logger.error(
+            f"Error in format_response(): {str(e)} - took {execution_time:.4f}s"
+        )
         return text  # Return original text if formatting fails
 
 
@@ -330,26 +372,154 @@ def remove_small_brackets(text):
     return re.sub(r"[()]", "", text)
 
 
-def format_datetime(user_date: str, user_time: str) -> str:
-    """Converts user-selected date (YYYY-MM-DD) and time (HH:MM or HH:MM AM/PM) to ISO 8601 format."""
-    logger.info(f"Tool called: format_datetime(user_date={user_date}, user_time={user_time})")
-    start_time = time.time()
-    try:
-        # Try parsing in 24-hour format first
-        dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
-    except ValueError:
-        try:
-            # If it fails, try parsing in 12-hour format
-            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
-        except ValueError:
-            logger.error(f"Invalid date-time format: {user_date} {user_time}")
-            raise ValueError(f"Invalid date-time format: {user_date} {user_time}")
+def format_datetime(user_date_time: str) -> str:
+    """
+    Converts various user date-time formats to ISO 8601 format.
+    Handles formats like:
+    - YYYY-MM-DD HH:MM
+    - YYYY-MM-DD HH:MM AM/PM
+    - Month DD, YYYY HH:MM AM/PM
+    - Already ISO 8601 formatted strings (returns as-is)
 
-    # Convert to ISO 8601 format
-    result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    Args:
+        user_date_time: A string containing date and time
+
+    Returns:
+        ISO 8601 formatted string (YYYY-MM-DDT00:00:00.000Z)
+
+    Raises:
+        ValueError: If the date-time format cannot be parsed
+    """
+    start_time = time.time()
+    logger.info(f"format_datetime() called with input: {user_date_time}")
+
+    # Check if input is already in ISO 8601 format
+    iso_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$"
+    if re.match(iso_pattern, user_date_time):
+        # Validate it's a real date by parsing and reformatting
+        try:
+            dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+            logger.info(f"Input already in ISO format: {user_date_time}")
+            return user_date_time
+        except ValueError:
+            try:
+                dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%SZ")
+                logger.info(f"Input already in ISO format: {user_date_time}")
+                return user_date_time
+            except ValueError:
+                logger.debug(
+                    "Input matched ISO pattern but failed validation, trying other formats"
+                )
+                pass  # Not a valid ISO format, continue with other formats
+
+    formats = [
+        # YYYY-MM-DD formats
+        "%Y-%m-%d %H:%M",  # 2025-03-21 14:00
+        "%Y-%m-%d %I:%M %p",  # 2025-03-21 02:00 PM
+        # Month name formats
+        "%B %d, %Y %I:%M %p",  # March 21, 2025 10:00 AM
+        "%b %d, %Y %I:%M %p",  # Mar 21, 2025 10:00 AM
+        # Additional formats with various separators
+        "%Y/%m/%d %H:%M",  # 2025/03/21 14:00
+        "%d/%m/%Y %H:%M",  # 21/03/2025 14:00
+        "%m/%d/%Y %I:%M %p",  # 03/21/2025 02:00 PM
+        "%d-%b-%Y %I:%M %p",  # 21-Mar-2025 02:00 PM
+    ]
+
+    # If input contains separate date and time parameters
+    if " " in user_date_time and len(user_date_time.split(" ")) == 2:
+        user_date, user_time = user_date_time.split(" ", 1)
+        logger.debug(f"Split input into date: {user_date} and time: {user_time}")
+        # Try both formats from the original function
+        try:
+            dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError:
+            logger.debug(
+                "Failed to parse with format %Y-%m-%d %H:%M, trying %Y-%m-%d %I:%M %p"
+            )
+            try:
+                dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
+                result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                execution_time = time.time() - start_time
+                logger.info(
+                    f"format_datetime() completed successfully in {execution_time:.4f}s"
+                )
+                return result
+            except ValueError:
+                logger.debug(
+                    "Failed to parse with both initial formats, continuing to other formats"
+                )
+                pass  # Continue to the general case
+
+    # Try all formats
+    for fmt in formats:
+        try:
+            logger.debug(f"Trying format: {fmt}")
+            dt = datetime.strptime(user_date_time, fmt)
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError:
+            continue
+
+    # If still no match, try to be more flexible by normalizing the input
+    normalized_input = user_date_time.replace(",", "")  # Remove commas
+    logger.debug(f"Using normalized input: {normalized_input}")
+
+    # Check for common patterns
+    month_pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* (\d{1,2})[\w,]* (\d{4})"
+    time_pattern = r"(\d{1,2}):(\d{2})(?:\s*([AP]M))?"
+
+    month_match = re.search(month_pattern, user_date_time, re.IGNORECASE)
+    time_match = re.search(time_pattern, user_date_time)
+
+    if month_match and time_match:
+        logger.debug("Found month and time patterns in the input")
+        month = month_match.group(1)
+        day = month_match.group(2)
+        year = month_match.group(3)
+
+        hour = time_match.group(1)
+        minute = time_match.group(2)
+        ampm = time_match.group(3) if time_match.group(3) else ""
+
+        logger.debug(
+            f"Extracted components - Month: {month}, Day: {day}, Year: {year}, Hour: {hour}, Minute: {minute}, AM/PM: {ampm}"
+        )
+
+        try:
+            date_str = f"{month} {day} {year} {hour}:{minute} {ampm}".strip()
+            format_str = "%b %d %Y %I:%M %p" if ampm else "%b %d %Y %H:%M"
+            logger.debug(
+                f"Attempting to parse: '{date_str}' with format: '{format_str}'"
+            )
+
+            dt = datetime.strptime(date_str, format_str)
+            result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            execution_time = time.time() - start_time
+            logger.info(
+                f"format_datetime() completed successfully in {execution_time:.4f}s"
+            )
+            return result
+        except ValueError as e:
+            logger.debug(f"Failed to parse extracted components: {e}")
+            pass
+
+    # If we get here, no format matched
     execution_time = time.time() - start_time
-    logger.info(f"format_datetime() completed successfully in {execution_time:.4f}s")
-    return result
+    logger.error(
+        f"Invalid date-time format: {user_date_time} (processing took {execution_time:.4f}s)"
+    )
+    raise ValueError(f"Invalid date-time format: {user_date_time}")
 
 
 def get_response_from_gpt(msg, user_id):
@@ -358,9 +528,13 @@ def get_response_from_gpt(msg, user_id):
     try:
         response = _get_assistant_manager().run_conversation(user_id, msg)
         execution_time = time.time() - start_time
-        logger.info(f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s")
+        logger.info(
+            f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s"
+        )
         return response
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in get_response_from_gpt(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(
+            f"Error in get_response_from_gpt(): {str(e)} - took {execution_time:.2f}s"
+        )
         return f"Error processing request: {str(e)}"

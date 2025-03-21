@@ -7,3 +7,1035 @@
 2025-03-20 15:08:42,848 - app - WARNING - User not found with email: yellowhunter007@gmail.com
 2025-03-20 15:08:42,876 - app - INFO - OTP sent to yellowhunter007@gmail.com
 2025-03-20 15:08:42,883 - app - INFO - User registered successfully: yellowhunter007@gmail.com
+2025-03-21 12:39:35,279 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:39:37,267 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:39:37,270 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:39:37,807 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:39:38,981 - app.agent - INFO - Run created successfully: run_fOMEGxwA4UeV12Ns2qLBBZI4
+2025-03-21 12:39:40,209 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:39:41,431 - app.agent - INFO - Run status: completed
+2025-03-21 12:39:41,862 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 6.58s
+2025-03-21 12:39:41,865 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Hello! How can I assist you today? If you're looking to book, reschedule, or cancel an appointment, just let me know!
+2025-03-21 12:39:42,907 - app - INFO - WhatsApp message sent successfully: SM45426f1391f0aa2a8e7e48e933bbd5b4
+2025-03-21 12:40:01,873 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:40:01,876 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:40:01,879 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:02,836 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:03,919 - app.agent - INFO - Run created successfully: run_aLSxYtE8F4kx94NXJvkU490V
+2025-03-21 12:40:04,651 - app.agent - INFO - Run status: queued
+2025-03-21 12:40:06,214 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:40:06,217 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:40:06,220 - app.agent - INFO - Function name requested: 'getProfile'
+2025-03-21 12:40:06,223 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:40:06,227 - app.agent - INFO - Tool 1/1: Executing getProfile()
+2025-03-21 12:40:06,232 - app.utils.tools_wrapper_util - INFO - Tool called: get_profile(mobile_number=+923171546206)
+2025-03-21 12:40:07,039 - app - INFO - Profile found for mobile number: +923171546206
+2025-03-21 12:40:07,042 - app - INFO - Creating/updating customer with mobile number: +923171546206
+2025-03-21 12:40:07,045 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:40:07,049 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:40:07,099 - app - INFO - Customer found: 1
+2025-03-21 12:40:07,101 - app - INFO - Updating existing customer: 1
+2025-03-21 12:40:07,115 - app - INFO - Customer updated: 1
+2025-03-21 12:40:07,117 - app.utils.tools_wrapper_util - INFO - get_profile() - profile retrieved successfully - took 0.88s
+2025-03-21 12:40:07,118 - app.agent - INFO - Tool 1/1: getProfile completed with status 'success' in 0.90s
+2025-03-21 12:40:08,268 - app.agent - INFO - Tool outputs submitted successfully in 1.15s (total tool handling: 2.05s)
+2025-03-21 12:40:09,468 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:11,817 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:40:11,820 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:40:11,823 - app.agent - INFO - Function name requested: 'getSites'
+2025-03-21 12:40:11,826 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:40:11,831 - app.agent - INFO - Tool 1/1: Executing getSites()
+2025-03-21 12:40:11,834 - app.utils.tools_wrapper_util - INFO - Tool called: get_sites()
+2025-03-21 12:40:13,066 - app - INFO - Successfully fetched 3 salons
+2025-03-21 12:40:13,069 - app.utils.tools_wrapper_util - INFO - get_sites() completed successfully in 1.23s
+2025-03-21 12:40:13,071 - app.agent - INFO - Tool 1/1: getSites completed with status 'success' in 1.25s
+2025-03-21 12:40:14,155 - app.agent - INFO - Tool outputs submitted successfully in 1.08s (total tool handling: 2.34s)
+2025-03-21 12:40:15,337 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:16,774 - app.agent - INFO - Run status: completed
+2025-03-21 12:40:17,223 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 15.35s
+2025-03-21 12:40:17,226 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Great! Let’s set up your appointment. We have the following salon locations available:
+
+1. Time Globe Hair & Beauty Bonn
+2. Time Globe Chatbot
+3. Time Globe Groomer Tierwelt
+
+Which location do you prefer for your appointment?
+2025-03-21 12:40:18,334 - app - INFO - WhatsApp message sent successfully: SMb073c55c550cd9e8cc92145ff486f0ec
+2025-03-21 12:40:24,409 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:40:24,411 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:40:24,413 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:25,336 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:26,484 - app.agent - INFO - Run created successfully: run_kBw14wxSyQpnKZMNnwsquKKM
+2025-03-21 12:40:27,335 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:28,539 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:40:28,542 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:40:28,546 - app.agent - INFO - Function name requested: 'getProducts'
+2025-03-21 12:40:28,549 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:40:28,554 - app.agent - INFO - Tool 1/1: Executing getProducts(site_code=bonn)
+2025-03-21 12:40:28,557 - app.utils.tools_wrapper_util - INFO - Tool called: get_products(site_code=bonn)
+2025-03-21 12:40:29,426 - app - INFO - Successfully fetched products for site: bonn
+2025-03-21 12:40:29,429 - app.utils.tools_wrapper_util - INFO - get_products() completed successfully in 0.87s
+2025-03-21 12:40:29,432 - app.agent - INFO - Tool 1/1: getProducts completed with status 'success' in 0.89s
+2025-03-21 12:40:30,582 - app.agent - INFO - Tool outputs submitted successfully in 1.14s (total tool handling: 2.04s)
+2025-03-21 12:40:31,841 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:33,296 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:35,118 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:37,495 - app.agent - INFO - Run status: completed
+2025-03-21 12:40:37,919 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 13.51s
+2025-03-21 12:40:37,939 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the services available at Time Globe Hair & Beauty in Bonn:
+
+*Main Services:*
+
+1. Haircut Wash/Cut/Blow-dry - 60 min
+2. Styling - 45 min
+3. Calligraphy Cut - 60 min
+4. Perm - 90 min
+
+*Hair Coloring:*
+
+5. Coloration - 75 min
+6. Bleaching - 90 min
+7. Highlighting Part Head - 75 min
+8. Highlighting Full Head - 120 min
+
+*Men's Services:*
+
+9. Clipper Cut - 30 min
+10. Dry Haircut - 30 min
+11. Haircut Wash/Cut/Blow-dry - 45 min
+12. Wet Shave - 15 min
+13. Beard Styling - 15 min
+14. Grey Shading - 75 min
+
+*Kids:*
+
+15. Kids Haircut 8-12 years - 30 min
+
+Would you like to add any optional services like eyebrow correction or hair treatments? If so, let me know! Otherwise, please select a service from the list above.
+2025-03-21 12:40:38,591 - app - INFO - WhatsApp message sent successfully: SM4a800da7a5cdb6b3985196f7030092d2
+2025-03-21 12:40:48,048 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:40:48,051 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:40:48,053 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:48,992 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:40:50,242 - app.agent - INFO - Run created successfully: run_P9gBD5efU3l0L1a5MuIFzI9q
+2025-03-21 12:40:51,010 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:52,330 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:54,271 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:40:54,274 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:40:54,278 - app.agent - INFO - Function name requested: 'getEmployees'
+2025-03-21 12:40:54,281 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:40:54,286 - app.agent - INFO - Tool 1/1: Executing getEmployees(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:40:54,292 - app.utils.tools_wrapper_util - INFO - Tool called: get_employee(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:40:54,995 - app - INFO - Successfully fetched employees for item: 100
+2025-03-21 12:40:54,997 - app.utils.tools_wrapper_util - INFO - get_employee() completed successfully in 0.70s
+2025-03-21 12:40:54,998 - app.agent - INFO - Tool 1/1: getEmployees completed with status 'success' in 0.72s
+2025-03-21 12:40:56,343 - app.agent - INFO - Tool outputs submitted successfully in 1.34s (total tool handling: 2.07s)
+2025-03-21 12:40:57,607 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:40:59,147 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:01,043 - app.agent - INFO - Run status: completed
+2025-03-21 12:41:01,422 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 13.37s
+2025-03-21 12:41:01,425 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: For the "Wash/Cut/Blow-dry" service, we have the following stylists available at Time Globe Hair & Beauty in Bonn:
+
+1. Ben
+2. Marti
+3. Michaela
+
+Do you have a preference for a particular stylist, or should I go ahead and find the first available slot for you?
+2025-03-21 12:41:03,116 - app - INFO - WhatsApp message sent successfully: SM97536690f150be7f914fcd2e8ec45862
+2025-03-21 12:41:09,299 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:41:09,303 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:41:09,304 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:41:10,407 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:41:11,655 - app.agent - INFO - Run created successfully: run_boN6XcZsZ0PZigFUJ6js3UDI
+2025-03-21 12:41:12,458 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:13,822 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:41:13,824 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:41:13,825 - app.agent - INFO - Function name requested: 'AppointmentSuggestion'
+2025-03-21 12:41:13,827 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:41:13,829 - app.agent - INFO - Tool 1/1: Executing AppointmentSuggestion(employee_id=58, item_no=100)
+2025-03-21 12:41:13,831 - app.utils.tools_wrapper_util - INFO - Tool called: get_suggestions(employee_id=58, item_no=100)
+2025-03-21 12:41:14,775 - app - INFO - Successfully fetched suggestions for employee: 58
+2025-03-21 12:41:14,778 - app.utils.tools_wrapper_util - INFO - get_suggestions() completed successfully in 0.95s
+2025-03-21 12:41:14,780 - app.agent - INFO - Tool 1/1: AppointmentSuggestion completed with status 'success' in 0.95s
+2025-03-21 12:41:16,205 - app.agent - INFO - Tool outputs submitted successfully in 1.42s (total tool handling: 2.38s)
+2025-03-21 12:41:17,449 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:18,981 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:20,839 - app.agent - INFO - Run status: completed
+2025-03-21 12:41:21,236 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 11.93s
+2025-03-21 12:41:21,243 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the available time slots for a "Wash/Cut/Blow-dry" service with Ben at Time Globe Hair & Beauty, Bonn:
+
+1. March 23, 2025, at 09:00 AM
+2. March 23, 2025, at 09:30 AM
+3. March 23, 2025, at 09:45 AM
+
+Please let me know which time slot works best for you!
+2025-03-21 12:41:22,045 - app - INFO - WhatsApp message sent successfully: SM59bac1e393bcbe7130fbbc6edf4f7991
+2025-03-21 12:41:28,626 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:41:28,628 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:41:28,629 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:41:29,366 - app.agent - INFO - Creating new run for thread thread_LxLn4MCDf3ienRNaunQA52pS with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:41:31,371 - app.agent - INFO - Run created successfully: run_tzLqDO1Sz2pgLIzJJ5AiYmGx
+2025-03-21 12:41:32,363 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:33,606 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:35,099 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:41:35,100 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:41:35,101 - app.agent - INFO - Function name requested: 'bookAppointment'
+2025-03-21 12:41:35,102 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:41:35,104 - app.agent - INFO - Tool 1/1: Executing bookAppointment(duration=3600000, user_date_time=March 23, 2025 09:00 AM)
+2025-03-21 12:41:35,105 - app.agent - ERROR - Parameter mismatch in bookAppointment: book_appointment() takes 2 positional arguments but 3 were given
+2025-03-21 12:41:36,268 - app.agent - INFO - Tool outputs submitted successfully in 1.16s (total tool handling: 1.17s)
+2025-03-21 12:41:37,626 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:39,127 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:40,993 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:41:40,995 - app.agent - INFO - Processing 1 tool calls for thread thread_LxLn4MCDf3ienRNaunQA52pS
+2025-03-21 12:41:40,998 - app.agent - INFO - Function name requested: 'bookAppointment'
+2025-03-21 12:41:41,001 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:41:41,004 - app.agent - INFO - Tool 1/1: Executing bookAppointment(duration=3600000, user_date_time=2025-03-23 09:00:00)
+2025-03-21 12:41:41,007 - app.agent - ERROR - Parameter mismatch in bookAppointment: book_appointment() takes 2 positional arguments but 3 were given
+2025-03-21 12:41:42,450 - app.agent - INFO - Tool outputs submitted successfully in 1.44s (total tool handling: 1.45s)
+2025-03-21 12:41:43,725 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:45,219 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:41:47,267 - app.agent - INFO - Run status: completed
+2025-03-21 12:41:47,644 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 19.02s
+2025-03-21 12:41:47,648 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: It seems I'm encountering an issue with booking the appointment. Please try again later or let me know if there's anything else I can help you with now.
+2025-03-21 12:41:48,919 - app - INFO - WhatsApp message sent successfully: SM84dee6166d2635be1e0f20ea7f9d4be7
+2025-03-21 12:44:07,983 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:44:10,247 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:44:10,247 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:10,832 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:12,128 - app.agent - INFO - Run created successfully: run_ysgXH4sJmZaAGgGKnPcF9N39
+2025-03-21 12:44:12,915 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:14,181 - app.agent - INFO - Run status: completed
+2025-03-21 12:44:14,632 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 6.65s
+2025-03-21 12:44:14,647 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Hello! How can I assist you today? Are you looking to book, reschedule, or cancel an appointment?
+2025-03-21 12:44:16,032 - app - INFO - WhatsApp message sent successfully: SM3acbc493603a7bceb5d5162f8d3b1c71
+2025-03-21 12:44:26,353 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:44:26,356 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:44:26,359 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:27,215 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:29,047 - app.agent - INFO - Run created successfully: run_mhR8XU1QDUEVT9H6RyVnlJkQ
+2025-03-21 12:44:29,865 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:31,184 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:44:31,184 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:44:31,184 - app.agent - INFO - Function name requested: 'getProfile'
+2025-03-21 12:44:31,197 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:44:31,201 - app.agent - INFO - Tool 1/1: Executing getProfile()
+2025-03-21 12:44:31,203 - app.utils.tools_wrapper_util - INFO - Tool called: get_profile(mobile_number=+923171546206)
+2025-03-21 12:44:31,815 - app - INFO - Profile found for mobile number: +923171546206
+2025-03-21 12:44:31,832 - app - INFO - Creating/updating customer with mobile number: +923171546206
+2025-03-21 12:44:31,832 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:44:31,832 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:44:31,904 - app - INFO - Customer found: 1
+2025-03-21 12:44:31,905 - app - INFO - Updating existing customer: 1
+2025-03-21 12:44:31,919 - app - INFO - Customer updated: 1
+2025-03-21 12:44:31,920 - app.utils.tools_wrapper_util - INFO - get_profile() - profile retrieved successfully - took 0.72s
+2025-03-21 12:44:31,921 - app.agent - INFO - Tool 1/1: getProfile completed with status 'success' in 0.74s
+2025-03-21 12:44:32,965 - app.agent - INFO - Tool outputs submitted successfully in 1.04s (total tool handling: 1.78s)
+2025-03-21 12:44:34,182 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:35,632 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:44:35,635 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:44:35,638 - app.agent - INFO - Function name requested: 'getSites'
+2025-03-21 12:44:35,640 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:44:35,644 - app.agent - INFO - Tool 1/1: Executing getSites()
+2025-03-21 12:44:35,646 - app.utils.tools_wrapper_util - INFO - Tool called: get_sites()
+2025-03-21 12:44:36,615 - app - INFO - Successfully fetched 3 salons
+2025-03-21 12:44:36,615 - app.utils.tools_wrapper_util - INFO - get_sites() completed successfully in 0.97s
+2025-03-21 12:44:36,615 - app.agent - INFO - Tool 1/1: getSites completed with status 'success' in 0.98s
+2025-03-21 12:44:37,747 - app.agent - INFO - Tool outputs submitted successfully in 1.13s (total tool handling: 2.11s)
+2025-03-21 12:44:38,973 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:40,436 - app.agent - INFO - Run status: completed
+2025-03-21 12:44:40,939 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 14.58s
+2025-03-21 12:44:40,942 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Great! Let's set that up. We have the following salon locations available for booking:
+
+1. Time Globe Hair & Beauty
+2. Time Globe Chatbot
+3. Time Globe Groomer
+
+Which location do you prefer?
+2025-03-21 12:44:41,861 - app - INFO - WhatsApp message sent successfully: SMbc5a2a228dca861df348d1d703739d64
+2025-03-21 12:44:46,457 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:44:46,457 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:44:46,467 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:47,282 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:44:48,733 - app.agent - INFO - Run created successfully: run_HNGLVM4cOc5tT9iNjzD2QyYQ
+2025-03-21 12:44:49,515 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:50,827 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:44:50,830 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:44:50,830 - app.agent - INFO - Function name requested: 'getProducts'
+2025-03-21 12:44:50,830 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:44:50,840 - app.agent - INFO - Tool 1/1: Executing getProducts(site_code=bonn)
+2025-03-21 12:44:50,841 - app.utils.tools_wrapper_util - INFO - Tool called: get_products(site_code=bonn)
+2025-03-21 12:44:51,762 - app - INFO - Successfully fetched products for site: bonn
+2025-03-21 12:44:51,765 - app.utils.tools_wrapper_util - INFO - get_products() completed successfully in 0.92s
+2025-03-21 12:44:51,765 - app.agent - INFO - Tool 1/1: getProducts completed with status 'success' in 0.93s
+2025-03-21 12:44:52,865 - app.agent - INFO - Tool outputs submitted successfully in 1.09s (total tool handling: 2.03s)
+2025-03-21 12:44:54,182 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:55,647 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:57,531 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:44:59,897 - app.agent - INFO - Run status: completed
+2025-03-21 12:45:00,357 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 13.90s
+2025-03-21 12:45:00,365 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the services available at Time Globe Hair & Beauty:
+
+*Main Services:*
+1. Waschen/Schneiden/Föhnen - from 55 EUR
+2. Styling - from 14 EUR
+3. Calligraphy Cut - from 60 EUR
+4. Dauerwelle - from 46 EUR
+5. Maschinenschnitt - from 20 EUR
+6. Haarschnitt Trocken - from 28 EUR
+7. Waschen/Schneiden/Föhnen Men - from 28 EUR
+8. Nassrasur - from 10 EUR
+9. Bartformung - from 10 EUR
+10. Kinderhaarschnitt 8-12 Jahre - from 25 EUR
+
+*Coloring Services:*
+11. Coloration - from 40 EUR
+12. Blondieren - from 46 EUR
+13. Strähnen Oberkopf Highlights - from 100 EUR
+14. Strähnen Ganzer Kopf Full head highlights - from 120 EUR
+
+*Additional Services:*
+15. Smoothing Treatment - from 20 EUR
+16. Haarkur - from 10 EUR
+17. 1-2-3 Kur - from 8 EUR
+18. Augenbrauenkorrektur - from 8 EUR
+19. Augenbrauen färben - from 12 EUR
+20. Wimpern färben - from 12 EUR
+21. Wimpernwelle - from 30 EUR
+
+Which service would you like to book?
+2025-03-21 12:45:01,197 - app - INFO - WhatsApp message sent successfully: SMf1431a54062752f7a807ff952a96723c
+2025-03-21 12:45:05,953 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:45:05,953 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:45:05,953 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:45:07,131 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:45:08,915 - app.agent - INFO - Run created successfully: run_9TYaOrQ3Cr5pQS9ZerAxZP7V
+2025-03-21 12:45:09,715 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:11,115 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:45:11,115 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:45:11,115 - app.agent - INFO - Function name requested: 'getEmployees'
+2025-03-21 12:45:11,131 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:45:11,135 - app.agent - INFO - Tool 1/1: Executing getEmployees(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:45:11,136 - app.utils.tools_wrapper_util - INFO - Tool called: get_employee(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:45:11,747 - app - INFO - Successfully fetched employees for item: 100
+2025-03-21 12:45:11,747 - app.utils.tools_wrapper_util - INFO - get_employee() completed successfully in 0.61s
+2025-03-21 12:45:11,763 - app.agent - INFO - Tool 1/1: getEmployees completed with status 'success' in 0.65s
+2025-03-21 12:45:12,843 - app.agent - INFO - Tool outputs submitted successfully in 1.08s (total tool handling: 1.73s)
+2025-03-21 12:45:14,030 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:15,874 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:45:15,889 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:45:15,889 - app.agent - INFO - Function name requested: 'AppointmentSuggestion'
+2025-03-21 12:45:15,894 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:45:15,902 - app.agent - INFO - Tool 1/1: Executing AppointmentSuggestion(employee_id=58, item_no=100)
+2025-03-21 12:45:15,902 - app.utils.tools_wrapper_util - INFO - Tool called: get_suggestions(employee_id=58, item_no=100)
+2025-03-21 12:45:16,716 - app - INFO - Successfully fetched suggestions for employee: 58
+2025-03-21 12:45:16,717 - app.utils.tools_wrapper_util - INFO - get_suggestions() completed successfully in 0.81s
+2025-03-21 12:45:16,719 - app.agent - INFO - Tool 1/1: AppointmentSuggestion completed with status 'success' in 0.83s
+2025-03-21 12:45:18,182 - app.agent - INFO - Tool outputs submitted successfully in 1.46s (total tool handling: 2.29s)
+2025-03-21 12:45:19,393 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:20,803 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:22,565 - app.agent - INFO - Run status: completed
+2025-03-21 12:45:22,991 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 17.04s
+2025-03-21 12:45:23,007 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: You’ve chosen "Waschen/Schneiden/Föhnen" with Ben. Here are the available time slots for this service:
+
+1. March 23, 2025 at 9:15 AM
+2. March 23, 2025 at 12:45 PM
+3. March 23, 2025 at 1:15 PM
+
+Which time slot would you like to book?
+2025-03-21 12:45:24,222 - app - INFO - WhatsApp message sent successfully: SM731d42c4cb02510c055ea0a3ec354f3e
+2025-03-21 12:45:38,476 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:45:38,476 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:45:38,476 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:45:39,405 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:45:40,700 - app.agent - INFO - Run created successfully: run_gyxD7po4nOiZjp1yDGbbBnlJ
+2025-03-21 12:45:41,931 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:43,277 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:45:43,280 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:45:43,283 - app.agent - INFO - Function name requested: 'bookAppointment'
+2025-03-21 12:45:43,286 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:45:43,291 - app.agent - INFO - Tool 1/1: Executing bookAppointment(duration=3600000, user_date_time=March 23, 2025 9:15 AM)
+2025-03-21 12:45:43,295 - app.utils.tools_wrapper_util - INFO - Tool called: book_appointment(duration=3600000, user_date_time=March 23, 2025 9:15 AM)
+2025-03-21 12:45:43,300 - app.utils.tools_wrapper_util - INFO - Processing appointment with date and time=March 23, 2025 9:15 AM
+2025-03-21 12:45:43,302 - app - INFO - format_datetime() called with input: March 23, 2025 9:15 AM
+2025-03-21 12:45:43,318 - app - INFO - format_datetime() completed successfully in 0.0154s
+2025-03-21 12:45:44,197 - app - ERROR - Failed to book appointment: {'code': 32, 'orderId': None}
+2025-03-21 12:45:44,215 - app.utils.tools_wrapper_util - WARNING - book_appointment() - unexpected code: 32 - took 0.92s
+2025-03-21 12:45:44,215 - app.agent - INFO - Tool 1/1: bookAppointment completed with status 'error' in 0.93s
+2025-03-21 12:45:45,596 - app.agent - INFO - Tool outputs submitted successfully in 1.38s (total tool handling: 2.32s)
+2025-03-21 12:45:47,165 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:45:48,777 - app.agent - INFO - Run status: completed
+2025-03-21 12:45:49,363 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.89s
+2025-03-21 12:45:49,366 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Oops, there was a problem. Please try again later, or we can try again now. Would you like to retry?
+2025-03-21 12:45:50,015 - app - INFO - WhatsApp message sent successfully: SM0f558ee38cd2f23c1859ac15a9497ae5
+2025-03-21 12:46:58,690 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:46:58,690 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:46:58,690 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:46:59,565 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:47:01,031 - app.agent - INFO - Run created successfully: run_buHlHlCb4o9p0UbWqtEAJ1rf
+2025-03-21 12:47:01,815 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:03,082 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:47:03,082 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:47:03,082 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:47:03,095 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:47:03,099 - app.agent - INFO - Tool 1/1: Executing getOrders(customer_code=demo)
+2025-03-21 12:47:03,102 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:47:03,833 - app - INFO - Successfully fetched open orders
+2025-03-21 12:47:03,833 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.72s
+2025-03-21 12:47:03,845 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.76s
+2025-03-21 12:47:04,955 - app.agent - INFO - Tool outputs submitted successfully in 1.11s (total tool handling: 1.87s)
+2025-03-21 12:47:06,296 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:07,781 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:09,715 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:12,131 - app.agent - INFO - Run status: completed
+2025-03-21 12:47:12,681 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 13.99s
+2025-03-21 12:47:12,702 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are your upcoming appointments:
+
+1. *Date:* March 22, 2025
+   - *Time:* 12:00 PM to 1:00 PM
+   - *Service:* Waschen/Schneiden/Föhnen
+   - *Employee:* Ben
+   - *Location:* Time Globe Hair & Beauty, Herwarthstraße 36, Bonn
+  
+2. *Date:* March 23, 2025
+   - *Time:* 1:00 PM to 2:00 PM
+   - *Service:* Waschen/Schneiden/Föhnen
+   - *Employee:* Ben
+   - *Location:* Time Globe Hair & Beauty, Herwarthstraße 36, Bonn
+
+3. *Date:* March 23, 2025
+   - *Time:* 3:00 PM to 3:45 PM
+   - *Service:* Waschen/Schneiden/Föhnen
+   - *Employee:* Ben
+   - *Location:* Time Globe Hair & Beauty, Herwarthstraße 36, Bonn
+
+If you would like to make any changes or need more information, let me know!
+2025-03-21 12:47:14,532 - app - INFO - WhatsApp message sent successfully: SM1b1cee3d26a371d4e2e74b5f5c178414
+2025-03-21 12:47:30,539 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:47:30,539 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:47:30,539 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:47:31,831 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:47:33,665 - app.agent - INFO - Run created successfully: run_LPSjITGxIl2bTwry4ik8upRj
+2025-03-21 12:47:34,482 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:35,781 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:47:35,781 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:47:35,781 - app.agent - INFO - Function name requested: 'cancelAppointment'
+2025-03-21 12:47:35,781 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:47:35,781 - app.agent - INFO - Tool 1/1: Executing cancelAppointment(order_id=51917)
+2025-03-21 12:47:35,788 - app.utils.tools_wrapper_util - INFO - Tool called: cancel_appointment(order_id=51917)
+2025-03-21 12:47:36,882 - app - INFO - Appointment canceled successfully: 51917
+2025-03-21 12:47:36,882 - app - INFO - Deleting booking for order_id: 51917
+2025-03-21 12:47:36,952 - app - INFO - Booking deleted successfully for order_id: 51917
+2025-03-21 12:47:36,952 - app.utils.tools_wrapper_util - INFO - cancel_appointment() - appointment cancelled successfully - took 1.16s
+2025-03-21 12:47:36,952 - app.agent - INFO - Tool 1/1: cancelAppointment completed with status 'success' in 1.17s
+2025-03-21 12:47:38,331 - app.agent - INFO - Tool outputs submitted successfully in 1.38s (total tool handling: 2.55s)
+2025-03-21 12:47:39,665 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:47:41,232 - app.agent - INFO - Run status: completed
+2025-03-21 12:47:41,697 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 11.16s
+2025-03-21 12:47:41,697 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Your appointment on March 22, 2025, at 12:00 PM has been successfully canceled. If you need anything else or wish to book a new appointment, just let me know!
+2025-03-21 12:47:42,465 - app - INFO - WhatsApp message sent successfully: SM47c641c653e91a9112b070cfbba58cf6
+2025-03-21 12:47:56,157 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:47:56,158 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:47:56,159 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:47:56,747 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:47:57,997 - app.agent - INFO - Run created successfully: run_R4ExnK2AEjCwTAKJzVAt85E4
+2025-03-21 12:47:59,015 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:48:00,315 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:48:00,315 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:48:00,315 - app.agent - INFO - Function name requested: 'cancelAppointment'
+2025-03-21 12:48:00,315 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:48:00,315 - app.agent - INFO - Tool 1/1: Executing cancelAppointment(order_id=51915)
+2025-03-21 12:48:00,315 - app.utils.tools_wrapper_util - INFO - Tool called: cancel_appointment(order_id=51915)
+2025-03-21 12:48:01,165 - app - INFO - Appointment canceled successfully: 51915
+2025-03-21 12:48:01,165 - app - INFO - Deleting booking for order_id: 51915
+2025-03-21 12:48:01,182 - app - WARNING - No booking found with order_id: 51915
+2025-03-21 12:48:01,185 - app - ERROR - Database error while deleting booking: Booking not found
+2025-03-21 12:48:01,187 - app.utils.tools_wrapper_util - ERROR - Error in cancel_appointment(): Database error: Booking not found - took 0.86s
+2025-03-21 12:48:01,189 - app.agent - INFO - Tool 1/1: cancelAppointment completed with status 'error' in 0.87s
+2025-03-21 12:48:02,897 - app.agent - INFO - Tool outputs submitted successfully in 1.71s (total tool handling: 2.58s)
+2025-03-21 12:48:04,231 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:48:05,747 - app.agent - INFO - Run status: completed
+2025-03-21 12:48:06,199 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.04s
+2025-03-21 12:48:06,215 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Oops, there was a problem canceling the appointment. Please try again later, or let me know if you'd like to try again now.
+2025-03-21 12:48:07,315 - app - INFO - WhatsApp message sent successfully: SM533d1bd42acb386d36bf516fd97483f0
+2025-03-21 12:49:14,566 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:49:14,567 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:49:14,567 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:49:15,565 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:49:17,182 - app.agent - INFO - Run created successfully: run_6NcqbB0CiPOu8yqAtbRhuikJ
+2025-03-21 12:49:17,931 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:49:19,354 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:49:19,358 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:49:19,362 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:49:19,365 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:49:19,372 - app.agent - INFO - Tool 1/1: Executing getOrders(customer_code=demo)
+2025-03-21 12:49:19,374 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:49:20,132 - app - INFO - Successfully fetched open orders
+2025-03-21 12:49:20,132 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.76s
+2025-03-21 12:49:20,132 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.77s
+2025-03-21 12:49:21,399 - app.agent - INFO - Tool outputs submitted successfully in 1.25s (total tool handling: 2.04s)
+2025-03-21 12:49:22,615 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:49:24,065 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:49:25,915 - app.agent - INFO - Run status: completed
+2025-03-21 12:49:26,332 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 11.77s
+2025-03-21 12:49:26,347 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here is your upcoming appointment:
+
+- *Date:* March 23, 2025
+  - *Time:* 3:00 PM to 3:45 PM
+  - *Service:* Waschen/Schneiden/Föhnen
+  - *Employee:* Ben
+  - *Location:* Time Globe Hair & Beauty, Herwarthstraße 36, Bonn
+
+If you need further assistance, feel free to ask!
+2025-03-21 12:49:28,081 - app - INFO - WhatsApp message sent successfully: SMfaaf2f2ce3f6b226c5581589475ee21e
+2025-03-21 12:50:14,620 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:50:14,620 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:50:14,620 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:50:15,532 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:50:16,956 - app.agent - INFO - Run created successfully: run_jMw8vAakLlYRCMF9o70zI7qq
+2025-03-21 12:50:17,847 - app.agent - INFO - Run status: queued
+2025-03-21 12:50:19,082 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:50:20,565 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:50:20,582 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:50:20,582 - app.agent - INFO - Function name requested: 'get_old_orders'
+2025-03-21 12:50:20,590 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:50:20,595 - app.agent - INFO - Tool 1/1: Executing get_old_orders(customer_code=demo)
+2025-03-21 12:50:20,598 - app.utils.tools_wrapper_util - INFO - Tool called: get_old_orders(customer_code=demo)
+2025-03-21 12:50:21,147 - app - WARNING - Token expired or invalid, attempting to refresh token
+2025-03-21 12:50:21,818 - app - INFO - Successfully logged in to Time Globe API
+2025-03-21 12:50:22,432 - app.utils.tools_wrapper_util - ERROR - Error in get_old_orders(): Expecting value: line 1 column 1 (char 0) - took 1.83s
+2025-03-21 12:50:22,432 - app.agent - INFO - Tool 1/1: get_old_orders completed with status 'error' in 1.85s
+2025-03-21 12:50:23,715 - app.agent - INFO - Tool outputs submitted successfully in 1.28s (total tool handling: 3.13s)
+2025-03-21 12:50:24,997 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:50:26,532 - app.agent - INFO - Run status: completed
+2025-03-21 12:50:26,981 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 12.36s
+2025-03-21 12:50:26,981 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: It seems there was an issue retrieving past appointments. Please try again later, or if there's anything else you'd like to do, let me know!
+2025-03-21 12:50:27,797 - app - INFO - WhatsApp message sent successfully: SMd95e8b535e0c8b27ab4b373164a296a7
+2025-03-21 12:50:46,735 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:50:46,738 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:50:46,740 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:50:47,384 - app.agent - INFO - Creating new run for thread thread_InwS41f2ujRM1p0U8bTp0kaW with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:50:48,832 - app.agent - INFO - Run created successfully: run_VtVaNFF24u54T6xv1RpmKiVN
+2025-03-21 12:50:49,615 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:50:51,400 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:50:51,400 - app.agent - INFO - Processing 1 tool calls for thread thread_InwS41f2ujRM1p0U8bTp0kaW
+2025-03-21 12:50:51,400 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:50:51,400 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:50:51,400 - app.agent - INFO - Tool 1/1: Executing getOrders(customer_code=demo)
+2025-03-21 12:50:51,400 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:50:52,115 - app - INFO - Successfully fetched open orders
+2025-03-21 12:50:52,115 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.71s
+2025-03-21 12:50:52,115 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.71s
+2025-03-21 12:50:53,432 - app.agent - INFO - Tool outputs submitted successfully in 1.30s (total tool handling: 2.03s)
+2025-03-21 12:50:54,732 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:50:56,215 - app.agent - INFO - Run status: completed
+2025-03-21 12:50:56,632 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 9.89s
+2025-03-21 12:50:56,650 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here is your upcoming appointment:
+
+- *Date:* March 23, 2025
+  - *Time:* 3:00 PM to 3:45 PM
+  - *Service:* Waschen/Schneiden/Föhnen
+  - *Employee:* Ben
+  - *Location:* Time Globe Hair & Beauty, Herwarthstraße 36, Bonn
+
+If there's anything else you'd like to know or do, feel free to ask!
+2025-03-21 12:50:57,582 - app - INFO - WhatsApp message sent successfully: SM706ced0153fe6acb6f128e9ad62e8015
+2025-03-21 12:53:13,573 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:53:15,298 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:53:15,298 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:53:15,832 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:53:17,693 - app.agent - INFO - Run created successfully: run_8wF6vEeSJFAs2Hx0h6zJHmrH
+2025-03-21 12:53:18,197 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:53:19,497 - app.agent - INFO - Run status: completed
+2025-03-21 12:53:20,083 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 6.51s
+2025-03-21 12:53:20,094 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Hello! How can I help you today? Are you looking to book, reschedule, or cancel an appointment?
+2025-03-21 12:53:21,546 - app - INFO - WhatsApp message sent successfully: SM7304fc0034c28ce5bab25a97e95d27e6
+2025-03-21 12:53:29,793 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:53:29,793 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:53:29,793 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:53:30,515 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:53:31,741 - app.agent - INFO - Run created successfully: run_evHXgedtry6DkCFTVH3zBOkh
+2025-03-21 12:53:32,547 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:53:33,883 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:53:33,886 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:53:33,889 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:53:33,889 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:53:33,896 - app.agent - INFO - Tool 1/1: Executing getOrders()
+2025-03-21 12:53:33,899 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:53:34,763 - app - INFO - Successfully fetched open orders
+2025-03-21 12:53:34,765 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.86s
+2025-03-21 12:53:34,765 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.88s
+2025-03-21 12:53:36,998 - app.agent - INFO - Tool outputs submitted successfully in 2.23s (total tool handling: 3.11s)
+2025-03-21 12:53:38,384 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:53:39,965 - app.agent - INFO - Run status: completed
+2025-03-21 12:53:40,482 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.69s
+2025-03-21 12:53:40,497 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Oops, there was a problem retrieving your appointments. Please try again later, or we can try again now.
+2025-03-21 12:53:41,497 - app - INFO - WhatsApp message sent successfully: SM18d0b4a14c5d1458a0bfd154424aa646
+2025-03-21 12:54:27,819 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:54:27,821 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:54:27,821 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:54:28,782 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:54:29,996 - app.agent - INFO - Run created successfully: run_O5cTdrfr0ErtTJ7E5q8hmXa6
+2025-03-21 12:54:30,747 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:54:32,097 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:54:33,697 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:54:33,697 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:54:33,697 - app.agent - INFO - Function name requested: 'getProfile'
+2025-03-21 12:54:33,697 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:54:33,714 - app.agent - INFO - Tool 1/1: Executing getProfile()
+2025-03-21 12:54:33,716 - app.utils.tools_wrapper_util - INFO - Tool called: get_profile(mobile_number=+923171546206)
+2025-03-21 12:54:34,417 - app - INFO - Profile found for mobile number: +923171546206
+2025-03-21 12:54:34,432 - app - INFO - Creating/updating customer with mobile number: +923171546206
+2025-03-21 12:54:34,432 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:54:34,439 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:54:34,501 - app - INFO - Customer found: 1
+2025-03-21 12:54:34,502 - app - INFO - Updating existing customer: 1
+2025-03-21 12:54:34,509 - app - INFO - Customer updated: 1
+2025-03-21 12:54:34,513 - app.utils.tools_wrapper_util - INFO - get_profile() - profile retrieved successfully - took 0.79s
+2025-03-21 12:54:34,515 - app.agent - INFO - Tool 1/1: getProfile completed with status 'success' in 0.82s
+2025-03-21 12:54:35,615 - app.agent - INFO - Tool outputs submitted successfully in 1.10s (total tool handling: 1.92s)
+2025-03-21 12:54:36,865 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:54:38,465 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:54:38,465 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:54:38,465 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:54:38,477 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:54:38,482 - app.agent - INFO - Tool 1/1: Executing getOrders(customer_code=Abdullah)
+2025-03-21 12:54:38,485 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:54:39,356 - app - INFO - Successfully fetched open orders
+2025-03-21 12:54:39,358 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.87s
+2025-03-21 12:54:39,359 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.89s
+2025-03-21 12:54:40,563 - app.agent - INFO - Tool outputs submitted successfully in 1.20s (total tool handling: 2.10s)
+2025-03-21 12:54:41,981 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:54:43,532 - app.agent - INFO - Run status: completed
+2025-03-21 12:54:44,215 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 16.39s
+2025-03-21 12:54:44,215 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: You have an upcoming appointment scheduled at Time Globe Hair & Beauty:
+
+- *Service:* Waschen/Schneiden/Föhnen
+- *Employee:* Ben
+- *Date:* March 23, 2025
+- *Time:* 14:00 local time
+- *Location:* Herwarthstraße 36, Bonn
+
+Would you like to cancel this appointment?
+2025-03-21 12:54:45,316 - app - INFO - WhatsApp message sent successfully: SM6d3feb6297107f222c283ecb9b483bee
+2025-03-21 12:54:51,983 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:54:51,986 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:54:51,986 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:54:53,265 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:54:54,565 - app.agent - INFO - Run created successfully: run_mcyQVHjFZ45C6UYGfLto54R1
+2025-03-21 12:54:55,742 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:54:57,065 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:54:57,065 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:54:57,075 - app.agent - INFO - Function name requested: 'cancelAppointment'
+2025-03-21 12:54:57,078 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:54:57,083 - app.agent - INFO - Tool 1/1: Executing cancelAppointment(order_id=51916)
+2025-03-21 12:54:57,086 - app.utils.tools_wrapper_util - INFO - Tool called: cancel_appointment(order_id=51916)
+2025-03-21 12:54:57,932 - app - INFO - Appointment canceled successfully: 51916
+2025-03-21 12:54:57,932 - app - INFO - Deleting booking for order_id: 51916
+2025-03-21 12:54:57,999 - app - INFO - Booking deleted successfully for order_id: 51916
+2025-03-21 12:54:58,001 - app.utils.tools_wrapper_util - INFO - cancel_appointment() - appointment cancelled successfully - took 0.91s
+2025-03-21 12:54:58,002 - app.agent - INFO - Tool 1/1: cancelAppointment completed with status 'success' in 0.93s
+2025-03-21 12:54:59,331 - app.agent - INFO - Tool outputs submitted successfully in 1.33s (total tool handling: 2.27s)
+2025-03-21 12:55:00,613 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:02,097 - app.agent - INFO - Run status: completed
+2025-03-21 12:55:02,515 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.53s
+2025-03-21 12:55:02,531 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Your appointment on March 23, 2025, at 14:00 with Ben has been canceled successfully. If there's anything else I can assist you with, please let me know!
+2025-03-21 12:55:03,197 - app - INFO - WhatsApp message sent successfully: SM0d0929212cdf1e2bbe723a3123c5764c
+2025-03-21 12:55:15,409 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:55:15,409 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:55:15,415 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:16,247 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:17,386 - app.agent - INFO - Run created successfully: run_9tKbsQAdX14NyT1oksfd9b06
+2025-03-21 12:55:18,182 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:19,696 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:55:19,696 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:55:19,712 - app.agent - INFO - Function name requested: 'getSites'
+2025-03-21 12:55:19,716 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:55:19,721 - app.agent - INFO - Tool 1/1: Executing getSites()
+2025-03-21 12:55:19,723 - app.utils.tools_wrapper_util - INFO - Tool called: get_sites()
+2025-03-21 12:55:20,482 - app - INFO - Successfully fetched 3 salons
+2025-03-21 12:55:20,482 - app.utils.tools_wrapper_util - INFO - get_sites() completed successfully in 0.75s
+2025-03-21 12:55:20,497 - app.agent - INFO - Tool 1/1: getSites completed with status 'success' in 0.79s
+2025-03-21 12:55:21,697 - app.agent - INFO - Tool outputs submitted successfully in 1.20s (total tool handling: 2.00s)
+2025-03-21 12:55:23,054 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:24,781 - app.agent - INFO - Run status: completed
+2025-03-21 12:55:25,265 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 9.86s
+2025-03-21 12:55:25,265 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Great! Let’s set that up. We have the following locations available for you:
+
+1. Time Globe Hair & Beauty
+2. Time Globe Chatbot
+3. Time Globe Groomer
+
+Which location do you prefer?
+2025-03-21 12:55:26,132 - app - INFO - WhatsApp message sent successfully: SMaf7b1562504aae6fa1e8940a9cea6e1d
+2025-03-21 12:55:30,939 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:55:30,939 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:55:30,939 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:32,165 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:33,782 - app.agent - INFO - Run created successfully: run_rJLWMULNyMjgr7zydp2izzs9
+2025-03-21 12:55:34,598 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:36,015 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:55:36,031 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:55:36,032 - app.agent - INFO - Function name requested: 'getProducts'
+2025-03-21 12:55:36,033 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:55:36,035 - app.agent - INFO - Tool 1/1: Executing getProducts(site_code=bonn)
+2025-03-21 12:55:36,036 - app.utils.tools_wrapper_util - INFO - Tool called: get_products(site_code=bonn)
+2025-03-21 12:55:37,097 - app - INFO - Successfully fetched products for site: bonn
+2025-03-21 12:55:37,097 - app.utils.tools_wrapper_util - INFO - get_products() completed successfully in 1.06s
+2025-03-21 12:55:37,097 - app.agent - INFO - Tool 1/1: getProducts completed with status 'success' in 1.06s
+2025-03-21 12:55:41,383 - app.agent - INFO - Tool outputs submitted successfully in 4.27s (total tool handling: 5.35s)
+2025-03-21 12:55:42,663 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:44,182 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:46,197 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:55:48,700 - app.agent - INFO - Run status: completed
+2025-03-21 12:55:49,202 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 18.26s
+2025-03-21 12:55:49,202 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the services available at Time Globe Hair & Beauty:
+
+1. Waschen/Schneiden/Föhnen
+2. Styling
+3. Calligraphy Cut
+4. Dauerwelle
+5. Maschinenschnitt for Men
+6. Haarschnitt Trocken for Men
+7. Waschen/Schneiden/Föhnen for Men
+8. Nassrasur Shaving
+9. Bartformung Beard Shaping
+10. Grey Shading
+11. Coloration
+12. Blondieren
+13. Strähnen Oberkopf
+14. Strähnen Ganzer Kopf
+15. Kinderhaarschnitt Children
+16. Smoothing Treatment Hair Care
+17. Haarkur Hair Care
+18. 1-2-3 Kur Hair Care
+19. Augenbrauenkorrektur Eye Care
+20. Augenbrauen färben Eye Care
+21. Wimpern färben Eye Care
+22. Wimpernwelle Eyelash Wave
+
+Which one would you like to book?
+2025-03-21 12:55:50,599 - app - INFO - WhatsApp message sent successfully: SM34b0e4424ba020aee8e695873109e8bc
+2025-03-21 12:55:58,008 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:55:58,008 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:55:58,008 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:58,718 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:55:59,951 - app.agent - INFO - Run created successfully: run_ZbgShDnGcBeSmaOAkJi33jrZ
+2025-03-21 12:56:00,693 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:01,959 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:56:01,963 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:56:01,966 - app.agent - INFO - Function name requested: 'getEmployees'
+2025-03-21 12:56:01,970 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:56:01,975 - app.agent - INFO - Tool 1/1: Executing getEmployees(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:56:01,977 - app.utils.tools_wrapper_util - INFO - Tool called: get_employee(item_no=100, item_name=Waschen/Schneiden/Föhnen)
+2025-03-21 12:56:02,653 - app - INFO - Successfully fetched employees for item: 100
+2025-03-21 12:56:02,655 - app.utils.tools_wrapper_util - INFO - get_employee() completed successfully in 0.68s
+2025-03-21 12:56:02,658 - app.agent - INFO - Tool 1/1: getEmployees completed with status 'success' in 0.69s
+2025-03-21 12:56:04,015 - app.agent - INFO - Tool outputs submitted successfully in 1.35s (total tool handling: 2.05s)
+2025-03-21 12:56:05,249 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:06,905 - app.agent - INFO - Run status: completed
+2025-03-21 12:56:07,434 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 9.43s
+2025-03-21 12:56:07,438 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: You can have your "Waschen/Schneiden/Föhnen" service with the following employees:
+
+1. Ben
+2. Marti
+3. Michaela
+
+Do you have a preference, or should I book with the first available employee?
+2025-03-21 12:56:08,503 - app - INFO - WhatsApp message sent successfully: SMde05c4fd8c36317b34684560a8590b84
+2025-03-21 12:56:26,209 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:56:26,209 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:56:26,216 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:56:27,015 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:56:28,255 - app.agent - INFO - Run created successfully: run_CRmfziSUOIEuOBACTOuEsGcy
+2025-03-21 12:56:29,263 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:30,613 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:56:30,615 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:56:30,615 - app.agent - INFO - Function name requested: 'AppointmentSuggestion'
+2025-03-21 12:56:30,623 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:56:30,627 - app.agent - INFO - Tool 1/1: Executing AppointmentSuggestion(employee_id=58, item_no=100)
+2025-03-21 12:56:30,630 - app.utils.tools_wrapper_util - INFO - Tool called: get_suggestions(employee_id=58, item_no=100)
+2025-03-21 12:56:31,797 - app - INFO - Successfully fetched suggestions for employee: 58
+2025-03-21 12:56:31,813 - app.utils.tools_wrapper_util - INFO - get_suggestions() completed successfully in 1.18s
+2025-03-21 12:56:31,815 - app.agent - INFO - Tool 1/1: AppointmentSuggestion completed with status 'success' in 1.20s
+2025-03-21 12:56:33,215 - app.agent - INFO - Tool outputs submitted successfully in 1.39s (total tool handling: 2.60s)
+2025-03-21 12:56:34,497 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:36,047 - app.agent - INFO - Run status: completed
+2025-03-21 12:56:36,497 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.29s
+2025-03-21 12:56:36,497 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the available time slots for the "Waschen/Schneiden/Föhnen" service with Ben at Time Globe Hair & Beauty:
+
+1. March 23, 2025, at 10:00 AM
+2. March 23, 2025, at 10:30 AM
+3. March 23, 2025, at 11:00 AM
+
+Please let me know which slot works for you!
+2025-03-21 12:56:37,347 - app - INFO - WhatsApp message sent successfully: SM88b91acb088e9929f989f1a56ca09814
+2025-03-21 12:56:44,670 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 12:56:44,670 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 12:56:44,674 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:56:45,515 - app.agent - INFO - Creating new run for thread thread_CDqZg1sUcsyBubiVAZRkluYT with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 12:56:47,281 - app.agent - INFO - Run created successfully: run_IuvxAXjIhhTWzlYBjls0qZ0G
+2025-03-21 12:56:48,231 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:49,498 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:56:49,498 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:56:49,498 - app.agent - INFO - Function name requested: 'bookAppointment'
+2025-03-21 12:56:49,511 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:56:49,516 - app.agent - INFO - Tool 1/1: Executing bookAppointment(duration=3600000, user_date_time=March 23, 2025 10:30 AM)
+2025-03-21 12:56:49,520 - app.utils.tools_wrapper_util - INFO - Tool called: book_appointment(duration=3600000, user_date_time=March 23, 2025 10:30 AM)
+2025-03-21 12:56:49,525 - app.utils.tools_wrapper_util - INFO - Processing appointment with date and time=March 23, 2025 10:30 AM
+2025-03-21 12:56:49,527 - app - INFO - format_datetime() called with input: March 23, 2025 10:30 AM
+2025-03-21 12:56:49,533 - app - INFO - format_datetime() completed successfully in 0.0068s
+2025-03-21 12:56:50,492 - app - INFO - Appointment booked successfully
+2025-03-21 12:56:50,495 - app - INFO - Saving booking appointment for order_id: 51918
+2025-03-21 12:56:50,498 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 12:56:50,518 - app - INFO - Customer found: 1
+2025-03-21 12:56:50,539 - app - INFO - Booking appointment saved with ID: 3
+2025-03-21 12:56:50,539 - app - INFO - Processing booking position: {'ordinalPosition': 1, 'beginTs': '2025-03-23T10:30:00.000Z', 'durationMillis': 3600000, 'employeeId': 58, 'itemNo': '100', 'itemNm': 'Waschen/Schneiden/Föhnen'}
+2025-03-21 12:56:50,565 - app - INFO - Booking details saved for order_id: 51918
+2025-03-21 12:56:50,565 - app.utils.tools_wrapper_util - INFO - book_appointment() - appointment booked successfully (orderID: 51918) - took 1.04s
+2025-03-21 12:56:50,568 - app.agent - INFO - Tool 1/1: bookAppointment completed with status 'success' in 1.07s
+2025-03-21 12:56:51,572 - app.agent - INFO - Tool outputs submitted successfully in 1.00s (total tool handling: 2.07s)
+2025-03-21 12:56:52,815 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:54,402 - app.agent - INFO - Run status: requires_action
+2025-03-21 12:56:54,404 - app.agent - INFO - Processing 1 tool calls for thread thread_CDqZg1sUcsyBubiVAZRkluYT
+2025-03-21 12:56:54,406 - app.agent - INFO - Function name requested: 'getOrders'
+2025-03-21 12:56:54,407 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 12:56:54,410 - app.agent - INFO - Tool 1/1: Executing getOrders()
+2025-03-21 12:56:54,411 - app.utils.tools_wrapper_util - INFO - Tool called: get_orders()
+2025-03-21 12:56:55,065 - app - INFO - Successfully fetched open orders
+2025-03-21 12:56:55,065 - app.utils.tools_wrapper_util - INFO - get_orders() completed successfully in 0.65s
+2025-03-21 12:56:55,065 - app.agent - INFO - Tool 1/1: getOrders completed with status 'success' in 0.66s
+2025-03-21 12:56:56,197 - app.agent - INFO - Tool outputs submitted successfully in 1.13s (total tool handling: 1.79s)
+2025-03-21 12:56:57,537 - app.agent - INFO - Run status: in_progress
+2025-03-21 12:56:59,165 - app.agent - INFO - Run status: completed
+2025-03-21 12:56:59,565 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 14.90s
+2025-03-21 12:57:01,015 - app - INFO - WhatsApp message sent successfully: SM81bde556958fe9daa775801c1ce52a52
+2025-03-21 13:06:03,438 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:06:05,722 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:06:05,726 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:06:06,752 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:06:08,036 - app.agent - INFO - Run created successfully: run_sMLEkLWnbnfJXsaDotZSOEFh
+2025-03-21 13:06:08,754 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:06:10,087 - app.agent - INFO - Run status: completed
+2025-03-21 13:06:10,518 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 7.08s
+2025-03-21 13:06:10,524 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Hello! How can I assist you today? Are you looking to book, reschedule, or cancel an appointment?
+2025-03-21 13:06:12,190 - app - INFO - WhatsApp message sent successfully: SMac5941a6b76972b2fca47a72a09bd052
+2025-03-21 13:06:48,669 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:06:48,671 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:06:48,673 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:06:50,108 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:06:54,374 - app.agent - INFO - Run created successfully: run_5joYcuHCivg4kLgnDgsUf4iV
+2025-03-21 13:06:55,333 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:06:56,553 - app.agent - INFO - Run status: completed
+2025-03-21 13:06:57,051 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 8.38s
+2025-03-21 13:06:57,056 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Great! Could you please clarify if you'd like to book, reschedule, or cancel an appointment?
+2025-03-21 13:06:58,529 - app - INFO - WhatsApp message sent successfully: SM6480d3a5822bac63667f7eab5e1b73cf
+2025-03-21 13:07:14,737 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:07:14,739 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:07:14,740 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:07:16,453 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:07:18,508 - app.agent - INFO - Run created successfully: run_qOmt77dfW9nX7tOgMr45tYEr
+2025-03-21 13:07:19,320 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:20,482 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:07:20,484 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:07:20,485 - app.agent - INFO - Function name requested: 'getProfile'
+2025-03-21 13:07:20,486 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:07:20,488 - app.agent - INFO - Tool 1/1: Executing getProfile()
+2025-03-21 13:07:20,490 - app.utils.tools_wrapper_util - INFO - Tool called: get_profile(mobile_number=+923171546206)
+2025-03-21 13:07:21,123 - app - INFO - Profile found for mobile number: +923171546206
+2025-03-21 13:07:21,125 - app - INFO - Creating/updating customer with mobile number: +923171546206
+2025-03-21 13:07:21,129 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 13:07:21,132 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 13:07:21,191 - app - INFO - Customer found: 1
+2025-03-21 13:07:21,191 - app - INFO - Updating existing customer: 1
+2025-03-21 13:07:21,203 - app - INFO - Customer updated: 1
+2025-03-21 13:07:21,205 - app.utils.tools_wrapper_util - INFO - get_profile() - profile retrieved successfully - took 0.71s
+2025-03-21 13:07:21,206 - app.agent - INFO - Tool 1/1: getProfile completed with status 'success' in 0.72s
+2025-03-21 13:07:22,348 - app.agent - INFO - Tool outputs submitted successfully in 1.14s (total tool handling: 1.86s)
+2025-03-21 13:07:24,021 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:25,604 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:07:25,606 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:07:25,608 - app.agent - INFO - Function name requested: 'getSites'
+2025-03-21 13:07:25,613 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:07:25,617 - app.agent - INFO - Tool 1/1: Executing getSites()
+2025-03-21 13:07:25,620 - app.utils.tools_wrapper_util - INFO - Tool called: get_sites()
+2025-03-21 13:07:26,577 - app - INFO - Successfully fetched 3 salons
+2025-03-21 13:07:26,580 - app.utils.tools_wrapper_util - INFO - get_sites() completed successfully in 0.96s
+2025-03-21 13:07:26,584 - app.agent - INFO - Tool 1/1: getSites completed with status 'success' in 0.98s
+2025-03-21 13:07:27,804 - app.agent - INFO - Tool outputs submitted successfully in 1.22s (total tool handling: 2.20s)
+2025-03-21 13:07:29,181 - app.agent - INFO - Run status: queued
+2025-03-21 13:07:30,702 - app.agent - INFO - Run status: completed
+2025-03-21 13:07:31,182 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 16.44s
+2025-03-21 13:07:31,189 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Let's set up your appointment! We have three locations available:
+
+1. Time Globe Hair & Beauty
+2. Time Globe Chatbot
+3. Time Globe Groomer
+
+Which location would you prefer for your appointment?
+2025-03-21 13:07:33,653 - app - INFO - WhatsApp message sent successfully: SMee9c296f64d3ea40cec05fb91caa8dcc
+2025-03-21 13:07:41,581 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:07:41,582 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:07:41,583 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:07:42,724 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:07:44,271 - app.agent - INFO - Run created successfully: run_fqSIfkxUWJifMtkxcebYDzak
+2025-03-21 13:07:45,028 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:46,353 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:47,913 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:49,881 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:07:49,884 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:07:49,886 - app.agent - INFO - Function name requested: 'getProducts'
+2025-03-21 13:07:49,890 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:07:49,895 - app.agent - INFO - Tool 1/1: Executing getProducts(site_code=bonn)
+2025-03-21 13:07:49,898 - app.utils.tools_wrapper_util - INFO - Tool called: get_products(site_code=bonn)
+2025-03-21 13:07:50,850 - app - INFO - Successfully fetched products for site: bonn
+2025-03-21 13:07:50,852 - app.utils.tools_wrapper_util - INFO - get_products() completed successfully in 0.95s
+2025-03-21 13:07:50,855 - app.agent - INFO - Tool 1/1: getProducts completed with status 'success' in 0.97s
+2025-03-21 13:07:51,999 - app.agent - INFO - Tool outputs submitted successfully in 1.14s (total tool handling: 2.12s)
+2025-03-21 13:07:53,149 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:54,649 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:56,668 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:07:59,162 - app.agent - INFO - Run status: completed
+2025-03-21 13:07:59,625 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 18.04s
+2025-03-21 13:07:59,637 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the available services at Time Globe Hair & Beauty:
+
+*Main Services:*
+1. Washing/Cutting/Blow-drying Ladies - starting from â‚¬55
+2. Styling - starting from â‚¬14
+3. Calligraphy Cut - starting from â‚¬60
+4. Perm - starting from â‚¬46
+
+*Gentlemen Services:*
+1. Machine Cut - starting from â‚¬20
+2. Dry Haircut - starting from â‚¬28
+3. Washing/Cutting/Blow-drying Men - starting from â‚¬28
+4. Wet Shave - starting from â‚¬10
+5. Beard Shaping - starting from â‚¬10
+
+*Coloring Services:*
+1. Coloration - starting from â‚¬40
+2. Bleaching - starting from â‚¬46
+3. Partial Highlight Top - starting from â‚¬100
+4. Full Head Highlight - starting from â‚¬120
+
+*Kids Services:*
+1. Children's Haircut 8-12 years - starting from â‚¬25
+
+*Optional Add-ons:*
+1. Smoothing Treatment - starting from â‚¬20
+2. Hair Cure - starting from â‚¬10
+3. 1-2-3 Cure - starting from â‚¬8
+
+*Eye Care:*
+1. Eyebrow Correction - starting from â‚¬8
+2. Eyebrow Tinting - starting from â‚¬12
+3. Eyelash Tinting - starting from â‚¬12
+4. Eyelash Wave - starting from â‚¬30
+
+Which service would you like to book? Let me know if you'd like to add any optional services as well!
+2025-03-21 13:08:00,845 - app - INFO - WhatsApp message sent successfully: SM9da4999451e66a46bdbbe4ea187990e6
+2025-03-21 13:08:07,412 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:08:07,413 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:08:07,415 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:08,304 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:09,363 - app.agent - INFO - Run created successfully: run_bOvixbIdHTPeyEEi9QCJ1vb5
+2025-03-21 13:08:10,059 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:11,174 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:08:11,176 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:08:11,178 - app.agent - INFO - Function name requested: 'getEmployees'
+2025-03-21 13:08:11,181 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:08:11,184 - app.agent - INFO - Tool 1/1: Executing getEmployees(item_no=104, item_name=Styling)
+2025-03-21 13:08:11,188 - app.utils.tools_wrapper_util - INFO - Tool called: get_employee(item_no=104, item_name=Styling)
+2025-03-21 13:08:13,624 - app - INFO - Successfully fetched employees for item: 104
+2025-03-21 13:08:13,627 - app.utils.tools_wrapper_util - INFO - get_employee() completed successfully in 2.44s
+2025-03-21 13:08:13,630 - app.agent - INFO - Tool 1/1: getEmployees completed with status 'success' in 2.45s
+2025-03-21 13:08:14,538 - app.agent - INFO - Tool outputs submitted successfully in 0.90s (total tool handling: 3.36s)
+2025-03-21 13:08:15,624 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:17,187 - app.agent - INFO - Run status: completed
+2025-03-21 13:08:17,614 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 10.20s
+2025-03-21 13:08:17,621 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: For the "Styling" service, you can choose from the following stylists:
+
+1. Ben
+2. Marti
+
+Would you prefer a specific stylist, or should I book with the first available one?
+2025-03-21 13:08:20,903 - app - INFO - WhatsApp message sent successfully: SM0a61d5382d1ba99443276879502000f3
+2025-03-21 13:08:25,403 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:08:25,404 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:08:25,406 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:26,350 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:28,051 - app.agent - INFO - Run created successfully: run_cxizgbLlRRfB6QvEcNBrClTp
+2025-03-21 13:08:28,591 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:29,871 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:08:29,873 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:08:29,875 - app.agent - INFO - Function name requested: 'AppointmentSuggestion'
+2025-03-21 13:08:29,878 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:08:29,884 - app.agent - INFO - Tool 1/1: Executing AppointmentSuggestion(employee_id=58, item_no=104)
+2025-03-21 13:08:29,886 - app.utils.tools_wrapper_util - INFO - Tool called: get_suggestions(employee_id=58, item_no=104)
+2025-03-21 13:08:30,831 - app - INFO - Successfully fetched suggestions for employee: 58
+2025-03-21 13:08:30,834 - app.utils.tools_wrapper_util - INFO - get_suggestions() completed successfully in 0.94s
+2025-03-21 13:08:30,837 - app.agent - INFO - Tool 1/1: AppointmentSuggestion completed with status 'success' in 0.96s
+2025-03-21 13:08:32,243 - app.agent - INFO - Tool outputs submitted successfully in 1.40s (total tool handling: 2.37s)
+2025-03-21 13:08:33,599 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:35,110 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:36,990 - app.agent - INFO - Run status: completed
+2025-03-21 13:08:37,457 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 12.05s
+2025-03-21 13:08:37,460 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Here are the available time slots for the "Styling" service with Ben:
+
+1. March 23rd at 8:00 AM
+2. March 23rd at 8:30 AM
+3. March 23rd at 9:00 AM
+
+Which one would you prefer?
+2025-03-21 13:08:38,539 - app - INFO - WhatsApp message sent successfully: SM805cce05cd591d46a301a5c2dbbf0e07
+2025-03-21 13:08:46,158 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:08:46,159 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:08:46,160 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:47,443 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:08:48,924 - app.agent - INFO - Run created successfully: run_hReF1jhK5OsrC4Rm8sEbGhzO
+2025-03-21 13:08:49,779 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:51,062 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:52,657 - app.agent - INFO - Run status: requires_action
+2025-03-21 13:08:52,659 - app.agent - INFO - Processing 1 tool calls for thread thread_qIcXf4GQqzTZsetpD67ZVsYB
+2025-03-21 13:08:52,663 - app.agent - INFO - Function name requested: 'bookAppointment'
+2025-03-21 13:08:52,666 - app.agent - INFO - Available functions: ['getSites', 'getProducts', 'getOrders', 'get_old_orders', 'getEmployees', 'AppointmentSuggestion', 'bookAppointment', 'cancelAppointment', 'getProfile', 'updateProfile', 'store_profile']
+2025-03-21 13:08:52,671 - app.agent - INFO - Tool 1/1: Executing bookAppointment(duration=2700000, user_date_time=March 23, 2025 8:00 AM)
+2025-03-21 13:08:52,675 - app.utils.tools_wrapper_util - INFO - Tool called: book_appointment(duration=2700000, user_date_time=March 23, 2025 8:00 AM)
+2025-03-21 13:08:52,681 - app.utils.tools_wrapper_util - INFO - Processing appointment with date and time=March 23, 2025 8:00 AM
+2025-03-21 13:08:52,683 - app - INFO - format_datetime() called with input: March 23, 2025 8:00 AM
+2025-03-21 13:08:52,696 - app - INFO - format_datetime() completed successfully in 0.0126s
+2025-03-21 13:08:53,698 - app - INFO - Appointment booked successfully
+2025-03-21 13:08:53,702 - app - INFO - Saving booking appointment for order_id: 51919
+2025-03-21 13:08:53,705 - app - INFO - Fetching customer with mobile number: +923171546206
+2025-03-21 13:08:53,728 - app - INFO - Customer found: 1
+2025-03-21 13:08:53,759 - app - INFO - Booking appointment saved with ID: 4
+2025-03-21 13:08:53,760 - app - INFO - Processing booking position: {'ordinalPosition': 1, 'beginTs': '2025-03-23T08:00:00.000Z', 'durationMillis': 2700000, 'employeeId': 58, 'itemNo': '104', 'itemNm': 'Styling'}
+2025-03-21 13:08:53,779 - app - INFO - Booking details saved for order_id: 51919
+2025-03-21 13:08:53,781 - app.utils.tools_wrapper_util - INFO - book_appointment() - appointment booked successfully (orderID: 51919) - took 1.10s
+2025-03-21 13:08:53,783 - app.agent - INFO - Tool 1/1: bookAppointment completed with status 'success' in 1.12s
+2025-03-21 13:08:54,949 - app.agent - INFO - Tool outputs submitted successfully in 1.16s (total tool handling: 2.29s)
+2025-03-21 13:08:56,222 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:08:57,766 - app.agent - INFO - Run status: completed
+2025-03-21 13:08:58,202 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 12.04s
+2025-03-21 13:08:58,212 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: Your appointment is booked! ðŸŽ‰
+
+Here are the details:
+- *Service:* Styling
+- *Employee:* Ben
+- *Date:* March 23
+- *Time:* 8:00 AM
+- *Booking Number:* 51919
+
+If there's anything else you need, feel free to ask!
+2025-03-21 13:08:59,657 - app - INFO - WhatsApp message sent successfully: SM5ad78dba92b762291b10f5fa18d98e5d
+2025-03-21 13:09:10,052 - app.utils.tools_wrapper_util - INFO - Tool called: get_response_from_gpt(user_id=whatsapp:+923171546206)
+2025-03-21 13:09:10,055 - app.agent - INFO - OpenAI API key length: 164
+2025-03-21 13:09:10,057 - app.agent - INFO - Assistant ID: asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:09:11,415 - app.agent - INFO - Creating new run for thread thread_qIcXf4GQqzTZsetpD67ZVsYB with assistant asst_c54Py3FArBcfcbSSgI7SJ7ro
+2025-03-21 13:09:13,145 - app.agent - INFO - Run created successfully: run_aTmi6d5KzjNqUjmKwCjsI0Ec
+2025-03-21 13:09:14,046 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:09:15,034 - app.agent - INFO - Run status: in_progress
+2025-03-21 13:09:16,584 - app.agent - INFO - Run status: completed
+2025-03-21 13:09:17,151 - app.utils.tools_wrapper_util - INFO - get_response_from_gpt() for user whatsapp:+923171546206 completed in 7.10s
+2025-03-21 13:09:17,153 - app - INFO - Sending WhatsApp message to whatsapp:+923171546206: You're welcome! If you have any more questions or need further assistance, just let me know. Have a great day! ðŸ˜Š
+2025-03-21 13:09:17,730 - app - INFO - WhatsApp message sent successfully: SMdfe00e9a110050db7e9ffdc5c8e8a973
