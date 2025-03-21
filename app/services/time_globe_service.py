@@ -221,7 +221,7 @@ class TimeGlobeService:
                         "order_id": response.get("orderId"),
                     }
                 )
-                self.time_globe_repo.save_book_appointement(payload)
+                self.time_globe_repo.save_book_appointment(payload)
             else:
                 main_logger.error(f"Failed to book appointment: {response}")
             return response
