@@ -2,7 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 
-def setup_logger(name, log_file="app.log", level=logging.INFO):
+def setup_logger(name, log_file="app.log", level=logging.DEBUG):
     """Configure and return a logger instance"""
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
