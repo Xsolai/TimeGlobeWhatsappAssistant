@@ -231,11 +231,22 @@ def store_profile(
     first_name: str,
     last_name: str,
 ):
-    """store user profile"""
+    """Store user profile"""
     # Handle missing parameters
     if not mobile_number:
         logger.error("store_profile() called without mobile_number")
         return {"status": "error", "message": "Mobile number is required"}
+    
+    # Normalize mobile number format - remove spaces and any special chars except +
+    if mobile_number:
+        mobile_number = ''.join(c for c in mobile_number if c.isdigit() or c == '+')
+        
+        # Ensure proper international formatting
+        if mobile_number.startswith('00'):  # Common format for international numbers
+            mobile_number = '+' + mobile_number[2:]
+        elif not mobile_number.startswith('+'):
+            # Add + if doesn't have country code indicator
+            mobile_number = '+' + mobile_number
     
     # Provide default values for optional parameters
     if not email:
@@ -266,8 +277,10 @@ def store_profile(
             logger.info(f"store_profile() - profile created successfully - took {execution_time:.2f}s")
             return {"status": "success", "message": "profile created successfully"}
         else:
-            logger.warning(f"store_profile() - error creating profile, code: {response.get('code')} - took {execution_time:.2f}s")
-            return {"status": "success", "message": "There is error creating profile"}
+            error_code = response.get("code", "unknown")
+            error_msg = response.get("message", "Unknown error")
+            logger.warning(f"store_profile() - error creating profile, code: {error_code}, message: {error_msg} - took {execution_time:.2f}s")
+            return {"status": "error", "message": f"Error creating profile: {error_msg}"}
 
     except Exception as e:
         execution_time = time.time() - start_time
