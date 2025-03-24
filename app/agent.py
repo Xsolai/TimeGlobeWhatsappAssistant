@@ -39,6 +39,7 @@ class AssistantManager:
 
     def get_or_create_thread(self, user_id: str) -> str:
         """Get existing thread for user or create new one."""
+        logger.info(f"All User threads: {self.user_threads}")
         if user_id not in self.user_threads:
             thread = self.client.beta.threads.create()
             self.user_threads[user_id] = thread.id
@@ -46,6 +47,7 @@ class AssistantManager:
 
     def cleanup_active_run(self, thread_id: str) -> None:
         """Clean up any existing active run for a thread."""
+        logger.debug(f"Active Runs Before Cleanup : {self.active_runs}")
         if thread_id in self.active_runs:
             try:
                 run_id = self.active_runs[thread_id]
@@ -56,15 +58,19 @@ class AssistantManager:
                     self.client.beta.threads.runs.cancel(
                         thread_id=thread_id, run_id=run_id
                     )
+
             except Exception as e:
                 logger.error(f"Error cleaning up run: {e}")
             finally:
                 del self.active_runs[thread_id]
+                logger.debug(f"All Active Runs After Cleanup: {self.active_runs}")
 
     def add_message_to_thread(self, user_id: str, question: str) -> None:
         """Add a message to the user's thread with active run check."""
         thread_id = self.get_or_create_thread(user_id)
-
+        logger.debug(
+            f"thread {thread_id} for user {user_id}  and question: {question} "
+        )
         # No need to clean up run here as it's already done in run_conversation
         current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         question = f"{question}\n\n(Current Date and Time: {current_datetime})"
@@ -97,7 +103,7 @@ class AssistantManager:
         thread_id = self.get_or_create_thread(user_id)
         max_retries = 3
         retry_delay = 0.5
-
+        logger.debug(f"All Threads {self.active_runs}")
         # Debug log OpenAI config
         logger.info(
             f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}"
