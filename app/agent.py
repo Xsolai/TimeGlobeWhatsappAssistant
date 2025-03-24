@@ -246,7 +246,7 @@ class AssistantManager:
                 "getProfile": lambda args: get_profile(
                     args.get(
                         "mobile_number",
-                        user_id[9:] if user_id.startswith("whatsapp:") else "",
+                        f"+{user_id}",
                     )
                 ),
                 # Support both function names for store_profile
@@ -412,7 +412,7 @@ class AssistantManager:
 
         try:
             submission_start = time.time()
-            self.client.beta.threads.runs.submit_tool_outputs(
+            self.client.beta.threads.runs.submit_tool_outputs_and_poll(
                 thread_id=thread_id, run_id=run_id, tool_outputs=tool_outputs
             )
             submission_time = time.time() - submission_start
@@ -501,7 +501,7 @@ def test_chatbot():
                 continue
 
             print("Processing your request...")
-            response = assistant_manager.run_conversation("+923171546206", question)
+            response = assistant_manager.run_conversation("923171546206", question)
             print(f"\nAssistant: {response}")
 
         except KeyboardInterrupt:

@@ -88,9 +88,18 @@ class TwilioService:
         payload = {
             "sender_id": f"whatsapp:{sender_request.phone_number}",
             "waba_id": sender_request.waba_id,
-            "profile": {"name": sender_request.business_name},
+            "profile": {
+                "name": sender_request.business_name,
+                "about": sender_request.about,
+                "address": sender_request.address,
+                "emails": [sender_request.email],
+                "vertical": sender_request.business_type,
+                "logo_url": sender_request.logo_url,
+                "description": sender_request.description,
+                "websites": sender_request.website,
+            },
             "webhook": {
-                "callback_url": "https://your-callback-url.com/api/twilio/incoming-whatsapp",
+                "callback_url": "http://18.184.65.167:3000/api/twilio/incoming-whatsapp",
                 "callback_method": "POST",
             },
         }
