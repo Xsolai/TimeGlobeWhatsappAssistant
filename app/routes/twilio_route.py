@@ -38,7 +38,7 @@ async def whatsapp_wbhook(
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
         # Get response from the assistant function
-        response = get_response_from_gpt(incoming_msg, sender_number)
+        response = get_response_from_gpt(incoming_msg, number)
         response = format_response(response)
 
         logging.info(f"Response generated for {sender_number}: {response}")
