@@ -4,3 +4,6 @@ project_venv/
 env/
 venv
 app.log
+/app.log
+*.log
+./app.log
