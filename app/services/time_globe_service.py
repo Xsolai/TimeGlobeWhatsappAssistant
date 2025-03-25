@@ -10,7 +10,6 @@ import re
 
 # Add a local format_datetime function to avoid circular imports
 def format_datetime(user_date_time: str) -> str:
-    return user_date_time
     """
     Converts various user date-time formats to ISO 8601 format.
     Handles formats like:
@@ -345,9 +344,10 @@ class TimeGlobeService:
         """Book an appointment."""
         main_logger.debug("Booking appointment")
         try:
-            main_logger.debug(f"Formatting date/time: {user_date_time}")
-            formatted_datetime = format_datetime(user_date_time)
-            main_logger.debug(f"Formatted datetime: {formatted_datetime}")
+            # main_logger.debug(f"Formatting date/time: {user_date_time}")
+            # formatted_datetime = format_datetime(user_date_time)
+            formatted_datetime = user_date_time
+            main_logger.debug(f"datetime: {formatted_datetime}")
 
             payload = {
                 "siteCd": site_code,
