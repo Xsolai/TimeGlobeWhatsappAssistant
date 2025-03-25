@@ -10,6 +10,7 @@ import re
 
 # Add a local format_datetime function to avoid circular imports
 def format_datetime(user_date_time: str) -> str:
+    return user_date_time
     """
     Converts various user date-time formats to ISO 8601 format.
     Handles formats like:
@@ -167,11 +168,11 @@ class TimeGlobeService:
         self.time_globe_repo = TimeGlobeRepository(next(get_db()))
         self.token = None
         self.expire_time = 3600  # 1 hour
-        self.site_code = "bonn"  # None
-        self.item_no = None
-        self.employee_id = None
-        self.item_name = None
-        self.mobile_number = None
+        # self.site_code = "bonn"  # None
+        # self.item_no = None
+        # self.employee_id = None
+        # self.item_name = None
+        # self.mobile_number = None
 
     def login(self) -> None:
         """Authenticate and retrieve a new JWT token."""
@@ -200,13 +201,20 @@ class TimeGlobeService:
             self.login()
         return self.token
 
-    def request(self, method: str, endpoint: str, data=None, is_header=False):
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        mobile_number: str = None,
+        data=None,
+        is_header=False,
+    ):
         """Generic method to make authenticated requests."""
         main_logger.debug(f"Making {method} request to {endpoint}")
         headers = {
             "Content-Type": "application/json",
             "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
-            "x-book-login-nm": self.mobile_number,
+            "x-book-login-nm": mobile_number,
         }
         url = f"{self.base_url}{endpoint}"
         main_logger.debug(f"Request payload: {data}")
@@ -248,37 +256,37 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched {len(sites)} salons")
         return sites
 
-    def get_products(self, site_code: str = "bonn"):
-        """Retrieve a list of available services for a studio."""
+    def get_products(self, site_code: str):
+        """Retrieve a list of available services for a selected salon."""
         main_logger.debug(f"Fetching products for site: {site_code}")
-        self.site_code = site_code
+        # self.site_code = site_code
         payload = {"customerCd": "demo", "siteCd": site_code}
         response = self.request("POST", "/browse/getProducts", data=payload)
         main_logger.info(f"Successfully fetched products for site: {site_code}")
         return response
 
-    def get_employee(self, item_no: str, item_name):
+    def get_employee(self, item_no: str, site_code):
         """Retrieve a list of available employees for a studio."""
         main_logger.debug(f"Fetching employees for item: {item_no}")
         payload = {
             "customerCd": "demo",
-            "siteCd": self.site_code,
+            "siteCd": site_code,
             "week": 0,
             "items": [item_no],
         }
-        self.item_no = item_no
-        self.item_name = item_name
+        # self.item_no = item_no
+        # self.item_name = item_name
         response = self.request("POST", "/browse/getEmployees", data=payload)
         main_logger.info(f"Successfully fetched employees for item: {item_no}")
         return response
 
-    def get_suggestions(self, employee_id: int, item_no: int):
+    def get_suggestions(self, employee_id: int, item_no: int, site_code: str):
         """Retrieve available appointment slots for selected services."""
         main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
-        self.employee_id = employee_id
+        # self.employee_id = employee_id
         payload = {
             "customerCd": "demo",
-            "siteCd": self.site_code,
+            "siteCd": site_code,
             "week": 0,
             "positions": [{"itemNo": item_no, "employeeId": employee_id}],
         }
@@ -291,9 +299,12 @@ class TimeGlobeService:
     def get_profile(self, mobile_number: str):
         """Retrieve the profile data for a given phone number."""
         main_logger.debug(f"Fetching profile for mobile number: {mobile_number}")
-        self.mobile_number = mobile_number
+        # self.mobile_number = mobile_number
         response = self.request(
-            method="POST", endpoint="/bot/getProfile", is_header=True
+            method="POST",
+            endpoint="/bot/getProfile",
+            mobile_number=mobile_number,
+            is_header=True,
         )
 
         if response and response.get("code") != -3:
@@ -304,10 +315,12 @@ class TimeGlobeService:
 
         return response
 
-    def get_orders(self):
+    def get_orders(self, mobile_number):
         """Retrieve a list of open appointments."""
         main_logger.debug("Fetching open orders")
-        response = self.request("POST", "/bot/getOrders", is_header=True)
+        response = self.request(
+            "POST", "/bot/getOrders", is_header=True, mobile_number=mobile_number
+        )
         main_logger.info("Successfully fetched open orders")
         return response
 
@@ -321,8 +334,13 @@ class TimeGlobeService:
 
     def book_appointment(
         self,
+        mobile_number: str,
         duration: int,
         user_date_time: str,
+        employee_id: int,
+        item_no: int,
+        item_name: int,
+        site_code: str,
     ):
         """Book an appointment."""
         main_logger.debug("Booking appointment")
@@ -332,7 +350,7 @@ class TimeGlobeService:
             main_logger.debug(f"Formatted datetime: {formatted_datetime}")
 
             payload = {
-                "siteCd": self.site_code,
+                "siteCd": site_code,
                 "reminderSms": True,
                 "reminderEmail": True,
                 "positions": [
@@ -340,18 +358,24 @@ class TimeGlobeService:
                         "ordinalPosition": 1,
                         "beginTs": formatted_datetime,  # "2025-02-25T12:00:00.000Z"
                         "durationMillis": duration,
-                        "employeeId": self.employee_id,
-                        "itemNo": self.item_no,
-                        "itemNm": self.item_name,
+                        "employeeId": employee_id,
+                        "itemNo": item_no,
+                        "itemNm": item_name,
                     }
                 ],
             }
-            response = self.request("POST", "/bot/book", data=payload, is_header=True)
+            response = self.request(
+                "POST",
+                "/bot/book",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
+            )
             if response.get("code") == 0:
                 main_logger.info("Appointment booked successfully")
                 payload.update(
                     {
-                        "mobile_number": self.mobile_number,
+                        "mobile_number": mobile_number,
                         "order_id": response.get("orderId"),
                     }
                 )
@@ -363,14 +387,20 @@ class TimeGlobeService:
             main_logger.error(f"Error in book_appointment: {str(e)}")
             raise
 
-    def cancel_appointment(self, order_id: int):
+    def cancel_appointment(self, order_id: int, mobile_number: str, site_code):
         """Cancel an existing appointment."""
         main_logger.debug(f"Canceling appointment with order ID: {order_id}")
         payload = {
-            "siteCd": self.site_code,
+            "siteCd": site_code,
             "orderId": order_id,
         }
-        response = self.request("POST", "/bot/cancel", data=payload, is_header=True)
+        response = self.request(
+            "POST",
+            "/bot/cancel",
+            data=payload,
+            is_header=True,
+            mobile_number=mobile_number,
+        )
         if response.get("code") == 0:
             main_logger.info(f"Appointment canceled successfully: {order_id}")
             self.time_globe_repo.delete_booking(order_id)
@@ -396,7 +426,7 @@ class TimeGlobeService:
             # Add + if missing (commonly expected format for international numbers)
             mobile_number = "+" + mobile_number
 
-        self.mobile_number = mobile_number
+        # self.mobile_number = mobile_number
         full_name = first_name + " " + last_name
 
         # Create the payload with proper field names
@@ -413,7 +443,11 @@ class TimeGlobeService:
 
         try:
             response = self.request(
-                "POST", "/bot/storeProfileData", data=payload, is_header=True
+                "POST",
+                "/bot/storeProfileData",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
             )
 
             # Check for specific response patterns

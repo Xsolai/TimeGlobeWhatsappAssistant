@@ -244,34 +244,47 @@ class AssistantManager:
                 # Simple functions with one or no parameters
                 "getSites": lambda args: get_sites(),
                 "getProducts": lambda args: (
-                    get_products(**args) if args else get_products()
+                    get_products(**args)
+                    if args
+                    else get_products(args.get("site_code"))
                 ),
-                "getOrders": lambda args: get_orders(),
+                "getOrders": lambda args: get_orders(f"+{user_id}"),
                 "get_old_orders": lambda args: (
                     get_old_orders(**args) if args else get_old_orders()
                 ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
-                    args.get("item_no"), args.get("item_name")
+                    args.get("item_no"), args.get("site_code")
                 ),
                 "AppointmentSuggestion": lambda args: get_suggestions(
-                    args.get("employee_id"), args.get("item_no")
+                    employee_id=args.get("employee_id"),
+                    item_no=args.get("item_no"),
+                    site_code=args.get("site_code"),
                 ),
                 "bookAppointment": lambda args: book_appointment(
-                    args.get("duration"), args.get("user_date_time")
+                    duration=args.get("duration"),
+                    user_date_time=args.get("user_date_time"),
+                    mobile_number=f"+{user_id}",
+                    employee_id=args.get("employee_id"),
+                    item_no=args.get("item_no"),
+                    item_name=args.get("item_name"),
+                    site_code=args.get("site_code"),
                 ),
                 "cancelAppointment": lambda args: cancel_appointment(
-                    args.get("order_id")
+                    order_id=args.get("order_id"),
+                    mobile_number=f"+{user_id}",
+                    site_code=args.get("site_code"),
                 ),
-                "getProfile": lambda args: get_profile(
-                    args.get(
-                        "mobile_number",
-                        f"+{user_id}",
-                    )
-                ),
+                # "getProfile": lambda args: get_profile(
+                #     args.get(
+                #         "mobile_number",
+                #         f"+{user_id}",
+                #     )
+                # ),
+                "getProfile": lambda args: get_profile(f"+{user_id}"),
                 # Support both function names for store_profile
                 "updateProfile": lambda args: store_profile(
-                    args.get("mobile_number", ""),
+                    f"+{user_id}",
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("first_name", ""),
@@ -279,7 +292,7 @@ class AssistantManager:
                 ),
                 # Add direct mapping for store_profile (same function, different name)
                 "store_profile": lambda args: store_profile(
-                    args.get("mobile_number", ""),
+                    f"+{user_id}",
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("first_name", ""),
