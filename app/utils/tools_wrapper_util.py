@@ -170,10 +170,10 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(order_id, mobile_number, site_code,args):
+def cancel_appointment(order_id, mobile_number, site_code):
     """Cancel an existing appointment"""
     logger.info(f"Tool called: cancel_appointment(order_id={order_id},sitecode={site_code})")
-    logger.info(f"Tool called: cancel_appointment(args={args}")
+    
     start_time = time.time()
     try:
         if not order_id:

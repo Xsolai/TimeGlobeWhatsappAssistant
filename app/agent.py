@@ -273,8 +273,7 @@ class AssistantManager:
                 "cancelAppointment": lambda args: cancel_appointment(
                     order_id=args.get("order_id"),
                     mobile_number=f"+{user_id}",
-                    site_code=args.get("site_code"),
-                    args=args
+                    site_code=args.get("site_code") if args.get("site_code") else args.get("sitecode",None),
                 ),
                 # "getProfile": lambda args: get_profile(
                 #     args.get(
