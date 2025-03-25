@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
+
+from app.agent import AssistantManager
 from ..services.twilio_service import TwilioService
 from ..schemas.twilio_sender import (
     SenderRequest,
@@ -6,24 +8,29 @@ from ..schemas.twilio_sender import (
     SenderId,
     UpdateSenderRequest,
 )
+from ..core.config import settings
 from ..schemas.auth import User
 from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
 from twilio.twiml.messaging_response import MessagingResponse
+from ..db.session import get_db
 from ..core.dependencies import (
     get_twilio_service,
     validate_twilio_request,
     get_current_user,
 )
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
 
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
-    request: Request, tiwilio_service: TwilioService = Depends(get_twilio_service)
+    request: Request,
+    tiwilio_service: TwilioService = Depends(get_twilio_service),
+    db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via Twilio.
@@ -38,7 +45,10 @@ async def whatsapp_wbhook(
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
         # Get response from the assistant function
-        response = get_response_from_gpt(incoming_msg, number)
+        _assistant_manager = AssistantManager(
+            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
+        )
+        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
         response = format_response(response)
 
         logging.info(f"Response generated for {sender_number}: {response}")

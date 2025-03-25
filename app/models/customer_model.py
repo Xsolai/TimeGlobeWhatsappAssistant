@@ -9,6 +9,6 @@ class CustomerModel(Base):
     first_name = Column(String)
     last_name = Column(String)
     mobile_number = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=True)
+    email = Column(String, nullable=True)
     gender = Column(String, nullable=True)
     appointments = relationship("BookModel", back_populates="customer")

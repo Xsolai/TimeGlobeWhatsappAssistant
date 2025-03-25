@@ -6,7 +6,6 @@ from .models.base import Base
 from .db.session import engine
 
 
-
 app = FastAPI(
     title="TimeGlobe WhatsApp Assistant",
     description="This Project aims to automate appointment booking through whatsapp",

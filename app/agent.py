@@ -8,6 +8,11 @@ import json
 import logging
 from dotenv import load_dotenv
 from .core.config import settings
+from .repositories.twilio_repository import TwilioRepository
+from .db.session import get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .schemas.thread import ThreadCreate
 
 load_dotenv()
 
@@ -17,38 +22,65 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# # Global state - moved outside the class
+# user_threads: Dict[str, str] = {}  # Store thread IDs for each user
+# active_runs: Dict[str, str] = {}  # Track active runs for each thread
+
+# Add global locks for thread-safe operations
+threads_lock = threading.RLock()  # For user_threads dict
+runs_lock = threading.RLock()  # For active_runs dict
+
 
 class AssistantManager:
-    def __init__(self, api_key: str, assistant_id: str):
+    def __init__(self, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
         """Initialize the AssistantManager with API key and assistant ID."""
         self.client = OpenAI(api_key=api_key)
         self.assistant_id = assistant_id
-        self.user_threads: Dict[str, str] = {}  # Store thread IDs for each user
-        self.active_runs: Dict[str, str] = {}  # Track active runs for each thread
-
-        # Add locks for thread-safe operations
-        self.threads_lock = threading.RLock()  # For user_threads dict
-        self.runs_lock = threading.RLock()  # For active_runs dict
-
+        self.twilio_repo = TwilioRepository(db)
         # Cache function mappings to avoid recreating on each tool call
         self._function_mapping = None
 
     def get_or_create_thread(self, user_id: str) -> str:
         """Get existing thread for user or create new one."""
-        with self.threads_lock:
-            logger.info(f"All User threads: {self.user_threads}")
-            if user_id not in self.user_threads:
-                thread = self.client.beta.threads.create()
-                self.user_threads[user_id] = thread.id
-            return self.user_threads[user_id]
+        with threads_lock:
+            logger.info(f"Checking existing thread for user: {user_id}")
+            existing_thread = self.twilio_repo.get_thread_by_number(user_id)
+            if existing_thread:
+                logger.info(f"Found existing thread: {existing_thread.thread_id}")
+                return existing_thread.thread_id
+
+            logger.info(f"Creating new thread for user: {user_id}")
+            thread = self.client.beta.threads.create()
+            self.twilio_repo.create_thread(
+                ThreadCreate(mobile_number=user_id, thread_id=thread.id)
+            )
+            return thread.id
+
+    def get_active_run(self, thread_id: str) -> str:
+        """Retrieve active run ID for a thread."""
+        with runs_lock:
+            run_id = self.twilio_repo.get_active_run(thread_id)
+            logger.info(f"Active run for thread {thread_id}: {run_id}")
+            return run_id
+
+    def store_active_run(self, thread_id: str, run_id: str) -> None:
+        """Store the active run for a thread."""
+        with runs_lock:
+            logger.info(f"Storing active run {run_id} for thread {thread_id}")
+            self.twilio_repo.store_active_run(thread_id, run_id)
+
+    def delete_active_run(self, thread_id: str) -> None:
+        """Delete active run when completed or failed."""
+        with runs_lock:
+            logger.info(f"Deleting active run for thread {thread_id}")
+            self.twilio_repo.delete_active_run(thread_id)
 
     def cleanup_active_run(self, thread_id: str) -> None:
         """Clean up any existing active run for a thread."""
-        with self.runs_lock:
-            logger.debug(f"Active Runs Before Cleanup : {self.active_runs}")
-            if thread_id in self.active_runs:
+        with runs_lock:
+            run_id = self.get_active_run(thread_id)
+            if run_id:
                 try:
-                    run_id = self.active_runs[thread_id]
                     run = self.client.beta.threads.runs.retrieve(
                         thread_id=thread_id, run_id=run_id
                     )
@@ -59,8 +91,7 @@ class AssistantManager:
                 except Exception as e:
                     logger.error(f"Error cleaning up run: {e}")
                 finally:
-                    del self.active_runs[thread_id]
-                    logger.debug(f"All Active Runs After Cleanup: {self.active_runs}")
+                    self.delete_active_run(thread_id)
 
     def add_message_to_thread(self, user_id: str, question: str) -> None:
         """Add a message to the user's thread with active run check."""
@@ -103,7 +134,6 @@ class AssistantManager:
         thread_lock = threading.Lock()
 
         with thread_lock:
-            logger.debug(f"All Threads {self.active_runs}")
             # Debug log OpenAI config
             logger.info(
                 f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}"
@@ -130,10 +160,7 @@ class AssistantManager:
                             thread_id=thread_id, assistant_id=self.assistant_id
                         )
                         logger.info(f"Run created successfully: {run.id}")
-
-                        # Thread-safe update of active_runs
-                        with self.runs_lock:
-                            self.active_runs[thread_id] = run.id
+                        self.store_active_run(thread_id, run.id)
                     except Exception as run_error:
                         logger.error(f"Error creating run: {run_error}")
                         return f"Unable to process your request: {str(run_error)}"
@@ -152,10 +179,7 @@ class AssistantManager:
                         logger.info(f"Run status: {run.status}")
 
                         if run.status == "completed":
-                            # Thread-safe removal from active_runs
-                            with self.runs_lock:
-                                if thread_id in self.active_runs:
-                                    del self.active_runs[thread_id]
+                            self.delete_active_run(thread_id)
                             return self.get_latest_assistant_response(user_id)
                         elif run.status == "requires_action":
                             # Pass the run.id directly to avoid potential race condition
@@ -172,11 +196,7 @@ class AssistantManager:
                         elif run.status in ["failed", "expired", "cancelled"]:
                             logger.warning(f"Run ended with status: {run.status}")
                             self.cleanup_active_run(thread_id)
-                            error_msg = getattr(
-                                run, "last_error", {"message": f"Run {run.status}"}
-                            )
-                            return f"Sorry, I couldn't process your request: {error_msg.get('message', 'Unknown error')}"
-
+                            return f"Error: {run.status}"
                         time.sleep(backoff_interval)
                         backoff_interval = min(
                             max_backoff, backoff_interval * 1.5
@@ -285,15 +305,6 @@ class AssistantManager:
         logger.info(f"Processing {total_tool_calls} tool calls for thread {thread_id}")
 
         # Check if run is still active before processing tools
-        with self.runs_lock:
-            if (
-                thread_id not in self.active_runs
-                or self.active_runs[thread_id] != run_id
-            ):
-                logger.warning(
-                    f"Run {run_id} is no longer active for thread {thread_id}"
-                )
-                return
 
         # Process all tool calls
         for idx, tool_call in enumerate(tool_calls):
@@ -399,17 +410,6 @@ class AssistantManager:
                     }
                 )
 
-        # Check again if run is still active before submission
-        with self.runs_lock:
-            if (
-                thread_id not in self.active_runs
-                or self.active_runs[thread_id] != run_id
-            ):
-                logger.warning(
-                    f"Run {run_id} is no longer active for thread {thread_id}, skipping tool output submission"
-                )
-                return
-
         try:
             submission_start = time.time()
             self.client.beta.threads.runs.submit_tool_outputs_and_poll(
@@ -429,13 +429,6 @@ class AssistantManager:
                 logger.info(
                     f"Run {run_id} cancelled after tool output submission failure"
                 )
-                # Clean up active_runs dictionary
-                with self.runs_lock:
-                    if (
-                        thread_id in self.active_runs
-                        and self.active_runs[thread_id] == run_id
-                    ):
-                        del self.active_runs[thread_id]
             except Exception as cancel_error:
                 logger.error(
                     f"Failed to cancel run after submission error: {cancel_error}"
@@ -443,11 +436,7 @@ class AssistantManager:
 
     def get_latest_assistant_response(self, user_id: str) -> str:
         """Get the latest assistant response with thread safety and error handling."""
-        with self.threads_lock:
-            thread_id = self.user_threads.get(user_id)
-            if not thread_id:
-                return "No conversation thread found."
-
+        thread_id = self.get_or_create_thread(user_id)
         try:
             messages = self.client.beta.threads.messages.list(
                 thread_id=thread_id, order="desc", limit=1
@@ -473,6 +462,7 @@ class AssistantManager:
 # Test function for basic chatbot interaction
 def test_chatbot():
     """Function to test chatbot without any tool integration."""
+    global user_threads
     api_key = settings.OPENAI_API_KEY
     logger.info(f"API key available: {bool(api_key)}")
 
@@ -493,15 +483,15 @@ def test_chatbot():
                 print("Goodbye!")
                 break
             elif question.lower() == "new":
-                with assistant_manager.threads_lock:
-                    assistant_manager.user_threads.clear()
+                with threads_lock:
+                    user_threads.clear()
                 print("Started new conversation")
                 continue
             elif not question:
                 continue
 
             print("Processing your request...")
-            response = assistant_manager.run_conversation("923171546206", question)
+            response = assistant_manager.run_conversation("923188335998", question)
             print(f"\nAssistant: {response}")
 
         except KeyboardInterrupt:

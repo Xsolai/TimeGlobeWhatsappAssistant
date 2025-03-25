@@ -18,9 +18,6 @@ def _get_assistant_manager():
     if _assistant_manager is None:
         from ..agent import AssistantManager
 
-        _assistant_manager = AssistantManager(
-            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID
-        )
     return _assistant_manager
 
 
@@ -522,11 +519,11 @@ def format_datetime(user_date_time: str) -> str:
     raise ValueError(f"Invalid date-time format: {user_date_time}")
 
 
-def get_response_from_gpt(msg, user_id):
+def get_response_from_gpt(msg, user_id, _assistant_manager):
     logger.info(f"Tool called: get_response_from_gpt(user_id={user_id})")
     start_time = time.time()
     try:
-        response = _get_assistant_manager().run_conversation(user_id, msg)
+        response = _assistant_manager.run_conversation(user_id, msg)
         execution_time = time.time() - start_time
         logger.info(
             f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s"
