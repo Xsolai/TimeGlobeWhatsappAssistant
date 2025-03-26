@@ -254,7 +254,7 @@ class AssistantManager:
                 ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
-                    args.get("item_no"), args.get("siteCd")
+                    args.get("items"), args.get("siteCd"),args.get("week")
                 ),
                 "AppointmentSuggestion": lambda args: get_suggestions(
                     employee_id=args.get("employee_id"),

@@ -264,19 +264,19 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched products for site: {siteCd}")
         return response
 
-    def get_employee(self, item_no: str, siteCd):
+    def get_employee(self, items: str, siteCd: str,week: int):
         """Retrieve a list of available employees for a studio."""
-        main_logger.debug(f"Fetching employees for item: {item_no}")
+        main_logger.debug(f"Fetching employees for item: {items}")
         payload = {
             "customerCd": "demo",
             "siteCd": siteCd,
-            "week": 0,
-            "items": [item_no],
+            "week": week,
+            "items": items,
         }
         # self.item_no = item_no
         # self.item_name = item_name
         response = self.request("POST", "/browse/getEmployees", data=payload)
-        main_logger.info(f"Successfully fetched employees for item: {item_no}")
+        main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
     def get_suggestions(self, employee_id: int, item_no: int, siteCd: str):

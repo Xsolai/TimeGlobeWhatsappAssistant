@@ -61,15 +61,15 @@ def get_products(siteCd: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_employee(item_no, siteCd: str):
+def get_employee(items, siteCd,week):
     """Get a list of available employees for a specific service.
      Parameters:
-    item_no (int): The item number of the selected service for which employees are to be retrieved.
+    items (int): The item number of the selected service for which employees are to be retrieved.
     siteCd (str): The siteCd of the salon"""
-    logger.info(f"Tool called: get_employee(item_no={item_no}, siteCd={siteCd})")
+    logger.info(f"Tool called: get_employee(items={items}, siteCd={siteCd},week={week})")
     start_time = time.time()
     try:
-        employees = _get_time_globe_service().get_employee(item_no, siteCd)
+        employees = _get_time_globe_service().get_employee(items, siteCd,week)
         execution_time = time.time() - start_time
         logger.info(f"get_employee() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "employees": employees}
