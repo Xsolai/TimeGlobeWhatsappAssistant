@@ -360,6 +360,7 @@ class TimeGlobeService:
                     }
                 ],
             }
+            
             response = self.request(
                 "POST",
                 "/bot/book",
