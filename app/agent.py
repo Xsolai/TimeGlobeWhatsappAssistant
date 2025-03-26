@@ -230,7 +230,7 @@ class AssistantManager:
                 get_sites,
                 get_products,
                 get_employee,
-                get_suggestions,
+                AppointmentSuggestion,
                 book_appointment,
                 cancel_appointment,
                 get_profile,
@@ -256,9 +256,10 @@ class AssistantManager:
                 "getEmployees": lambda args: get_employee(
                     args.get("items"), args.get("siteCd"),args.get("week")
                 ),
-                "AppointmentSuggestion": lambda args: get_suggestions(
-                    employee_id=args.get("employee_id"),
-                    item_no=args.get("item_no"),
+                "AppointmentSuggestion": lambda args: AppointmentSuggestion(
+                    week=args.get("week"),
+                    employeeid=args.get("employeeId"),
+                    itemno=args.get("itemNo"),
                     siteCd=args.get("siteCd"),
                 ),
                 "bookAppointment": lambda args: book_appointment(

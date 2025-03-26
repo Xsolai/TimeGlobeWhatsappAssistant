@@ -79,25 +79,25 @@ def get_employee(items, siteCd,week):
         return {"status": "error", "message": str(e)}
 
 
-def get_suggestions(employee_id, item_no, siteCd: str):
+def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
     """Get available appointment slots for a selected employee,service and salon"""
     logger.info(
-        f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})"
+        f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd})"
     )
     start_time = time.time()
     try:
-        suggestions = _get_time_globe_service().get_suggestions(
-            employee_id, item_no, siteCd
+        suggestions = _get_time_globe_service().AppointmentSuggestion(
+            week,employeeid, itemno, siteCd
         )
         execution_time = time.time() - start_time
         logger.info(
-            f"get_suggestions() completed successfully in {execution_time:.2f}s"
+            f"AppointmentSuggestion() completed successfully in {execution_time:.2f}s"
         )
         return {"status": "success", "suggestions": suggestions}
     except Exception as e:
         execution_time = time.time() - start_time
         logger.error(
-            f"Error in get_suggestions(): {str(e)} - took {execution_time:.2f}s"
+            f"Error in AppointmentSuggestion(): {str(e)} - took {execution_time:.2f}s"
         )
         return {"status": "error", "message": str(e)}
 

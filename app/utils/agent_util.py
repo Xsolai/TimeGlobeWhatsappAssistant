@@ -54,7 +54,7 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_suggestions",
+            "name": "AppointmentSuggestion",
             "description": "Get available appointment slots for a selected employee and service",
             "parameters": {
                 "type": "object",
