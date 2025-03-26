@@ -278,6 +278,7 @@ def store_profile(
     mobile_number: str,
     email: str,
     gender: str,
+    full_name: str,
     first_name: str,
     last_name: str,
 ):
@@ -321,7 +322,7 @@ def store_profile(
     start_time = time.time()
     try:
         response = _get_time_globe_service().store_profile(
-            mobile_number, email, gender, first_name, last_name
+            mobile_number, email, gender, full_name, first_name, last_name
         )
         execution_time = time.time() - start_time
 

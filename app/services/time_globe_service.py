@@ -413,6 +413,7 @@ class TimeGlobeService:
         mobile_number: str,
         email: str,
         gender: str,
+        full_name: str,
         first_name: str,
         last_name: str,
     ):
@@ -427,7 +428,7 @@ class TimeGlobeService:
             mobile_number = "+" + mobile_number
 
         # self.mobile_number = mobile_number
-        full_name = first_name + " " + last_name
+        # full_name = first_name + " " + last_name
 
         # Create the payload with proper field names
         payload = {
