@@ -267,7 +267,7 @@ class AssistantManager:
                     durationMillis=args.get("durationMillis"),
                     mobile_number=f"+{user_id}",
                     employee_id=args.get("employee_id"),
-                    item_no=args.get("item_no")
+                    item_no=args.get("item_no"),
                     siteCd=args.get("siteCd"),
                 ),
                 "cancelAppointment": lambda args: cancel_appointment(
