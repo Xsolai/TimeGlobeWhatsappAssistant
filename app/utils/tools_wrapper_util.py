@@ -103,37 +103,35 @@ def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
 
 
 def book_appointment(
-    duration,
-    user_date_time,
-    mobile_number: str,
-    employee_id: int,
-    item_no: int,
-    item_name: int,
-    siteCd: str,
+    beginTs,
+    durationMillis,
+    mobile_number,
+    employee_id,
+    item_no,
+    siteCd
 ):
     """Book an appointment with the selected parameters"""
     logger.info(
-        f"Tool called: book_appointment(duration={duration}, user_date_time={user_date_time})"
+        f"Tool called: book_appointment(duration={durationMillis}, user_date_time={beginTs})"
     )
     start_time = time.time()
     try:
         # Try our own date parsing in case there's any issue with the format
         # Used for debug, not actual conversion since time_globe_service has its own format_datetime
-        if not isinstance(user_date_time, str):
-            logger.warning(f"Invalid date/time types: date={type(user_date_time)}")
+        if not isinstance(beginTs, str):
+            logger.warning(f"Invalid date/time types: date={type(beginTs)}")
             return {"status": "error", "message": "Date and time must be strings"}
 
-        logger.info(f"Processing appointment with date and time={user_date_time}")
+        logger.info(f"Processing appointment with date and time={beginTs}")
 
         # Call the service function which has a local format_datetime
         result = _get_time_globe_service().book_appointment(
-            duration=duration,
-            user_date_time=user_date_time,
-            mobile_number=mobile_number,
-            item_name=item_name,
-            item_no=item_no,
-            siteCd=siteCd,
-            employee_id=employee_id,
+                    beginTs,
+                    durationMillis,
+                    mobile_number,
+                    employee_id,
+                    item_no,
+                    siteCd
         )
         execution_time = time.time() - start_time
         if result.get("code") == 90:

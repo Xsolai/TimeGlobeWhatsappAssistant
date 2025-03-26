@@ -333,12 +333,11 @@ class TimeGlobeService:
 
     def book_appointment(
         self,
+        beginTs: str,
+        durationMillis: int,
         mobile_number: str,
-        duration: int,
-        user_date_time: str,
         employee_id: int,
         item_no: int,
-        item_name: int,
         siteCd: str,
     ):
         """Book an appointment."""
@@ -346,8 +345,7 @@ class TimeGlobeService:
         try:
             # main_logger.debug(f"Formatting date/time: {user_date_time}")
             # formatted_datetime = format_datetime(user_date_time)
-            formatted_datetime = user_date_time
-            main_logger.debug(f"datetime: {formatted_datetime}")
+            main_logger.debug(f"datetime: {beginTs}")
 
             payload = {
                 "siteCd": siteCd,
@@ -355,12 +353,10 @@ class TimeGlobeService:
                 "reminderEmail": True,
                 "positions": [
                     {
-                        "ordinalPosition": 1,
-                        "beginTs": formatted_datetime,  # "2025-02-25T12:00:00.000Z"
-                        "durationMillis": duration,
+                        "beginTs": beginTs,  # "2025-02-25T12:00:00.000Z"
+                        "durationMillis": durationMillis,
                         "employeeId": employee_id,
                         "itemNo": item_no,
-                        "itemNm": item_name,
                     }
                 ],
             }
