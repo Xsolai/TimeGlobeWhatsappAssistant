@@ -46,12 +46,12 @@ def get_sites():
         return {"status": "error", "message": str(e)}
 
 
-def get_products(site_code: str):
+def get_products(siteCd: str):
     """Get a list of available services for a specific salon"""
-    logger.info(f"Tool called: get_products(site_code={site_code})")
+    logger.info(f"Tool called: get_products(site_code={siteCd})")
     start_time = time.time()
     try:
-        products = _get_time_globe_service().get_products(site_code)
+        products = _get_time_globe_service().get_products(siteCd)
         execution_time = time.time() - start_time
         logger.info(f"get_products() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "products": products}

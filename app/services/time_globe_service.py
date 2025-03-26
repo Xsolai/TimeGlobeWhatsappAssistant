@@ -255,13 +255,13 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched {len(sites)} salons")
         return sites
 
-    def get_products(self, site_code: str):
+    def get_products(self, siteCd: str):
         """Retrieve a list of available services for a selected salon."""
-        main_logger.debug(f"Fetching products for site: {site_code}")
+        main_logger.debug(f"Fetching products for site: {siteCd}")
         # self.site_code = site_code
-        payload = {"customerCd": "demo", "siteCd": site_code}
+        payload = {"customerCd": "demo", "siteCd": siteCd}
         response = self.request("POST", "/browse/getProducts", data=payload)
-        main_logger.info(f"Successfully fetched products for site: {site_code}")
+        main_logger.info(f"Successfully fetched products for site: {siteCd}")
         return response
 
     def get_employee(self, item_no: str, site_code):

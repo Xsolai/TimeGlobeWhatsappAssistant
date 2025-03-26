@@ -246,7 +246,7 @@ class AssistantManager:
                 "getProducts": lambda args: (
                     get_products(**args)
                     if args
-                    else get_products(args.get("site_code"))
+                    else get_products(args.get("siteCd"))
                 ),
                 "getOrders": lambda args: get_orders(f"+{user_id}"),
                 "get_old_orders": lambda args: (
