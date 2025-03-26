@@ -384,25 +384,25 @@ class TimeGlobeService:
             main_logger.error(f"Error in book_appointment: {str(e)}")
             raise
 
-    def cancel_appointment(self, order_id: int, mobile_number: str, siteCd):
+    def cancel_appointment(self, orderId: int, mobileNumber: str, siteCd):
         """Cancel an existing appointment."""
-        main_logger.debug(f"Canceling appointment with order ID: {order_id}")
+        main_logger.debug(f"Canceling appointment with order ID: {orderId}")
         payload = {
             "siteCd": siteCd,
-            "orderId": order_id,
+            "orderId": orderId,
         }
         response = self.request(
             "POST",
             "/bot/cancel",
             data=payload,
             is_header=True,
-            mobile_number=mobile_number,
+            mobile_number=mobileNumber,
         )
         if response.get("code") == 0:
-            main_logger.info(f"Appointment canceled successfully: {order_id}")
-            self.time_globe_repo.delete_booking(order_id)
+            main_logger.info(f"Appointment canceled successfully: {orderId}")
+            self.time_globe_repo.delete_booking(orderId)
         else:
-            main_logger.error(f"Failed to cancel appointment: {order_id}")
+            main_logger.error(f"Failed to cancel appointment: {orderId}")
         return response
 
     def store_profile(

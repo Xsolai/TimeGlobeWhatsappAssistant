@@ -168,18 +168,18 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(order_id, mobile_number, siteCd):
+def cancel_appointment(orderId, mobileNumber, siteCd):
     """Cancel an existing appointment"""
-    logger.info(f"Tool called: cancel_appointment(order_id={order_id},sitecode={siteCd})")
+    logger.info(f"Tool called: cancel_appointment(orderId={orderId},sitecode={siteCd})")
     
     start_time = time.time()
-    try:
-        if not order_id:
-            logger.warning("cancel_appointment() called without order_id")
-            return {"status": "error", "message": "order_id is required"}
+    try:    
+        if not orderId:
+            logger.warning("cancel_appointment() called without orderId")
+            return {"status": "error", "message": "orderId is required"}
 
         result = _get_time_globe_service().cancel_appointment(
-            order_id=order_id, mobile_number=mobile_number, siteCd=siteCd
+            orderId=orderId, mobileNumber=mobileNumber, siteCd=siteCd
         )
         execution_time = time.time() - start_time
 
