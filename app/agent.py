@@ -265,9 +265,9 @@ class AssistantManager:
                 "bookAppointment": lambda args: book_appointment(
                     beginTs=args.get("beginTs"),
                     durationMillis=args.get("durationMillis"),
-                    mobile_number=f"+{user_id}",
-                    employee_id=args.get("employee_id"),
-                    item_no=args.get("item_no"),
+                    mobileNumber=f"+{user_id}",
+                    employeeId=args.get("employeeId"),
+                    itemNo=args.get("itemNo"),
                     siteCd=args.get("siteCd"),
                 ),
                 "cancelAppointment": lambda args: cancel_appointment(

@@ -105,9 +105,9 @@ def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
 def book_appointment(
     beginTs,
     durationMillis,
-    mobile_number,
-    employee_id,
-    item_no,
+    mobileNumber,
+    employeeId,
+    itemNo,
     siteCd
 ):
     """Book an appointment with the selected parameters"""
@@ -128,9 +128,9 @@ def book_appointment(
         result = _get_time_globe_service().book_appointment(
                     beginTs,
                     durationMillis,
-                    mobile_number,
-                    employee_id,
-                    item_no,
+                    mobileNumber,
+                    employeeId,
+                    itemNo,
                     siteCd
         )
         execution_time = time.time() - start_time

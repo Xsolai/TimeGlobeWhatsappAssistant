@@ -335,9 +335,9 @@ class TimeGlobeService:
         self,
         beginTs: str,
         durationMillis: int,
-        mobile_number: str,
-        employee_id: int,
-        item_no: int,
+        mobileNumber: str,
+        employeeId: int,
+        itemNo: int,
         siteCd: str,
     ):
         """Book an appointment."""
@@ -355,8 +355,8 @@ class TimeGlobeService:
                     {
                         "beginTs": beginTs,  # "2025-02-25T12:00:00.000Z"
                         "durationMillis": durationMillis,
-                        "employeeId": employee_id,
-                        "itemNo": item_no,
+                        "employeeId": employeeId,
+                        "itemNo": itemNo,
                     }
                 ],
             }
@@ -365,14 +365,14 @@ class TimeGlobeService:
                 "/bot/book",
                 data=payload,
                 is_header=True,
-                mobile_number=mobile_number,
+                mobile_number=mobileNumber,
             )
             if response.get("code") == 0:
                 main_logger.info("Appointment booked successfully")
                 payload.update(
                     {
-                        "mobile_number": mobile_number,
-                        "order_id": response.get("orderId"),
+                        "mobileNumber": mobileNumber,
+                        "orderId": response.get("orderId"),
                     }
                 )
                 self.time_globe_repo.save_book_appointment(payload)
