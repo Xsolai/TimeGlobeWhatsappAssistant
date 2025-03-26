@@ -48,7 +48,7 @@ def get_sites():
 
 def get_products(siteCd: str):
     """Get a list of available services for a specific salon"""
-    logger.info(f"Tool called: get_products(site_code={siteCd})")
+    logger.info(f"Tool called: get_products(siteCd={siteCd})")
     start_time = time.time()
     try:
         products = _get_time_globe_service().get_products(siteCd)
@@ -61,15 +61,15 @@ def get_products(siteCd: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_employee(item_no, site_code: str):
+def get_employee(item_no, siteCd: str):
     """Get a list of available employees for a specific service.
      Parameters:
     item_no (int): The item number of the selected service for which employees are to be retrieved.
-    site_code (str): The siteCd of the salon"""
-    logger.info(f"Tool called: get_employee(item_no={item_no}, site_code={site_code})")
+    siteCd (str): The siteCd of the salon"""
+    logger.info(f"Tool called: get_employee(item_no={item_no}, siteCd={siteCd})")
     start_time = time.time()
     try:
-        employees = _get_time_globe_service().get_employee(item_no, site_code)
+        employees = _get_time_globe_service().get_employee(item_no, siteCd)
         execution_time = time.time() - start_time
         logger.info(f"get_employee() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "employees": employees}
@@ -79,7 +79,7 @@ def get_employee(item_no, site_code: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_suggestions(employee_id, item_no, site_code: str):
+def get_suggestions(employee_id, item_no, siteCd: str):
     """Get available appointment slots for a selected employee,service and salon"""
     logger.info(
         f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})"
@@ -87,7 +87,7 @@ def get_suggestions(employee_id, item_no, site_code: str):
     start_time = time.time()
     try:
         suggestions = _get_time_globe_service().get_suggestions(
-            employee_id, item_no, site_code
+            employee_id, item_no, siteCd
         )
         execution_time = time.time() - start_time
         logger.info(
@@ -109,7 +109,7 @@ def book_appointment(
     employee_id: int,
     item_no: int,
     item_name: int,
-    site_code: str,
+    siteCd: str,
 ):
     """Book an appointment with the selected parameters"""
     logger.info(
@@ -132,7 +132,7 @@ def book_appointment(
             mobile_number=mobile_number,
             item_name=item_name,
             item_no=item_no,
-            site_code=site_code,
+            siteCd=siteCd,
             employee_id=employee_id,
         )
         execution_time = time.time() - start_time
@@ -170,9 +170,9 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(order_id, mobile_number, site_code):
+def cancel_appointment(order_id, mobile_number, siteCd):
     """Cancel an existing appointment"""
-    logger.info(f"Tool called: cancel_appointment(order_id={order_id},sitecode={site_code})")
+    logger.info(f"Tool called: cancel_appointment(order_id={order_id},sitecode={siteCd})")
     
     start_time = time.time()
     try:
@@ -181,7 +181,7 @@ def cancel_appointment(order_id, mobile_number, site_code):
             return {"status": "error", "message": "order_id is required"}
 
         result = _get_time_globe_service().cancel_appointment(
-            order_id=order_id, mobile_number=mobile_number, site_code=site_code
+            order_id=order_id, mobile_number=mobile_number, siteCd=siteCd
         )
         execution_time = time.time() - start_time
 

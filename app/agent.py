@@ -254,12 +254,12 @@ class AssistantManager:
                 ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
-                    args.get("item_no"), args.get("site_code")
+                    args.get("item_no"), args.get("siteCd")
                 ),
                 "AppointmentSuggestion": lambda args: get_suggestions(
                     employee_id=args.get("employee_id"),
                     item_no=args.get("item_no"),
-                    site_code=args.get("site_code"),
+                    siteCd=args.get("siteCd"),
                 ),
                 "bookAppointment": lambda args: book_appointment(
                     duration=args.get("duration"),
@@ -268,12 +268,12 @@ class AssistantManager:
                     employee_id=args.get("employee_id"),
                     item_no=args.get("item_no"),
                     item_name=args.get("item_name"),
-                    site_code=args.get("site_code"),
+                    siteCd=args.get("siteCd"),
                 ),
                 "cancelAppointment": lambda args: cancel_appointment(
                     order_id=args.get("order_id"),
                     mobile_number=f"+{user_id}",
-                    site_code=args.get("site_code") if args.get("site_code") else args.get("sitecode",None),
+                    siteCd=args.get("siteCd") if args.get("siteCd") else args.get("sitecode",None),
                 ),
                 # "getProfile": lambda args: get_profile(
                 #     args.get(

@@ -167,7 +167,7 @@ class TimeGlobeService:
         self.time_globe_repo = TimeGlobeRepository(next(get_db()))
         self.token = None
         self.expire_time = 3600  # 1 hour
-        # self.site_code = "bonn"  # None
+        # self.siteCd = "bonn"  # None
         # self.item_no = None
         # self.employee_id = None
         # self.item_name = None
@@ -258,18 +258,18 @@ class TimeGlobeService:
     def get_products(self, siteCd: str):
         """Retrieve a list of available services for a selected salon."""
         main_logger.debug(f"Fetching products for site: {siteCd}")
-        # self.site_code = site_code
+        # self.siteCd = siteCd
         payload = {"customerCd": "demo", "siteCd": siteCd}
         response = self.request("POST", "/browse/getProducts", data=payload)
         main_logger.info(f"Successfully fetched products for site: {siteCd}")
         return response
 
-    def get_employee(self, item_no: str, site_code):
+    def get_employee(self, item_no: str, siteCd):
         """Retrieve a list of available employees for a studio."""
         main_logger.debug(f"Fetching employees for item: {item_no}")
         payload = {
             "customerCd": "demo",
-            "siteCd": site_code,
+            "siteCd": siteCd,
             "week": 0,
             "items": [item_no],
         }
@@ -279,13 +279,13 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched employees for item: {item_no}")
         return response
 
-    def get_suggestions(self, employee_id: int, item_no: int, site_code: str):
+    def get_suggestions(self, employee_id: int, item_no: int, siteCd: str):
         """Retrieve available appointment slots for selected services."""
         main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
         # self.employee_id = employee_id
         payload = {
             "customerCd": "demo",
-            "siteCd": site_code,
+            "siteCd": siteCd,
             "week": 0,
             "positions": [{"itemNo": item_no, "employeeId": employee_id}],
         }
@@ -339,7 +339,7 @@ class TimeGlobeService:
         employee_id: int,
         item_no: int,
         item_name: int,
-        site_code: str,
+        siteCd: str,
     ):
         """Book an appointment."""
         main_logger.debug("Booking appointment")
@@ -350,7 +350,7 @@ class TimeGlobeService:
             main_logger.debug(f"datetime: {formatted_datetime}")
 
             payload = {
-                "siteCd": site_code,
+                "siteCd": siteCd,
                 "reminderSms": True,
                 "reminderEmail": True,
                 "positions": [
@@ -387,11 +387,11 @@ class TimeGlobeService:
             main_logger.error(f"Error in book_appointment: {str(e)}")
             raise
 
-    def cancel_appointment(self, order_id: int, mobile_number: str, site_code):
+    def cancel_appointment(self, order_id: int, mobile_number: str, siteCd):
         """Cancel an existing appointment."""
         main_logger.debug(f"Canceling appointment with order ID: {order_id}")
         payload = {
-            "siteCd": site_code,
+            "siteCd": siteCd,
             "orderId": order_id,
         }
         response = self.request(
