@@ -374,9 +374,10 @@ class TimeGlobeService:
                     {
                         "mobileNumber": mobileNumber,
                         "orderId": response.get("orderId"),
+                        "siteCd": siteCd,
                     }
                 )
-                # self.time_globe_repo.save_book_appointment(payload)
+                self.time_globe_repo.save_book_appointment(payload)
             else:
                 main_logger.error(f"Failed to book appointment: {response}")
             return response
