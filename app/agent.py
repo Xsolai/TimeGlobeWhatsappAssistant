@@ -39,30 +39,14 @@ class AssistantManager:
         self.twilio_repo = TwilioRepository(db)
         # Cache function mappings to avoid recreating on each tool call
         self._function_mapping = None
-        # Cache for thread IDs to reduce database calls
-        self._thread_cache = {}
-        # Cache for active runs to reduce database calls
-        self._active_runs_cache = {}
-        # Cache for assistant responses
-        self._response_cache = {}
-        # Cache TTL in seconds (5 minutes)
-        self._cache_ttl = 300
 
     def get_or_create_thread(self, user_id: str) -> str:
         """Get existing thread for user or create new one."""
         with threads_lock:
-            # Check cache first
-            if user_id in self._thread_cache:
-                thread_id, timestamp = self._thread_cache[user_id]
-                if time.time() - timestamp < self._cache_ttl:
-                    return thread_id
-
             logger.info(f"Checking existing thread for user: {user_id}")
             existing_thread = self.twilio_repo.get_thread_by_number(user_id)
             if existing_thread:
                 logger.info(f"Found existing thread: {existing_thread.thread_id}")
-                # Update cache
-                self._thread_cache[user_id] = (existing_thread.thread_id, time.time())
                 return existing_thread.thread_id
 
             logger.info(f"Creating new thread for user: {user_id}")
@@ -70,23 +54,13 @@ class AssistantManager:
             self.twilio_repo.create_thread(
                 ThreadCreate(mobile_number=user_id, thread_id=thread.id)
             )
-            # Update cache
-            self._thread_cache[user_id] = (thread.id, time.time())
             return thread.id
 
     def get_active_run(self, thread_id: str) -> str:
         """Retrieve active run ID for a thread."""
         with runs_lock:
-            # Check cache first
-            if thread_id in self._active_runs_cache:
-                run_id, timestamp = self._active_runs_cache[thread_id]
-                if time.time() - timestamp < self._cache_ttl:
-                    return run_id
-
             run_id = self.twilio_repo.get_active_run(thread_id)
-            if run_id:
-                # Update cache
-                self._active_runs_cache[thread_id] = (run_id, time.time())
+            logger.info(f"Active run for thread {thread_id}: {run_id}")
             return run_id
 
     def store_active_run(self, thread_id: str, run_id: str) -> None:
@@ -94,16 +68,12 @@ class AssistantManager:
         with runs_lock:
             logger.info(f"Storing active run {run_id} for thread {thread_id}")
             self.twilio_repo.store_active_run(thread_id, run_id)
-            # Update cache
-            self._active_runs_cache[thread_id] = (run_id, time.time())
 
     def delete_active_run(self, thread_id: str) -> None:
         """Delete active run when completed or failed."""
         with runs_lock:
             logger.info(f"Deleting active run for thread {thread_id}")
             self.twilio_repo.delete_active_run(thread_id)
-            # Clear cache
-            self._active_runs_cache.pop(thread_id, None)
 
     def cleanup_active_run(self, thread_id: str) -> None:
         """Clean up any existing active run for a thread."""
@@ -131,10 +101,9 @@ class AssistantManager:
         current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         question = f"{question}\n\n(Current Date and Time: {current_datetime})"
 
-        # Optimized retry logic with exponential backoff
+        # Optimized retry logic with shorter initial delay
         max_retries = 3
-        base_delay = 0.5
-        max_delay = 2.0
+        retry_delay = 0.5
 
         for attempt in range(max_retries):
             try:
@@ -144,26 +113,37 @@ class AssistantManager:
                 return
             except Exception as e:
                 if attempt < max_retries - 1:
-                    delay = min(base_delay * (2 ** attempt), max_delay)  # Exponential backoff with cap
-                    logger.warning(f"Retry {attempt + 1}/{max_retries} adding message: {e}")
-                    time.sleep(delay)
+                    logger.warning(
+                        f"Retry {attempt + 1}/{max_retries} adding message: {e}"
+                    )
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
                 else:
-                    logger.error(f"Failed to add message after {max_retries} attempts: {e}")
+                    logger.error(
+                        f"Failed to add message after {max_retries} attempts: {e}"
+                    )
                     raise
 
     def run_conversation(self, user_id: str, question: str) -> str:
         """Run a conversation turn with thread safety and optimized error handling."""
         thread_id = self.get_or_create_thread(user_id)
         max_retries = 3
-        base_delay = 0.5
-        max_delay = 2.0
+        retry_delay = 0.5
 
-        # Use a thread-specific lock to prevent simultaneous operations
+        # Use a thread-specific lock to prevent simultaneous operations on the same thread
         thread_lock = threading.Lock()
 
         with thread_lock:
+            # Debug log OpenAI config
+            logger.info(
+                f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}"
+            )
+            logger.info(f"Assistant ID: {self.assistant_id}")
+
             if not settings.OPENAI_API_KEY or not self.assistant_id:
-                logger.error("Missing OpenAI credentials")
+                logger.error(
+                    "Missing OpenAI credentials: API key or Assistant ID not configured"
+                )
                 return "Configuration error: API credentials missing. Please contact support."
 
             for attempt in range(max_retries):
@@ -171,52 +151,72 @@ class AssistantManager:
                     self.cleanup_active_run(thread_id)
                     self.add_message_to_thread(user_id, question)
 
-                    # Start a new run with optimized polling
-                    run = self.client.beta.threads.runs.create(
-                        thread_id=thread_id, assistant_id=self.assistant_id
+                    # Start a new run with detailed logging
+                    logger.info(
+                        f"Creating new run for thread {thread_id} with assistant {self.assistant_id}"
                     )
-                    self.store_active_run(thread_id, run.id)
+                    try:
+                        run = self.client.beta.threads.runs.create(
+                            thread_id=thread_id, assistant_id=self.assistant_id
+                        )
+                        logger.info(f"Run created successfully: {run.id}")
+                        self.store_active_run(thread_id, run.id)
+                    except Exception as run_error:
+                        logger.error(f"Error creating run: {run_error}")
+                        return f"Unable to process your request: {str(run_error)}"
 
-                    # Optimized polling with adaptive intervals
+                    # More reasonable timeout - 60 seconds
                     timeout = 180
                     start_time = time.time()
-                    base_interval = 0.5
-                    max_interval = 5.0
-                    current_interval = base_interval
+                    # Optimized polling strategy
+                    backoff_interval = 0.5
+                    max_backoff = 5  # Cap max backoff at 5 seconds
 
                     while time.time() - start_time < timeout:
                         run = self.client.beta.threads.runs.retrieve(
                             thread_id=thread_id, run_id=run.id
                         )
+                        logger.info(f"Run status: {run.status}")
 
                         if run.status == "completed":
                             self.delete_active_run(thread_id)
                             return self.get_latest_assistant_response(user_id)
                         elif run.status == "requires_action":
+                            # Pass the run.id directly to avoid potential race condition
+                            # where run.id might have changed
+                            current_run_id = run.id
                             self.handle_tool_calls(
                                 thread_id,
-                                run.id,
+                                current_run_id,
                                 run.required_action.submit_tool_outputs.tool_calls,
                                 user_id,
                             )
-                            current_interval = base_interval  # Reset interval after action
+                            # Reset backoff after handling tool calls
+                            backoff_interval = 0.5
                         elif run.status in ["failed", "expired", "cancelled"]:
+                            logger.warning(f"Run ended with status: {run.status}")
                             self.cleanup_active_run(thread_id)
                             return f"Error: {run.status}"
+                        time.sleep(backoff_interval)
+                        backoff_interval = min(
+                            max_backoff, backoff_interval * 1.5
+                        )  # Gentler exponential backoff
 
-                        time.sleep(current_interval)
-                        current_interval = min(current_interval * 1.2, max_interval)  # Gradual increase
-
+                    logger.error("Conversation run timed out")
+                    # Ensure cleanup happens on timeout
                     self.cleanup_active_run(thread_id)
                     return "I'm sorry, but your request is taking longer than expected. Please try again with a simpler question."
 
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        delay = min(base_delay * (2 ** attempt), max_delay)
-                        logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
-                        time.sleep(delay)
+                        logger.warning(
+                            f"Attempt {attempt + 1}/{max_retries} failed: {e}"
+                        )
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
                     else:
                         logger.error(f"All {max_retries} attempts failed: {e}")
+                        # Ensure cleanup happens on failure
                         self.cleanup_active_run(thread_id)
                         return f"Sorry, I encountered an error: {str(e)}"
 
@@ -450,25 +450,28 @@ class AssistantManager:
                 )
 
     def get_latest_assistant_response(self, user_id: str) -> str:
-        """Get the latest assistant response with caching."""
+        """Get the latest assistant response with thread safety and error handling."""
         thread_id = self.get_or_create_thread(user_id)
-        
-        # Check cache first
-        cache_key = f"{thread_id}_{user_id}"
-        if cache_key in self._response_cache:
-            response, timestamp = self._response_cache[cache_key]
-            if time.time() - timestamp < self._cache_ttl:
-                return response
+        try:
+            messages = self.client.beta.threads.messages.list(
+                thread_id=thread_id, order="desc", limit=1
+            )
 
-        messages = self.client.beta.threads.messages.list(thread_id=thread_id)
-        for message in messages.data:
-            if message.role == "assistant":
-                response = message.content[0].text.value
-                # Update cache
-                self._response_cache[cache_key] = (response, time.time())
-                return response
+            for msg in messages:
+                if msg.role == "assistant":
+                    # Handle different content types properly
+                    for content_item in msg.content:
+                        if content_item.type == "text":
+                            return content_item.text.value
 
-        return "No response found."
+                    # If we get here, no text content was found
+                    return "Assistant responded but no text content was found."
+
+            return "No response from assistant."
+
+        except Exception as e:
+            logger.error(f"Error retrieving assistant response: {e}")
+            return "Error retrieving response."
 
 
 # Test function for basic chatbot interaction

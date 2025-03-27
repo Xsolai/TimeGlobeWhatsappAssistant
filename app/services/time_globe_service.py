@@ -290,6 +290,26 @@ class TimeGlobeService:
             "positions": [{"itemNo": item_no, "employeeId": employee_id}],
         }
         response = self.request("POST", "/browse/getSuggestions", data=payload)
+        
+        # Define the cutoff date (April 1st, 2025)
+        cutoff_date = datetime(2025, 4, 1)
+        
+        # Increment beginTs based on the date
+        if response and "suggestions" in response:
+            for suggestion in response["suggestions"]:
+                # Increment the main beginTs
+                dt = datetime.strptime(suggestion["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                hours_to_add = 2 if dt >= cutoff_date else 1
+                dt = dt.replace(hour=dt.hour + hours_to_add)
+                suggestion["beginTs"] = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                
+                # Increment beginTs in positions
+                for position in suggestion["positions"]:
+                    dt = datetime.strptime(position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_add = 2 if dt >= cutoff_date else 1
+                    dt = dt.replace(hour=dt.hour + hours_to_add)
+                    position["beginTs"] = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        
         main_logger.info(
             f"Successfully fetched suggestions for employee: {employee_id}"
         )
