@@ -423,9 +423,20 @@ class TimeGlobeService:
         """Book an appointment."""
         main_logger.debug("Booking appointment")
         try:
-            # main_logger.debug(f"Formatting date/time: {user_date_time}")
-            # formatted_datetime = format_datetime(user_date_time)
-            main_logger.debug(f"datetime: {beginTs}")
+            # Define the cutoff date (April 1st, 2025)
+            cutoff_date = datetime(2025, 4, 1)
+            main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+            
+            # Parse and adjust the beginTs time
+            original_dt = datetime.strptime(beginTs, "%Y-%m-%dT%H:%M:%S.%fZ")
+            hours_to_subtract = 2 if original_dt >= cutoff_date else 1
+            adjusted_dt = original_dt.replace(hour=original_dt.hour - hours_to_subtract)
+            adjusted_beginTs = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            
+            main_logger.info(
+                f"Adjusting appointment time - Original: {original_dt.strftime('%Y-%m-%d %H:%M')} → "
+                f"Adjusted: {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (-{hours_to_subtract} hour{'s' if hours_to_subtract > 1 else ''})"
+            )
 
             payload = {
                 "siteCd": siteCd,
@@ -433,7 +444,7 @@ class TimeGlobeService:
                 "reminderEmail": True,
                 "positions": [
                     {
-                        "beginTs": beginTs,  # "2025-02-25T12:00:00.000Z"
+                        "beginTs": adjusted_beginTs,  # Using the adjusted time
                         "durationMillis": durationMillis,
                         "employeeId": employeeId,
                         "itemNo": itemNo,
