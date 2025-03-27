@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from twilio.twiml.messaging_response import MessagingResponse
 import logging
-from functools import lru_cache
 from typing import Optional
 
 from app.agent import AssistantManager
@@ -26,15 +25,9 @@ from ..core.dependencies import (
 
 router = APIRouter()
 
-# Cache the AssistantManager instance
-@lru_cache(maxsize=1)
-def get_cached_assistant_manager(db: Session) -> AssistantManager:
+def create_assistant_manager(db: Session) -> AssistantManager:
+    """Create a new AssistantManager instance for each request to ensure thread isolation."""
     return AssistantManager(settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db)
-
-# Cache the TwilioService instance
-@lru_cache(maxsize=1)
-def get_cached_twilio_service(db: Session) -> TwilioService:
-    return TwilioService(db)
 
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
@@ -44,6 +37,7 @@ async def whatsapp_wbhook(
     """
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
+    Each request gets its own AssistantManager instance to ensure thread isolation.
     """
     # Validate request early
     await validate_twilio_request(request)
@@ -64,9 +58,9 @@ async def whatsapp_wbhook(
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     
     try:
-        # Get cached service instances
-        twilio_service = get_cached_twilio_service(db)
-        assistant_manager = get_cached_assistant_manager(db)
+        # Create new instances for each request to ensure thread isolation
+        twilio_service = TwilioService(db)
+        assistant_manager = create_assistant_manager(db)
         
         # Process message
         response = get_response_from_gpt(incoming_msg, number, assistant_manager)
@@ -83,7 +77,7 @@ async def whatsapp_wbhook(
     except Exception as e:
         logging.error(f"Error processing message for {sender_number}: {e}")
         # Send error message to user
-        twilio_service = get_cached_twilio_service(db)
+        twilio_service = TwilioService(db)
         error_response = "I'm sorry, something went wrong while processing your message. Please try again later."
         resp = twilio_service.send_whatsapp(sender_number, error_response)
         return str(resp)
