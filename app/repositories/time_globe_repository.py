@@ -129,23 +129,23 @@ class TimeGlobeRepository:
                 f"Booking appointment saved with ID: {book_appointment.id}"
             )
 
-            for position in booking_details.get("positions", []):
-                main_logger.info(f"Processing booking position: {position}")
-                booking_detail = BookingDetail(
-                    begin_ts=datetime.strptime(
-                        position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ),
-                    duration_millis=position["durationMillis"],
-                    employee_id=position["employeeId"],
-                    item_no=position["itemNo"],
-                    item_nm=position["itemNm"],
-                    book_id=book_appointment.id,
-                )
-                self.db.add(booking_detail)
+            # for position in booking_details.get("positions", []):
+            #     main_logger.info(f"Processing booking position: {position}")
+            #     booking_detail = BookingDetail(
+            #         begin_ts=datetime.strptime(
+            #             position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            #         ),
+            #         duration_millis=position["durationMillis"],
+            #         employee_id=position["employeeId"],
+            #         item_no=position["itemNo"],
+            #         item_nm=position["itemNm"],
+            #         book_id=book_appointment.id,
+            #     )
+            #     self.db.add(booking_detail)
 
-            self.db.commit()
+            # self.db.commit()
             main_logger.info(
-                f"Booking details saved for order_id: {booking_details.get('order_id')}"
+                f"Booking details saved for order_id: {booking_details.get('orderId')}"
             )
 
         except Exception as e:

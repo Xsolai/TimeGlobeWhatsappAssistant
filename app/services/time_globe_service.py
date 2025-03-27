@@ -373,8 +373,7 @@ class TimeGlobeService:
                 payload.update(
                     {
                         "mobileNumber": mobileNumber,
-                        "orderId": response.get("orderId"),
-                        "siteCd": siteCd,
+                        "orderId": response.get("orderId")
                     }
                 )
                 self.time_globe_repo.save_book_appointment(payload)
