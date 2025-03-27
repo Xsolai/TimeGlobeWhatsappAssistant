@@ -1,4 +1,11 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from typing import Optional
+import logging
+from functools import lru_cache
+from twilio.twiml.messaging_response import MessagingResponse
+import time
 
 from app.agent import AssistantManager
 from ..services.twilio_service import TwilioService
@@ -10,60 +17,86 @@ from ..schemas.twilio_sender import (
 )
 from ..core.config import settings
 from ..schemas.auth import User
-from ..utils.tools_wrapper_util import get_response_from_gpt
-from ..utils.tools_wrapper_util import format_response
-import logging
-from twilio.twiml.messaging_response import MessagingResponse
+from ..utils.tools_wrapper_util import get_response_from_gpt, format_response
 from ..db.session import get_db
 from ..core.dependencies import (
     get_twilio_service,
     validate_twilio_request,
     get_current_user,
 )
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Cache for AssistantManager instances
+_assistant_manager_cache = {}
+_cache_ttl = 300  # 5 minutes
+
+def _get_assistant_manager(db: Session) -> AssistantManager:
+    """Get or create an AssistantManager instance with caching."""
+    cache_key = id(db)
+    if cache_key in _assistant_manager_cache:
+        manager, timestamp = _assistant_manager_cache[cache_key]
+        if time.time() - timestamp < _cache_ttl:
+            return manager
+    
+    manager = AssistantManager(settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db)
+    _assistant_manager_cache[cache_key] = (manager, time.time())
+    return manager
 
 @router.post("/incoming-whatsapp")
-async def whatsapp_wbhook(
+async def whatsapp_webhook(
     request: Request,
-    tiwilio_service: TwilioService = Depends(get_twilio_service),
+    twilio_service: TwilioService = Depends(get_twilio_service),
     db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
     """
-    form_data = await request.form()
-    await validate_twilio_request(request)
-
-    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
-    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
-    number = "".join(filter(str.isdigit, sender_number))
-    logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
-        # Get response from the assistant function
-        _assistant_manager = AssistantManager(
-            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
+        # Validate request first
+        await validate_twilio_request(request)
+        
+        # Get form data
+        form_data = await request.form()
+        incoming_msg = form_data.get("Body", "").lower()
+        sender_number = form_data.get("From", "")
+        number = "".join(filter(str.isdigit, sender_number))
+        
+        if not incoming_msg or not sender_number:
+            logger.warning("Missing required message data")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": "Missing required message data"}
+            )
+
+        logger.info(f"Processing message from {sender_number}: {incoming_msg}")
+        
+        # Get response using cached assistant manager
+        assistant_manager = _get_assistant_manager(db)
+        response = get_response_from_gpt(incoming_msg, number, assistant_manager)
+        
+        # Send response
+        resp = twilio_service.send_whatsapp(sender_number, response)
+        logger.info(f"Response sent to {sender_number}")
+        
+        return str(resp)
+        
+    except HTTPException as he:
+        logger.error(f"HTTP error processing message: {str(he)}")
+        return JSONResponse(
+            status_code=he.status_code,
+            content={"error": he.detail}
         )
-        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
-        response = format_response(response)
-
-        logging.info(f"Response generated for {sender_number}: {response}")
     except Exception as e:
-        logging.error(f"Error generating response for {sender_number}: {e}")
-        response = "I'm sorry, something went wrong while processing your message."
-    # # Send the response back to the incoming message
-    print(f"Response ==>> {sender_number} with: {response}")
-
-    # resp = MessagingResponse()
-    # resp.message(response)
-    resp = tiwilio_service.send_whatsapp(sender_number, response)
-    # logging.info(f"Responded to {sender_number} with: {response}")
-    print("Resp", str(resp))
-    return str(resp)  # Respond to Twilio's webhook with the message
+        logger.error(f"Error processing message: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error"}
+        )
 
 
 @router.post(
