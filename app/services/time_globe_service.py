@@ -293,26 +293,53 @@ class TimeGlobeService:
         
         # Define the cutoff date (April 1st, 2025)
         cutoff_date = datetime(2025, 4, 1)
+        main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
         
         # Increment beginTs based on the date
         if response and "suggestions" in response:
-            for suggestion in response["suggestions"]:
-                # Increment the main beginTs
-                dt = datetime.strptime(suggestion["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
-                hours_to_add = 2 if dt >= cutoff_date else 1
-                dt = dt.replace(hour=dt.hour + hours_to_add)
-                suggestion["beginTs"] = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                
-                # Increment beginTs in positions
-                for position in suggestion["positions"]:
-                    dt = datetime.strptime(position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
-                    hours_to_add = 2 if dt >= cutoff_date else 1
-                    dt = dt.replace(hour=dt.hour + hours_to_add)
-                    position["beginTs"] = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            main_logger.info(f"Processing {len(response['suggestions'])} appointment suggestions")
+            for idx, suggestion in enumerate(response["suggestions"], 1):
+                try:
+                    # Increment the main beginTs
+                    original_dt = datetime.strptime(suggestion["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_add = 2 if original_dt >= cutoff_date else 1
+                    adjusted_dt = original_dt.replace(hour=original_dt.hour + hours_to_add)
+                    suggestion["beginTs"] = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    main_logger.info(
+                        f"Suggestion {idx}: Adjusted main beginTs from {original_dt.strftime('%Y-%m-%d %H:%M')} "
+                        f"to {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (+{hours_to_add} hour{'s' if hours_to_add > 1 else ''})"
+                    )
+                    
+                    # Increment beginTs in positions
+                    for pos_idx, position in enumerate(suggestion["positions"], 1):
+                        try:
+                            pos_original_dt = datetime.strptime(position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                            pos_hours_to_add = 2 if pos_original_dt >= cutoff_date else 1
+                            pos_adjusted_dt = pos_original_dt.replace(hour=pos_original_dt.hour + pos_hours_to_add)
+                            position["beginTs"] = pos_adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                            
+                            main_logger.info(
+                                f"Suggestion {idx}, Position {pos_idx}: Adjusted beginTs from "
+                                f"{pos_original_dt.strftime('%Y-%m-%d %H:%M')} to "
+                                f"{pos_adjusted_dt.strftime('%Y-%m-%d %H:%M')} "
+                                f"(+{pos_hours_to_add} hour{'s' if pos_hours_to_add > 1 else ''})"
+                            )
+                        except Exception as pos_e:
+                            main_logger.error(
+                                f"Error adjusting time for suggestion {idx}, position {pos_idx}: {str(pos_e)}"
+                            )
+                            continue
+                except Exception as e:
+                    main_logger.error(f"Error processing suggestion {idx}: {str(e)}")
+                    continue
+        else:
+            main_logger.warning("No suggestions found in response or invalid response format")
         
         main_logger.info(
-            f"Successfully fetched suggestions for employee: {employee_id}"
+            f"Successfully processed appointment suggestions for employee: {employee_id}"
         )
+        main_logger.info(f"Response of appointment suggestions: {response}")
         return response
 
     def get_profile(self, mobile_number: str):
