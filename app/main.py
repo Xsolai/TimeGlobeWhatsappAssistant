@@ -5,6 +5,7 @@ from .routes import twilio_route, auth_route, subscription_route
 from .models.base import Base
 from .db.session import engine
 from sqlalchemy import inspect
+from .models.customer_model import CustomerModel
 
 app = FastAPI(
     title="TimeGlobe WhatsApp Assistant",
@@ -24,7 +25,7 @@ Base.metadata.create_all(bind=engine)
 def create_customer_table():
     inspector = inspect(engine)
     if 'Customers' not in inspector.get_table_names():
-        Base.metadata.tables['Customers'].create(bind=engine)
+        CustomerModel.__table__.create(bind=engine)
 
 
 app.include_router(router=twilio_route.router, prefix="/api/twilio", tags=["Twilio"])
