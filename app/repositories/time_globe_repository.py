@@ -112,38 +112,38 @@ class TimeGlobeRepository:
             main_logger.info(
                 f"Saving booking appointment for order_id: {booking_details.get('order_id')}"
             )
-            customer = self.get_customer(booking_details.get("mobile_number"))
-            if not customer:
-                main_logger.error("Customer not found while saving appointment.")
-                raise Exception("Customer not found")
+            # customer = self.get_customer(booking_details.get("mobile_number"))
+            # if not customer:
+            #     main_logger.error("Customer not found while saving appointment.")
+            #     raise Exception("Customer not found")
 
-            site_cd = booking_details.get("siteCd")
-            book_appointment = BookModel(
-                order_id=booking_details.get("order_id"),
-                site_cd=site_cd,
-                customer_id=customer.id,
-            )
-            self.db.add(book_appointment)
-            self.db.commit()
-            main_logger.info(
-                f"Booking appointment saved with ID: {book_appointment.id}"
-            )
+            # site_cd = booking_details.get("siteCd")
+            # book_appointment = BookModel(
+            #     order_id=booking_details.get("order_id"),
+            #     site_cd=site_cd,
+            #     customer_id=customer.id,
+            # )
+            # self.db.add(book_appointment)
+            # self.db.commit()
+            # main_logger.info(
+            #     f"Booking appointment saved with ID: {book_appointment.id}"
+            # )
 
-            for position in booking_details.get("positions", []):
-                main_logger.info(f"Processing booking position: {position}")
-                booking_detail = BookingDetail(
-                    begin_ts=datetime.strptime(
-                        position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ),
-                    duration_millis=position["durationMillis"],
-                    employee_id=position["employeeId"],
-                    item_no=position["itemNo"],
-                    item_nm=position["itemNm"],
-                    book_id=book_appointment.id,
-                )
-                self.db.add(booking_detail)
+            # for position in booking_details.get("positions", []):
+            #     main_logger.info(f"Processing booking position: {position}")
+            #     booking_detail = BookingDetail(
+            #         begin_ts=datetime.strptime(
+            #             position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            #         ),
+            #         duration_millis=position["durationMillis"],
+            #         employee_id=position["employeeId"],
+            #         item_no=position["itemNo"],
+            #         item_nm=position["itemNm"],
+            #         book_id=book_appointment.id,
+            #     )
+            #     self.db.add(booking_detail)
 
-            self.db.commit()
+            # self.db.commit()
             main_logger.info(
                 f"Booking details saved for order_id: {booking_details.get('order_id')}"
             )
