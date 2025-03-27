@@ -144,6 +144,7 @@ class TimeGlobeRepository:
             #     self.db.add(booking_detail)
 
             # self.db.commit()
+            
             main_logger.info(
                 f"Booking details saved for order_id: {booking_details.get('orderId')}"
             )

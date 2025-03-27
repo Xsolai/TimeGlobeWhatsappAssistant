@@ -166,7 +166,7 @@ class AssistantManager:
                         return f"Unable to process your request: {str(run_error)}"
 
                     # More reasonable timeout - 60 seconds
-                    timeout = 60
+                    timeout = 180
                     start_time = time.time()
                     # Optimized polling strategy
                     backoff_interval = 0.5
