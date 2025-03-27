@@ -11,4 +11,4 @@ class CustomerModel(Base):
     mobile_number = Column(String, unique=True, index=True)
     email = Column(String, nullable=True)
     gender = Column(String, nullable=True)
-    appointments = relationship("BookModel", back_populates="customer")
+    appointments = relationship("BookModel", back_populates="customer", lazy="joined")
