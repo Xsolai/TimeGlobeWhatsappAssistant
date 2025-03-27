@@ -3,6 +3,7 @@ import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import twilio_route, auth_route, subscription_route
 from .models.base import Base
+from .models import *  # This ensures all models are registered
 from .db.session import engine
 
 
