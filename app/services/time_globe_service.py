@@ -367,7 +367,40 @@ class TimeGlobeService:
         response = self.request(
             "POST", "/bot/getOrders", is_header=True, mobile_number=mobile_number
         )
-        main_logger.info("Successfully fetched open orders")
+        
+        # Define the cutoff date (April 1st, 2025)
+        cutoff_date = datetime(2025, 4, 1)
+        main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+        
+        # Adjust order times based on the date
+        if response and isinstance(response, list):
+            main_logger.info(f"Processing {len(response)} open orders")
+            for idx, order in enumerate(response, 1):
+                try:
+                    # Adjust orderBegin
+                    begin_dt = datetime.strptime(order["orderBegin"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_add = 2 if begin_dt >= cutoff_date else 1
+                    adjusted_begin_dt = begin_dt.replace(hour=begin_dt.hour + hours_to_add)
+                    order["orderBegin"] = adjusted_begin_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    # Adjust orderEnd
+                    end_dt = datetime.strptime(order["orderEnd"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    adjusted_end_dt = end_dt.replace(hour=end_dt.hour + hours_to_add)
+                    order["orderEnd"] = adjusted_end_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    main_logger.info(
+                        f"Order {idx} (ID: {order.get('orderId')}): Adjusted times - "
+                        f"Begin: {begin_dt.strftime('%Y-%m-%d %H:%M')} → {adjusted_begin_dt.strftime('%Y-%m-%d %H:%M')} "
+                        f"(+{hours_to_add} hour{'s' if hours_to_add > 1 else ''}), "
+                        f"End: {end_dt.strftime('%Y-%m-%d %H:%M')} → {adjusted_end_dt.strftime('%Y-%m-%d %H:%M')}"
+                    )
+                except Exception as e:
+                    main_logger.error(f"Error adjusting times for order {idx}: {str(e)}")
+                    continue
+        else:
+            main_logger.warning("No orders found in response or invalid response format")
+        
+        main_logger.info("Successfully processed open orders")
         return response
 
     def get_old_orders(self, customer_code: str = "demo"):
