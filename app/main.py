@@ -23,8 +23,8 @@ Base.metadata.create_all(bind=engine)
 # create customer table if not exists   
 def create_customer_table():
     inspector = inspect(engine)
-    if 'customers' not in inspector.get_table_names():
-        Base.metadata.tables['customers'].create(bind=engine)
+    if 'Customers' not in inspector.get_table_names():
+        Base.metadata.tables['Customers'].create(bind=engine)
 
 
 app.include_router(router=twilio_route.router, prefix="/api/twilio", tags=["Twilio"])
