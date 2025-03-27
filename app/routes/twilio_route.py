@@ -1,9 +1,4 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from twilio.twiml.messaging_response import MessagingResponse
-import logging
-from typing import Optional
 
 from app.agent import AssistantManager
 from ..services.twilio_service import TwilioService
@@ -15,72 +10,60 @@ from ..schemas.twilio_sender import (
 )
 from ..core.config import settings
 from ..schemas.auth import User
-from ..utils.tools_wrapper_util import get_response_from_gpt, format_response
+from ..utils.tools_wrapper_util import get_response_from_gpt
+from ..utils.tools_wrapper_util import format_response
+import logging
+from twilio.twiml.messaging_response import MessagingResponse
 from ..db.session import get_db
 from ..core.dependencies import (
     get_twilio_service,
     validate_twilio_request,
     get_current_user,
 )
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
-def create_assistant_manager(db: Session) -> AssistantManager:
-    """Create a new AssistantManager instance for each request to ensure thread isolation."""
-    return AssistantManager(settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db)
 
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
     request: Request,
+    tiwilio_service: TwilioService = Depends(get_twilio_service),
     db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
-    Each request gets its own AssistantManager instance to ensure thread isolation.
     """
-    # Validate request early
-    await validate_twilio_request(request)
-    
-    # Get form data
     form_data = await request.form()
-    incoming_msg = form_data.get("Body", "").lower()
-    sender_number = form_data.get("From", "")
-    
-    if not incoming_msg or not sender_number:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing required message or sender information"
-        )
-    
-    # Clean sender number
+    await validate_twilio_request(request)
+
+    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
+    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
     number = "".join(filter(str.isdigit, sender_number))
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
-    
     try:
-        # Create new instances for each request to ensure thread isolation
-        twilio_service = TwilioService(db)
-        assistant_manager = create_assistant_manager(db)
-        
-        # Process message
-        response = get_response_from_gpt(incoming_msg, number, assistant_manager)
+        # Get response from the assistant function
+        _assistant_manager = AssistantManager(
+            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
+        )
+        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
         response = format_response(response)
-        
+
         logging.info(f"Response generated for {sender_number}: {response}")
-        
-        # Send response
-        resp = twilio_service.send_whatsapp(sender_number, response)
-        logging.info(f"Response sent to {sender_number}")
-        
-        return str(resp)
-        
     except Exception as e:
-        logging.error(f"Error processing message for {sender_number}: {e}")
-        # Send error message to user
-        twilio_service = TwilioService(db)
-        error_response = "I'm sorry, something went wrong while processing your message. Please try again later."
-        resp = twilio_service.send_whatsapp(sender_number, error_response)
-        return str(resp)
+        logging.error(f"Error generating response for {sender_number}: {e}")
+        response = "I'm sorry, something went wrong while processing your message."
+    # # Send the response back to the incoming message
+    print(f"Response ==>> {sender_number} with: {response}")
+
+    # resp = MessagingResponse()
+    # resp.message(response)
+    resp = tiwilio_service.send_whatsapp(sender_number, response)
+    # logging.info(f"Responded to {sender_number} with: {response}")
+    print("Resp", str(resp))
+    return str(resp)  # Respond to Twilio's webhook with the message
 
 
 @router.post(
