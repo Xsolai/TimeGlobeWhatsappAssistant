@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.orm import Session
-from ..models.customer_model import CustomerModel
 from ..models.booked_appointment import BookModel
+from ..models.customer_model import CustomerModel
 from ..models.booking_detail import BookingDetail
 from datetime import datetime
 from ..logger import (
