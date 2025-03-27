@@ -1,7 +1,7 @@
 import datetime
 import time
 import threading
-from typing import Any, Dict, List, Callable
+from typing import Any, Dict, List, Callable, Optional
 from openai import OpenAI
 import os
 import json
@@ -13,6 +13,7 @@ from .db.session import get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from .schemas.thread import ThreadCreate
+import asyncio
 
 load_dotenv()
 
@@ -32,46 +33,44 @@ runs_lock = threading.RLock()  # For active_runs dict
 
 
 class AssistantManager:
-    _instance = None
-    _initialized = False
+    def __init__(
+        self, 
+        api_key: str, 
+        assistant_id: str, 
+        db: Session = Depends(get_db),
+        thread_id: Optional[str] = None
+    ):
+        """Initialize the AssistantManager with API key and assistant ID."""
+        self.client = OpenAI(api_key=api_key)
+        self.assistant_id = assistant_id
+        self.twilio_repo = TwilioRepository(db)
+        self.current_thread_id = thread_id
+        self._function_mapping = None
 
-    def __new__(cls, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
-        if cls._instance is None:
-            cls._instance = super(AssistantManager, cls).__new__(cls)
-        return cls._instance
+    async def process_message(self, user_id: str, question: str) -> str:
+        """Process a message asynchronously with optimized thread handling."""
+        try:
+            # Get or create thread
+            if not self.current_thread_id:
+                self.current_thread_id = await self.get_or_create_thread(user_id)
+            
+            # Add message to thread
+            await self.add_message_to_thread(user_id, question)
+            
+            # Run conversation
+            return await self.run_conversation(user_id, question)
+            
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
+            raise
 
-    def __init__(self, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
-        if not self._initialized:
-            self.client = OpenAI(api_key=api_key)
-            self.assistant_id = assistant_id
-            self.twilio_repo = TwilioRepository(db)
-            self._function_mapping = None
-            self._initialized = True
-            # Add thread cache
-            self._thread_cache = {}
-            self._thread_cache_lock = threading.RLock()
-            self._thread_cache_ttl = 3600  # 1 hour TTL
-
-    def get_or_create_thread(self, user_id: str) -> str:
-        """Get existing thread for user or create new one with caching."""
-        with self._thread_cache_lock:
-            # Check cache first
-            cache_entry = self._thread_cache.get(user_id)
-            if cache_entry:
-                thread_id, timestamp = cache_entry
-                if time.time() - timestamp < self._thread_cache_ttl:
-                    logger.info(f"Cache hit for thread: {thread_id}")
-                    return thread_id
-                else:
-                    # Cache expired, remove it
-                    del self._thread_cache[user_id]
-
+    async def get_or_create_thread(self, user_id: str) -> str:
+        """Get existing thread for user or create new one."""
+        with threads_lock:
             logger.info(f"Checking existing thread for user: {user_id}")
             existing_thread = self.twilio_repo.get_thread_by_number(user_id)
             if existing_thread:
                 logger.info(f"Found existing thread: {existing_thread.thread_id}")
-                # Update cache
-                self._thread_cache[user_id] = (existing_thread.thread_id, time.time())
                 return existing_thread.thread_id
 
             logger.info(f"Creating new thread for user: {user_id}")
@@ -79,8 +78,6 @@ class AssistantManager:
             self.twilio_repo.create_thread(
                 ThreadCreate(mobile_number=user_id, thread_id=thread.id)
             )
-            # Update cache
-            self._thread_cache[user_id] = (thread.id, time.time())
             return thread.id
 
     def get_active_run(self, thread_id: str) -> str:
@@ -120,10 +117,12 @@ class AssistantManager:
                 finally:
                     self.delete_active_run(thread_id)
 
-    def add_message_to_thread(self, user_id: str, question: str) -> None:
+    async def add_message_to_thread(self, user_id: str, question: str) -> None:
         """Add a message to the user's thread with active run check."""
-        thread_id = self.get_or_create_thread(user_id)
-        logger.debug(f"thread {thread_id} for user {user_id} and question: {question} ")
+        if not self.current_thread_id:
+            self.current_thread_id = await self.get_or_create_thread(user_id)
+            
+        logger.debug(f"thread {self.current_thread_id} for user {user_id} and question: {question}")
 
         current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         question = f"{question}\n\n(Current Date and Time: {current_datetime})"
@@ -134,26 +133,26 @@ class AssistantManager:
 
         for attempt in range(max_retries):
             try:
-                self.client.beta.threads.messages.create(
-                    thread_id=thread_id, role="user", content=question
+                await self.client.beta.threads.messages.create(
+                    thread_id=self.current_thread_id, 
+                    role="user", 
+                    content=question
                 )
                 return
             except Exception as e:
                 if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Retry {attempt + 1}/{max_retries} adding message: {e}"
-                    )
-                    time.sleep(retry_delay)
+                    logger.warning(f"Retry {attempt + 1}/{max_retries} adding message: {e}")
+                    await asyncio.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
                 else:
-                    logger.error(
-                        f"Failed to add message after {max_retries} attempts: {e}"
-                    )
+                    logger.error(f"Failed to add message after {max_retries} attempts: {e}")
                     raise
 
-    def run_conversation(self, user_id: str, question: str) -> str:
+    async def run_conversation(self, user_id: str, question: str) -> str:
         """Run a conversation turn with thread safety and optimized error handling."""
-        thread_id = self.get_or_create_thread(user_id)
+        if not self.current_thread_id:
+            self.current_thread_id = await self.get_or_create_thread(user_id)
+            
         max_retries = 3
         retry_delay = 0.5
 
@@ -162,97 +161,74 @@ class AssistantManager:
 
         with thread_lock:
             # Debug log OpenAI config
-            logger.info(
-                f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}"
-            )
+            logger.info(f"OpenAI API key length: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
             logger.info(f"Assistant ID: {self.assistant_id}")
 
             if not settings.OPENAI_API_KEY or not self.assistant_id:
-                logger.error(
-                    "Missing OpenAI credentials: API key or Assistant ID not configured"
-                )
+                logger.error("Missing OpenAI credentials: API key or Assistant ID not configured")
                 return "Configuration error: API credentials missing. Please contact support."
 
             for attempt in range(max_retries):
                 try:
-                    self.cleanup_active_run(thread_id)
-                    self.add_message_to_thread(user_id, question)
+                    await self.cleanup_active_run(self.current_thread_id)
+                    await self.add_message_to_thread(user_id, question)
 
                     # Start a new run with detailed logging
-                    logger.info(
-                        f"Creating new run for thread {thread_id} with assistant {self.assistant_id}"
-                    )
+                    logger.info(f"Creating new run for thread {self.current_thread_id} with assistant {self.assistant_id}")
                     try:
-                        run = self.client.beta.threads.runs.create(
-                            thread_id=thread_id, assistant_id=self.assistant_id
+                        run = await self.client.beta.threads.runs.create(
+                            thread_id=self.current_thread_id, 
+                            assistant_id=self.assistant_id
                         )
                         logger.info(f"Run created successfully: {run.id}")
-                        self.store_active_run(thread_id, run.id)
+                        await self.store_active_run(self.current_thread_id, run.id)
                     except Exception as run_error:
                         logger.error(f"Error creating run: {run_error}")
                         return f"Unable to process your request: {str(run_error)}"
 
-                    # Optimized polling strategy with exponential backoff
+                    # More reasonable timeout - 60 seconds
                     timeout = 180
                     start_time = time.time()
-                    poll_interval = 0.5
-                    max_poll_interval = 5.0
-                    consecutive_same_status = 0
-                    last_status = None
+                    # Optimized polling strategy
+                    backoff_interval = 0.5
+                    max_backoff = 5  # Cap max backoff at 5 seconds
 
                     while time.time() - start_time < timeout:
-                        run = self.client.beta.threads.runs.retrieve(
-                            thread_id=thread_id, run_id=run.id
+                        run = await self.client.beta.threads.runs.retrieve(
+                            thread_id=self.current_thread_id, 
+                            run_id=run.id
                         )
-                        current_status = run.status
-                        
-                        # Optimize polling based on status
-                        if current_status == last_status:
-                            consecutive_same_status += 1
-                            if consecutive_same_status > 3:
-                                # Increase polling interval if status hasn't changed
-                                poll_interval = min(poll_interval * 1.5, max_poll_interval)
-                        else:
-                            consecutive_same_status = 0
-                            poll_interval = 0.5  # Reset interval on status change
-                        
-                        last_status = current_status
-                        logger.info(f"Run status: {current_status}")
+                        logger.info(f"Run status: {run.status}")
 
-                        if current_status == "completed":
-                            self.delete_active_run(thread_id)
-                            return self.get_latest_assistant_response(user_id)
-                        elif current_status == "requires_action":
+                        if run.status == "completed":
+                            await self.delete_active_run(self.current_thread_id)
+                            return await self.get_latest_assistant_response(user_id)
+                        elif run.status == "requires_action":
                             current_run_id = run.id
-                            self.handle_tool_calls(
-                                thread_id,
+                            await self.handle_tool_calls(
+                                self.current_thread_id,
                                 current_run_id,
                                 run.required_action.submit_tool_outputs.tool_calls,
                                 user_id,
                             )
-                            poll_interval = 0.5  # Reset interval after handling tool calls
-                        elif current_status in ["failed", "expired", "cancelled"]:
-                            logger.warning(f"Run ended with status: {current_status}")
-                            self.cleanup_active_run(thread_id)
-                            return f"Error: {current_status}"
-                        
-                        time.sleep(poll_interval)
+                            backoff_interval = 0.5
+                        elif run.status in ["failed", "expired", "cancelled"]:
+                            logger.warning(f"Run ended with status: {run.status}")
+                            await self.cleanup_active_run(self.current_thread_id)
+                            return f"Error: {run.status}"
+                        await asyncio.sleep(backoff_interval)
 
-                    # Timeout reached
-                    logger.warning(f"Run timed out after {timeout} seconds")
-                    self.cleanup_active_run(thread_id)
-                    return "Request timed out. Please try again."
+                    logger.warning("Conversation timed out")
+                    return "I apologize, but the request timed out. Please try again."
 
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt + 1}/{max_retries}: {e}")
-                        time.sleep(retry_delay)
+                        logger.warning(f"Retry {attempt + 1}/{max_retries} running conversation: {e}")
+                        await asyncio.sleep(retry_delay)
                         retry_delay *= 2
                     else:
-                        logger.error(f"Failed after {max_retries} attempts: {e}")
+                        logger.error(f"Failed to run conversation after {max_retries} attempts: {e}")
                         return f"Error processing your request: {str(e)}"
-
-            return "Failed to complete the conversation after multiple attempts."
 
     def _get_function_mapping(self, user_id: str) -> Dict[str, Callable]:
         """Get cached function mapping or create a new one."""

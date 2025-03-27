@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-import time
-from collections import defaultdict
-from typing import Dict, Tuple
-import threading
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+from cachetools import TTLCache
+from typing import Optional
 
 from app.agent import AssistantManager
 from ..services.twilio_service import TwilioService
@@ -16,8 +16,7 @@ from ..schemas.twilio_sender import (
 )
 from ..core.config import settings
 from ..schemas.auth import User
-from ..utils.tools_wrapper_util import get_response_from_gpt
-from ..utils.tools_wrapper_util import format_response
+from ..utils.tools_wrapper_util import get_response_from_gpt, format_response
 import logging
 from twilio.twiml.messaging_response import MessagingResponse
 from ..db.session import get_db
@@ -27,75 +26,76 @@ from ..core.dependencies import (
     get_current_user,
 )
 
-# Rate limiting configuration
-RATE_LIMIT_WINDOW = 60  # 1 minute window
-MAX_REQUESTS_PER_WINDOW = 30  # Maximum requests per minute per user
-rate_limit_data: Dict[str, list] = defaultdict(list)
-rate_limit_lock = threading.RLock()
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-def check_rate_limit(user_id: str) -> bool:
-    """Check if the user has exceeded the rate limit."""
-    current_time = time.time()
-    
-    with rate_limit_lock:
-        # Clean up old timestamps
-        rate_limit_data[user_id] = [ts for ts in rate_limit_data[user_id] 
-                                  if current_time - ts < RATE_LIMIT_WINDOW]
-        
-        # Check if user has exceeded rate limit
-        if len(rate_limit_data[user_id]) >= MAX_REQUESTS_PER_WINDOW:
-            return False
-            
-        # Add current timestamp
-        rate_limit_data[user_id].append(current_time)
-        return True
+# Initialize rate limiter
+limiter = FastAPILimiter()
+
+# Initialize thread cache with 1 hour TTL
+thread_cache = TTLCache(maxsize=1000, ttl=3600)
 
 router = APIRouter()
 
+@router.on_event("startup")
+async def startup():
+    await limiter.init()
 
 @router.post("/incoming-whatsapp")
-async def whatsapp_wbhook(
+@limiter.limit("30/minute")  # Rate limit of 30 requests per minute per IP
+async def whatsapp_webhook(
     request: Request,
-    tiwilio_service: TwilioService = Depends(get_twilio_service),
+    twilio_service: TwilioService = Depends(get_twilio_service),
     db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via Twilio.
     Responds with the processed message from get_response_from_gpt.
     """
-    form_data = await request.form()
-    await validate_twilio_request(request)
-
-    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
-    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
-    number = "".join(filter(str.isdigit, sender_number))
-    
-    # Check rate limit
-    if not check_rate_limit(number):
-        logging.warning(f"Rate limit exceeded for user {number}")
-        return JSONResponse(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            content={"message": "Rate limit exceeded. Please try again later."}
-        )
-    
-    logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
-        # Get response from the assistant function
+        # Validate request and extract data
+        form_data = await request.form()
+        await validate_twilio_request(request)
+
+        incoming_msg = form_data.get("Body", "").lower()
+        sender_number = form_data.get("From", "")
+        number = "".join(filter(str.isdigit, sender_number))
+        
+        logger.info(f"Incoming message from {sender_number}: {incoming_msg}")
+
+        # Check cache for existing thread
+        thread_id = thread_cache.get(number)
+        
+        # Initialize assistant manager with cached thread if available
         _assistant_manager = AssistantManager(
-            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
+            settings.OPENAI_API_KEY, 
+            settings.OPENAI_ASSISTANT_ID, 
+            db,
+            thread_id=thread_id  # Pass thread_id if available
         )
-        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
+
+        # Process message and get response
+        response = await _assistant_manager.process_message(number, incoming_msg)
         response = format_response(response)
 
-        logging.info(f"Response generated for {sender_number}: {response}")
+        # Update cache with new thread ID if created
+        if not thread_id and _assistant_manager.current_thread_id:
+            thread_cache[number] = _assistant_manager.current_thread_id
+
+        logger.info(f"Response generated for {sender_number}: {response}")
+        
+        # Send response
+        resp = twilio_service.send_whatsapp(sender_number, response)
+        logger.info(f"Response sent to {sender_number}")
+        
+        return str(resp)
+
     except Exception as e:
-        logging.error(f"Error generating response for {sender_number}: {e}")
-        response = "I'm sorry, something went wrong while processing your message."
-    
-    print(f"Response ==>> {sender_number} with: {response}")
-    resp = tiwilio_service.send_whatsapp(sender_number, response)
-    print("Resp", str(resp))
-    return str(resp)
+        logger.error(f"Error processing message from {sender_number}: {e}")
+        error_response = "I'm sorry, something went wrong while processing your message."
+        resp = twilio_service.send_whatsapp(sender_number, error_response)
+        return str(resp)
 
 
 @router.post(
