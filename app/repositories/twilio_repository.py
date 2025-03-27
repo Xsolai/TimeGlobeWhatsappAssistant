@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 from typing import Optional
 from ..models.customer_model import CustomerModel
 from ..models.sender_model import SenderModel
@@ -9,15 +8,13 @@ from ..logger import main_logger
 from ..models.thread import ThreadModel
 from ..schemas import thread
 from ..models.active_run import ActiveRunModel
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 
 class TwilioRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    async def create_whatsapp_sender(
+    def create_whatsapp_sender(
         self,
         sender_data: twilio_sender.SenderRequest,
         sender_id: str,
@@ -39,30 +36,32 @@ class TwilioRepository:
                 user_id=user.id,
             )
             self.db.add(sender)
-            await self.db.commit()
-            await self.db.refresh(sender)
+            self.db.commit()
+            self.db.refresh(sender)
             main_logger.info(
                 f"WhatsApp sender created successfully: {sender.sender_id}"
             )
             return sender
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             main_logger.error(f"Error creating WhatsApp sender: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def get_sender(self, sender_id: str) -> Optional[twilio_sender.SenderRequest]:
+    def get_sender(self, sender_id: str) -> Optional[twilio_sender.SenderRequest]:
         main_logger.debug(f"Fetching sender with ID: {sender_id}")
         try:
-            query = select(SenderModel).where(SenderModel.sender_id == sender_id)
-            result = await self.db.execute(query)
-            sender = result.scalar_one_or_none()
-            
+            sender = (
+                self.db.query(SenderModel)
+                .filter(SenderModel.sender_id == sender_id)
+                .first()
+            )
             if not sender:
                 main_logger.warning(f"Sender not found with ID: {sender_id}")
             else:
                 main_logger.info(f"Sender fetched successfully: {sender.sender_id}")
             return sender
         except Exception as e:
+            self.db.rollback()
             main_logger.error(f"Error fetching sender: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
@@ -93,7 +92,7 @@ class TwilioRepository:
             main_logger.error(f"Error updating sender: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def create_thread(self, thread_data: thread.ThreadCreate):
+    def create_thread(self, thread_data: thread.ThreadCreate):
         """Insert a new thread entry into the database."""
         main_logger.info(
             f"Creating new thread for mobile number: {thread_data.mobile_number}"
@@ -101,24 +100,25 @@ class TwilioRepository:
         try:
             new_thread = ThreadModel(**thread_data.model_dump())
             self.db.add(new_thread)
-            await self.db.commit()
-            await self.db.refresh(new_thread)
+            self.db.commit()
+            self.db.refresh(new_thread)
             return new_thread
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             main_logger.error(f"Error creating thread: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def get_thread_by_number(
+    def get_thread_by_number(
         self, mobile_number: str
     ) -> Optional[thread.ThreadResponse]:
         """Retrieve thread by mobile number."""
         main_logger.info(f"Fetching thread for mobile number: {mobile_number}")
         try:
-            query = select(ThreadModel).where(ThreadModel.mobile_number == mobile_number)
-            result = await self.db.execute(query)
-            thread = result.scalar_one_or_none()
-            
+            thread = (
+                self.db.query(ThreadModel)
+                .filter(ThreadModel.mobile_number == mobile_number)
+                .first()
+            )
             if not thread:
                 main_logger.warning(
                     f"No thread found for mobile number: {mobile_number}"
@@ -128,25 +128,29 @@ class TwilioRepository:
             main_logger.error(f"Error retrieving thread: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def get_active_run(self, thread_id: str) -> Optional[str]:
+    def get_active_run(self, thread_id: str) -> Optional[str]:
         """Retrieve the active run ID for a given thread ID."""
         main_logger.info(f"Fetching active run for thread ID: {thread_id}")
         try:
-            query = select(ActiveRunModel).where(ActiveRunModel.thread_id == thread_id)
-            result = await self.db.execute(query)
-            active_run = result.scalar_one_or_none()
+            active_run = (
+                self.db.query(ActiveRunModel)
+                .filter(ActiveRunModel.thread_id == thread_id)
+                .first()
+            )
             return active_run.run_id if active_run else None
         except Exception as e:
             main_logger.error(f"Error retrieving active run: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def store_active_run(self, thread_id: str, run_id: str) -> None:
+    def store_active_run(self, thread_id: str, run_id: str) -> None:
         """Store the active run for a thread."""
         main_logger.info(f"Storing active run {run_id} for thread ID: {thread_id}")
         try:
-            query = select(ActiveRunModel).where(ActiveRunModel.thread_id == thread_id)
-            result = await self.db.execute(query)
-            existing_run = result.scalar_one_or_none()
+            existing_run = (
+                self.db.query(ActiveRunModel)
+                .filter(ActiveRunModel.thread_id == thread_id)
+                .first()
+            )
 
             if existing_run:
                 existing_run.run_id = run_id  # Update existing run ID
@@ -154,24 +158,21 @@ class TwilioRepository:
                 new_run = ActiveRunModel(thread_id=thread_id, run_id=run_id)
                 self.db.add(new_run)
 
-            await self.db.commit()
+            self.db.commit()
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             main_logger.error(f"Error storing active run: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
 
-    async def delete_active_run(self, thread_id: str) -> None:
+    def delete_active_run(self, thread_id: str) -> None:
         """Delete the active run for a thread."""
         main_logger.info(f"Deleting active run for thread ID: {thread_id}")
         try:
-            query = select(ActiveRunModel).where(ActiveRunModel.thread_id == thread_id)
-            result = await self.db.execute(query)
-            active_run = result.scalar_one_or_none()
-            
-            if active_run:
-                await self.db.delete(active_run)
-                await self.db.commit()
+            self.db.query(ActiveRunModel).filter(
+                ActiveRunModel.thread_id == thread_id
+            ).delete()
+            self.db.commit()
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             main_logger.error(f"Error deleting active run: {str(e)}")
             raise Exception(f"Database error: {str(e)}")
