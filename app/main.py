@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import twilio_route, auth_route, subscription_route
 from .models.base import Base
 from .db.session import engine
-
+from sqlalchemy import inspect
 
 app = FastAPI(
     title="TimeGlobe WhatsApp Assistant",
@@ -18,6 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 Base.metadata.create_all(bind=engine)
+
+
+# create customer table if not exists   
+def create_customer_table():
+    inspector = inspect(engine)
+    if 'customers' not in inspector.get_table_names():
+        Base.metadata.tables['customers'].create(bind=engine)
+
+
 app.include_router(router=twilio_route.router, prefix="/api/twilio", tags=["Twilio"])
 app.include_router(
     router=auth_route.router, prefix="/api/auth", tags=["authentication"]
