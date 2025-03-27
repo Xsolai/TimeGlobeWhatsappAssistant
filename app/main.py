@@ -4,16 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import twilio_route, auth_route, subscription_route
 from .models.base import Base
 from .db.session import engine
-from .models.booked_appointment import BookModel
-from .models.customer_model import CustomerModel
-from .models.booking_detail import BookingDetail
-from .models.thread import Thread
-from .models.active_run import ActiveRun
-from .models.user import User
-from .models.user_subscription import UserSubscription
-from .models.subscription_plan import SubscriptionPlan
-from .models.sender_model import SenderModel
-from sqlalchemy import inspect
+
 
 app = FastAPI(
     title="TimeGlobe WhatsApp Assistant",

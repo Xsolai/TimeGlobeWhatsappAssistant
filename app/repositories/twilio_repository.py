@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Optional
+from ..models.customer_model import CustomerModel
 from ..models.sender_model import SenderModel
 from ..models.user import UserModel
 from ..schemas import twilio_sender, auth

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Optional
+from ..models.customer_model import CustomerModel
 from ..models.user import UserModel
 from ..schemas.auth import UserCreate, User
 from ..utils.security_util import get_password_hash
