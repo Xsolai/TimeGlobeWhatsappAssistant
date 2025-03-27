@@ -32,21 +32,46 @@ runs_lock = threading.RLock()  # For active_runs dict
 
 
 class AssistantManager:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
+        if cls._instance is None:
+            cls._instance = super(AssistantManager, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
-        """Initialize the AssistantManager with API key and assistant ID."""
-        self.client = OpenAI(api_key=api_key)
-        self.assistant_id = assistant_id
-        self.twilio_repo = TwilioRepository(db)
-        # Cache function mappings to avoid recreating on each tool call
-        self._function_mapping = None
+        if not self._initialized:
+            self.client = OpenAI(api_key=api_key)
+            self.assistant_id = assistant_id
+            self.twilio_repo = TwilioRepository(db)
+            self._function_mapping = None
+            self._initialized = True
+            # Add thread cache
+            self._thread_cache = {}
+            self._thread_cache_lock = threading.RLock()
+            self._thread_cache_ttl = 3600  # 1 hour TTL
 
     def get_or_create_thread(self, user_id: str) -> str:
-        """Get existing thread for user or create new one."""
-        with threads_lock:
+        """Get existing thread for user or create new one with caching."""
+        with self._thread_cache_lock:
+            # Check cache first
+            cache_entry = self._thread_cache.get(user_id)
+            if cache_entry:
+                thread_id, timestamp = cache_entry
+                if time.time() - timestamp < self._thread_cache_ttl:
+                    logger.info(f"Cache hit for thread: {thread_id}")
+                    return thread_id
+                else:
+                    # Cache expired, remove it
+                    del self._thread_cache[user_id]
+
             logger.info(f"Checking existing thread for user: {user_id}")
             existing_thread = self.twilio_repo.get_thread_by_number(user_id)
             if existing_thread:
                 logger.info(f"Found existing thread: {existing_thread.thread_id}")
+                # Update cache
+                self._thread_cache[user_id] = (existing_thread.thread_id, time.time())
                 return existing_thread.thread_id
 
             logger.info(f"Creating new thread for user: {user_id}")
@@ -54,6 +79,8 @@ class AssistantManager:
             self.twilio_repo.create_thread(
                 ThreadCreate(mobile_number=user_id, thread_id=thread.id)
             )
+            # Update cache
+            self._thread_cache[user_id] = (thread.id, time.time())
             return thread.id
 
     def get_active_run(self, thread_id: str) -> str:
@@ -165,25 +192,37 @@ class AssistantManager:
                         logger.error(f"Error creating run: {run_error}")
                         return f"Unable to process your request: {str(run_error)}"
 
-                    # More reasonable timeout - 60 seconds
+                    # Optimized polling strategy with exponential backoff
                     timeout = 180
                     start_time = time.time()
-                    # Optimized polling strategy
-                    backoff_interval = 0.5
-                    max_backoff = 5  # Cap max backoff at 5 seconds
+                    poll_interval = 0.5
+                    max_poll_interval = 5.0
+                    consecutive_same_status = 0
+                    last_status = None
 
                     while time.time() - start_time < timeout:
                         run = self.client.beta.threads.runs.retrieve(
                             thread_id=thread_id, run_id=run.id
                         )
-                        logger.info(f"Run status: {run.status}")
+                        current_status = run.status
+                        
+                        # Optimize polling based on status
+                        if current_status == last_status:
+                            consecutive_same_status += 1
+                            if consecutive_same_status > 3:
+                                # Increase polling interval if status hasn't changed
+                                poll_interval = min(poll_interval * 1.5, max_poll_interval)
+                        else:
+                            consecutive_same_status = 0
+                            poll_interval = 0.5  # Reset interval on status change
+                        
+                        last_status = current_status
+                        logger.info(f"Run status: {current_status}")
 
-                        if run.status == "completed":
+                        if current_status == "completed":
                             self.delete_active_run(thread_id)
                             return self.get_latest_assistant_response(user_id)
-                        elif run.status == "requires_action":
-                            # Pass the run.id directly to avoid potential race condition
-                            # where run.id might have changed
+                        elif current_status == "requires_action":
                             current_run_id = run.id
                             self.handle_tool_calls(
                                 thread_id,
@@ -191,34 +230,27 @@ class AssistantManager:
                                 run.required_action.submit_tool_outputs.tool_calls,
                                 user_id,
                             )
-                            # Reset backoff after handling tool calls
-                            backoff_interval = 0.5
-                        elif run.status in ["failed", "expired", "cancelled"]:
-                            logger.warning(f"Run ended with status: {run.status}")
+                            poll_interval = 0.5  # Reset interval after handling tool calls
+                        elif current_status in ["failed", "expired", "cancelled"]:
+                            logger.warning(f"Run ended with status: {current_status}")
                             self.cleanup_active_run(thread_id)
-                            return f"Error: {run.status}"
-                        time.sleep(backoff_interval)
-                        backoff_interval = min(
-                            max_backoff, backoff_interval * 1.5
-                        )  # Gentler exponential backoff
+                            return f"Error: {current_status}"
+                        
+                        time.sleep(poll_interval)
 
-                    logger.error("Conversation run timed out")
-                    # Ensure cleanup happens on timeout
+                    # Timeout reached
+                    logger.warning(f"Run timed out after {timeout} seconds")
                     self.cleanup_active_run(thread_id)
-                    return "I'm sorry, but your request is taking longer than expected. Please try again with a simpler question."
+                    return "Request timed out. Please try again."
 
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        logger.warning(
-                            f"Attempt {attempt + 1}/{max_retries} failed: {e}"
-                        )
+                        logger.warning(f"Retry {attempt + 1}/{max_retries}: {e}")
                         time.sleep(retry_delay)
                         retry_delay *= 2
                     else:
-                        logger.error(f"All {max_retries} attempts failed: {e}")
-                        # Ensure cleanup happens on failure
-                        self.cleanup_active_run(thread_id)
-                        return f"Sorry, I encountered an error: {str(e)}"
+                        logger.error(f"Failed after {max_retries} attempts: {e}")
+                        return f"Error processing your request: {str(e)}"
 
             return "Failed to complete the conversation after multiple attempts."
 

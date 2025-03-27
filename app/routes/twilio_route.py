@@ -1,4 +1,10 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+import time
+from collections import defaultdict
+from typing import Dict, Tuple
+import threading
 
 from app.agent import AssistantManager
 from ..services.twilio_service import TwilioService
@@ -20,8 +26,29 @@ from ..core.dependencies import (
     validate_twilio_request,
     get_current_user,
 )
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+
+# Rate limiting configuration
+RATE_LIMIT_WINDOW = 60  # 1 minute window
+MAX_REQUESTS_PER_WINDOW = 30  # Maximum requests per minute per user
+rate_limit_data: Dict[str, list] = defaultdict(list)
+rate_limit_lock = threading.RLock()
+
+def check_rate_limit(user_id: str) -> bool:
+    """Check if the user has exceeded the rate limit."""
+    current_time = time.time()
+    
+    with rate_limit_lock:
+        # Clean up old timestamps
+        rate_limit_data[user_id] = [ts for ts in rate_limit_data[user_id] 
+                                  if current_time - ts < RATE_LIMIT_WINDOW]
+        
+        # Check if user has exceeded rate limit
+        if len(rate_limit_data[user_id]) >= MAX_REQUESTS_PER_WINDOW:
+            return False
+            
+        # Add current timestamp
+        rate_limit_data[user_id].append(current_time)
+        return True
 
 router = APIRouter()
 
@@ -42,6 +69,15 @@ async def whatsapp_wbhook(
     incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
     sender_number = form_data.get("From", "")  # Sender's WhatsApp number
     number = "".join(filter(str.isdigit, sender_number))
+    
+    # Check rate limit
+    if not check_rate_limit(number):
+        logging.warning(f"Rate limit exceeded for user {number}")
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"message": "Rate limit exceeded. Please try again later."}
+        )
+    
     logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
         # Get response from the assistant function
@@ -55,15 +91,11 @@ async def whatsapp_wbhook(
     except Exception as e:
         logging.error(f"Error generating response for {sender_number}: {e}")
         response = "I'm sorry, something went wrong while processing your message."
-    # # Send the response back to the incoming message
+    
     print(f"Response ==>> {sender_number} with: {response}")
-
-    # resp = MessagingResponse()
-    # resp.message(response)
     resp = tiwilio_service.send_whatsapp(sender_number, response)
-    # logging.info(f"Responded to {sender_number} with: {response}")
     print("Resp", str(resp))
-    return str(resp)  # Respond to Twilio's webhook with the message
+    return str(resp)
 
 
 @router.post(
