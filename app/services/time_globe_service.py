@@ -412,69 +412,79 @@ class TimeGlobeService:
         main_logger.info("Successfully fetched old orders")
         return response
 
-    def book_appointment(
-        self,
-        beginTs: str,
-        durationMillis: int,
-        mobileNumber: str,
-        employeeId: int,
-        itemNo: int,
-        siteCd: str,
-    ):
-        """Book an appointment."""
-        main_logger.debug("Booking appointment")
+    def book_appointment(self, payload: dict):
+        """Book one or more appointments with the updated API structure."""
+        main_logger.debug("Booking appointment with new API format")
+        
         try:
-            # Define the cutoff date (April 1st, 2025)
+            # Define the cutoff date for time adjustment
             cutoff_date = datetime(2025, 4, 1)
             main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
-            
-            # Parse and adjust the beginTs time
-            original_dt = datetime.strptime(beginTs, "%Y-%m-%dT%H:%M:%S.%fZ")
-            hours_to_subtract = 2 if original_dt >= cutoff_date else 1
-            adjusted_dt = original_dt.replace(hour=original_dt.hour - hours_to_subtract)
-            adjusted_beginTs = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-            
-            main_logger.info(
-                f"Adjusting appointment time - Original: {original_dt.strftime('%Y-%m-%d %H:%M')} → "
-                f"Adjusted: {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (-{hours_to_subtract} hour{'s' if hours_to_subtract > 1 else ''})"
-            )
 
-            payload = {
-                "siteCd": siteCd,
-                "reminderSms": True,
-                "reminderEmail": True,
-                "positions": [
-                    {
-                        "beginTs": adjusted_beginTs,  # Using the adjusted time
-                        "durationMillis": durationMillis,
-                        "employeeId": employeeId,
-                        "itemNo": itemNo,
-                    }
-                ],
+            # Adjust beginTs in all positions
+            adjusted_positions = []
+            for i, pos in enumerate(payload.get("positions", [])):
+                try:
+                    original_dt = datetime.strptime(pos["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_subtract = 2 if original_dt >= cutoff_date else 1
+                    adjusted_dt = original_dt.replace(hour=original_dt.hour - hours_to_subtract)
+                    adjusted_beginTs = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+                    main_logger.info(
+                        f"[Position {i+1}] Adjusting appointment time - "
+                        f"Original: {original_dt.strftime('%Y-%m-%d %H:%M')} → "
+                        f"Adjusted: {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (-{hours_to_subtract} hour{'s' if hours_to_subtract > 1 else ''})"
+                    )
+
+                    adjusted_positions.append({
+                        **pos,
+                        "beginTs": adjusted_beginTs
+                    })
+
+                except Exception as e:
+                    main_logger.warning(f"Could not adjust beginTs for position {i+1}: {str(e)}")
+                    adjusted_positions.append(pos)  # fallback to original if parsing fails
+
+            # Build adjusted payload
+            adjusted_payload = {
+                "siteCd": payload.get("siteCd"),
+                "customerId": payload.get("customerId"),
+                "reminderSms": payload.get("reminderSms", True),
+                "reminderEmail": payload.get("reminderEmail", False),
+                "positions": adjusted_positions
             }
-            
+
+            # Use first position to extract mobile_number for header
+            mobile_number = payload.get("mobileNumber", None)
+            if not mobile_number:
+                main_logger.warning("No mobile number provided in payload — sending request without it")
+
+            # Send request to API
             response = self.request(
                 "POST",
                 "/bot/book",
-                data=payload,
+                data=adjusted_payload,
                 is_header=True,
-                mobile_number=mobileNumber,
+                mobile_number=mobile_number,
             )
+
             if response.get("code") == 0:
                 main_logger.info("Appointment booked successfully")
-                payload.update(
-                    {
-                        "mobileNumber": mobileNumber,
-                        "orderId": response.get("orderId")
-                    }
-                )
-                self.time_globe_repo.save_book_appointment(payload)
+                # Save with mobile number and order ID
+                adjusted_payload.update({
+                    "mobileNumber": mobile_number,
+                    "orderId": response.get("orderId")
+                })
+                self.time_globe_repo.save_book_appointment(adjusted_payload)
             else:
                 main_logger.error(f"Failed to book appointment: {response}")
+
             return response
+
         except Exception as e:
             main_logger.error(f"Error in book_appointment: {str(e)}")
             raise
+
 
     def cancel_appointment(self, orderId: int, mobileNumber: str, siteCd):
         """Cancel an existing appointment."""

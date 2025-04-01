@@ -264,13 +264,23 @@ class AssistantManager:
                 ),
 
                 "bookAppointment": lambda args: book_appointment(
-                    beginTs=args.get("beginTs"),
-                    durationMillis=args.get("durationMillis"),
-                    mobileNumber=f"+{user_id}",
-                    employeeId=args.get("employeeId"),
-                    itemNo=args.get("itemNo"),
                     siteCd=args.get("siteCd"),
+                    customerId=args.get("customerId"),
+                    reminderSms=args.get("reminderSms", True),
+                    reminderEmail=args.get("reminderEmail", False),
+                    positions=[
+                        {
+                            "ordinalPosition": i + 1,
+                            "beginTs": pos.get("beginTs"),
+                            "durationMillis": pos.get("durationMillis"),
+                            "employeeId": pos.get("employeeId"),
+                            "itemNo": pos.get("itemNo"),
+                            "itemNm": pos.get("itemNm")
+                        }
+                        for i, pos in enumerate(args.get("positions", []))
+                    ]
                 ),
+
                 "cancelAppointment": lambda args: cancel_appointment(
                     orderId=args.get("orderId"),
                     mobileNumber=f"+{user_id}",

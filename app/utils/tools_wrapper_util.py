@@ -106,45 +106,63 @@ def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: li
 
 
 def book_appointment(
-    beginTs,
-    durationMillis,
-    mobileNumber,
-    employeeId,
-    itemNo,
-    siteCd
+    siteCd,
+    customerId,
+    reminderSms,
+    reminderEmail,
+    positions
 ):
-    """Book an appointment with the selected parameters"""
-    logger.info(
-        f"Tool called: book_appointment(duration={durationMillis}, user_date_time={beginTs})"
-    )
+    """Book one or more appointments using the updated API structure"""
+    logger.info("Tool called: book_appointment() with multiple positions")
     start_time = time.time()
+    
     try:
-        # Try our own date parsing in case there's any issue with the format
-        # Used for debug, not actual conversion since time_globe_service has its own format_datetime
-        if not isinstance(beginTs, str):
-            logger.warning(f"Invalid date/time types: date={type(beginTs)}")
-            return {"status": "error", "message": "Date and time must be strings"}
+        # Validate beginTs in positions
+        for i, pos in enumerate(positions):
+            if not isinstance(pos.get("beginTs"), str):
+                logger.warning(f"Invalid beginTs format in position {i + 1}: {pos.get('beginTs')}")
+                return {
+                    "status": "error",
+                    "message": f"Invalid date format in position {i + 1}"
+                }
 
-        logger.info(f"Processing appointment with date and time={beginTs}")
+        logger.info(f"Processing appointment booking for customerId={customerId}, siteCd={siteCd}")
 
-        # Call the service function which has a local format_datetime
-        result = _get_time_globe_service().book_appointment(
-                    beginTs,
-                    durationMillis,
-                    mobileNumber,
-                    employeeId,
-                    itemNo,
-                    siteCd
-        )
+        # Construct the API payload
+        payload = {
+            "siteCd": siteCd,
+            "customerId": customerId,
+            "reminderSms": reminderSms,
+            "reminderEmail": reminderEmail,
+            "positions": [
+                {
+                    "ordinalPosition": i + 1,
+                    "beginTs": pos.get("beginTs"),
+                    "durationMillis": pos.get("durationMillis"),
+                    "employeeId": pos.get("employeeId"),
+                    "itemNo": pos.get("itemNo"),
+                    "itemNm": pos.get("itemNm"),
+                }
+                for i, pos in enumerate(positions)
+            ]
+        }
+
+        # Make the API call
+        result = _get_time_globe_service().book_appointment(payload)
+
         execution_time = time.time() - start_time
+
+        # Handle result codes
         if result.get("code") == 90:
             logger.info(
                 f"book_appointment() - user already has 2 appointments - took {execution_time:.2f}s"
             )
             return {
                 "status": "success",
-                "booking_result": "you already have 2 appointments in future \
-            in order to make another appointment please cancel one of them.",
+                "booking_result": (
+                    "You already have 2 future appointments. "
+                    "Please cancel one to book another."
+                ),
             }
         elif result.get("code") == 0:
             order_id = result.get("orderId")
@@ -153,21 +171,20 @@ def book_appointment(
             )
             return {
                 "status": "success",
-                "booking_result": f"appointment booked successfully orderID is {order_id}",
+                "booking_result": f"Appointment booked successfully. Order ID: {order_id}",
             }
         else:
             logger.warning(
-                f"book_appointment() - unexpected code: {result.get('code')} - took {execution_time:.2f}s"
+                f"book_appointment() - unexpected response code: {result.get('code')} - took {execution_time:.2f}s"
             )
             return {
                 "status": "error",
                 "message": f"Unexpected response code: {result.get('code')}",
             }
+
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(
-            f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s"
-        )
+        logger.error(f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
 
 
