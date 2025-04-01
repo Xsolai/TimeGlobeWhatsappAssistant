@@ -279,12 +279,12 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
-    def AppointmentSuggestion(self, week: int, siteCd: str, positions: list):
+    def AppointmentSuggestion(self,customerCd:str, week: int, siteCd: str, positions: list):
         """Retrieve available appointment slots for selected services and optionally employees."""
         main_logger.debug(f"Fetching suggestions for week: {week}, siteCd: {siteCd}, positions: {positions}")
         
         payload = {
-            "customerCd": "demo",
+            "customerCd": customerCd,
             "siteCd": siteCd,
             "week": week,
             "positions": positions
