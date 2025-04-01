@@ -337,9 +337,6 @@ class TimeGlobeService:
         else:
             main_logger.warning("No suggestions found in response or invalid response format")
         
-        main_logger.info(
-            f"Successfully processed appointment suggestions for employee: {employee_id}"
-        )
         main_logger.info(f"Response of appointment suggestions: {response}")
         return response
 
