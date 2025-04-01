@@ -257,11 +257,12 @@ class AssistantManager:
                     args.get("items"), args.get("siteCd"),args.get("week")
                 ),
                 "AppointmentSuggestion": lambda args: AppointmentSuggestion(
-                    week=args.get("week"),
-                    employeeid=args.get("employeeId"),
-                    itemno=args.get("itemNo"),
+                    customerCd=args.get("customerCd"),
                     siteCd=args.get("siteCd"),
+                    week=args.get("week"),
+                    positions=args.get("positions")
                 ),
+
                 "bookAppointment": lambda args: book_appointment(
                     beginTs=args.get("beginTs"),
                     durationMillis=args.get("durationMillis"),

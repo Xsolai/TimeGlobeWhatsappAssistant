@@ -279,16 +279,17 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
-    def AppointmentSuggestion(self, week: int, employee_id: int, item_no: int, siteCd: str):
-        """Retrieve available appointment slots for selected services."""
-        main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
-        # self.employee_id = employee_id
+    def AppointmentSuggestion(self, week: int, siteCd: str, positions: list):
+        """Retrieve available appointment slots for selected services and optionally employees."""
+        main_logger.debug(f"Fetching suggestions for week: {week}, siteCd: {siteCd}, positions: {positions}")
+        
         payload = {
             "customerCd": "demo",
             "siteCd": siteCd,
             "week": week,
-            "positions": [{"itemNo": item_no, "employeeId": employee_id}],
+            "positions": positions
         }
+
         response = self.request("POST", "/browse/getSuggestions", data=payload)
         
         # Define the cutoff date (April 1st, 2025)

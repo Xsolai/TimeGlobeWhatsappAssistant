@@ -79,15 +79,18 @@ def get_employee(items, siteCd,week):
         return {"status": "error", "message": str(e)}
 
 
-def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
-    """Get available appointment slots for a selected employee,service and salon"""
+def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: list):
+    """Get available appointment slots for selected services and optionally specific employees at a given salon"""
     logger.info(
-        f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd})"
+        f"Tool called: AppointmentSuggestion(customerCd={customerCd}, siteCd={siteCd}, week={week}, positions={positions})"
     )
     start_time = time.time()
     try:
         suggestions = _get_time_globe_service().AppointmentSuggestion(
-            week,employeeid, itemno, siteCd
+            customerCd=customerCd,
+            siteCd=siteCd,
+            week=week,
+            positions=positions
         )
         execution_time = time.time() - start_time
         logger.info(
