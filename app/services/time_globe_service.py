@@ -515,30 +515,27 @@ class TimeGlobeService:
         full_name: str,
         first_name: str,
         last_name: str,
+        dpl_accepted: bool = False  # <-- NEU
     ):
         """Store user profile."""
         main_logger.debug(f"Storing profile for mobile number: {mobile_number}")
 
         # Ensure mobile number is properly formatted (remove leading zeroes, ensure country code, etc.)
         if mobile_number.startswith("0"):
-            mobile_number = mobile_number[1:]  # Remove leading zero
+            mobile_number = mobile_number[1:]
         if not mobile_number.startswith("+"):
-            # Add + if missing (commonly expected format for international numbers)
             mobile_number = "+" + mobile_number
 
-        # self.mobile_number = mobile_number
-        # full_name = first_name + " " + last_name
-
-        # Create the payload with proper field names
+        # Erstelle Payload für API
         payload = {
             "salutationCd": gender,
             "email": email,
             "fullNm": full_name,
             "firstNm": first_name,
             "lastNm": last_name,
+            "dplAccepted": dpl_accepted,  # <-- NEU
         }
 
-        # Add extra debugging
         main_logger.debug(f"Sending profile data to API: {payload}")
 
         try:
@@ -550,7 +547,6 @@ class TimeGlobeService:
                 mobile_number=mobile_number,
             )
 
-            # Check for specific response patterns
             main_logger.debug(f"API response for store_profile: {response}")
 
             if response and isinstance(response, dict):
@@ -558,18 +554,19 @@ class TimeGlobeService:
                 main_logger.info(f"Profile API response code: {code}")
 
                 if code == 0:
-                    main_logger.info(
-                        f"Profile stored successfully in API: {mobile_number}"
-                    )
-                    # Make sure customer data has the right field names for the repository
+                    main_logger.info(f"Profile stored successfully in API: {mobile_number}")
+
+                    # Kundendaten ggf. auch mit dplAccepted speichern
                     customer_data = {
                         "salutationCd": gender,
                         "email": email,
                         "fullNm": full_name,
                         "firstNm": first_name,
                         "lastNm": last_name,
+                        "dplAccepted": dpl_accepted,  # <-- Optional, je nach Bedarf
                     }
                     self.time_globe_repo.create_customer(customer_data, mobile_number)
+
                     return {"code": 0, "message": "Profile created successfully"}
                 else:
                     main_logger.error(f"API returned error code: {code}")

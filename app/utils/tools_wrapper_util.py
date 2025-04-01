@@ -299,6 +299,7 @@ def store_profile(
     full_name: str,
     first_name: str,
     last_name: str,
+    dpl_accepted: bool = False  # Neu hinzugefügt
 ):
     """Store user profile"""
     # Handle missing parameters
@@ -314,7 +315,6 @@ def store_profile(
         if mobile_number.startswith("00"):  # Common format for international numbers
             mobile_number = "+" + mobile_number[2:]
         elif not mobile_number.startswith("+"):
-            # Add + if doesn't have country code indicator
             mobile_number = "+" + mobile_number
 
     # Provide default values for optional parameters
@@ -335,20 +335,25 @@ def store_profile(
         last_name = ""
 
     logger.info(
-        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})"
+        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, "
+        f"gender={gender}, full_name={full_name}, first_name={first_name}, "
+        f"last_name={last_name}, dplAccepted={dpl_accepted})"
     )
+
     start_time = time.time()
     try:
+        # Übergib den neuen Parameter an den Service
         response = _get_time_globe_service().store_profile(
-            mobile_number, email, gender, full_name, first_name, last_name
+            mobile_number, email, gender, full_name, first_name, last_name, dpl_accepted
         )
+
         execution_time = time.time() - start_time
 
         if response.get("code") == 0:
             logger.info(
                 f"store_profile() - profile created successfully - took {execution_time:.2f}s"
             )
-            return {"status": "success", "message": "profile created successfully"}
+            return {"status": "success", "message": "Profile created successfully"}
         else:
             error_code = response.get("code", "unknown")
             error_msg = response.get("message", "Unknown error")

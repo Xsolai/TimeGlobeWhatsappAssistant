@@ -47,18 +47,20 @@ class TimeGlobeRepository:
             main_logger.info(f"Fetching customer with mobile number: {mobile_number}")
             customer = self.get_customer(mobile_number)
 
+            dpl_accepted = customer_data.get("dplAccepted", False)  # <-- NEU
+
             if not customer:
                 main_logger.warning(
                     f"No customer found with mobile number: {mobile_number}"
                 )
 
-                # Extract required fields with defaults to avoid KeyErrors
                 new_customer = CustomerModel(
                     first_name=customer_data.get("firstNm", ""),
                     last_name=customer_data.get("lastNm", ""),
                     mobile_number=mobile_number,
                     email=customer_data.get("email", ""),
                     gender=customer_data.get("salutationCd", "M"),
+                    dpl_accepted=dpl_accepted,  # <-- NEU
                 )
 
                 main_logger.debug(f"Creating new customer with data: {customer_data}")
@@ -87,6 +89,7 @@ class TimeGlobeRepository:
                     customer.email = customer_data.get("email")
                 if customer_data.get("salutationCd"):
                     customer.gender = customer_data.get("salutationCd")
+                customer.dpl_accepted = dpl_accepted  # <-- NEU
 
                 try:
                     self.db.commit()

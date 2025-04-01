@@ -304,13 +304,15 @@ class AssistantManager:
                 ),
                 # Add direct mapping for store_profile (same function, different name)
                 "store_profile": lambda args: store_profile(
-                    f"+{user_id}",
-                    args.get("email", ""),
-                    args.get("gender", ""),
-                    args.get("fullNm", ""),
-                    args.get("first_name", ""),
-                    args.get("last_name", ""),
-                ),
+                f"+{user_id}",
+                args.get("email", ""),
+                args.get("gender", ""),
+                args.get("fullNm", ""),
+                args.get("first_name", ""),
+                args.get("last_name", ""),
+                args.get("dplAccepted", False)
+            ),
+
             }
 
         return self._function_mapping
