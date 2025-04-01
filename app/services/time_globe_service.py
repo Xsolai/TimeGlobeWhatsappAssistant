@@ -217,6 +217,7 @@ class TimeGlobeService:
         }
         url = f"{self.base_url}{endpoint}"
         main_logger.debug(f"Request payload: {data}")
+        main_logger.debug(f"Request header: {headers}")
 
         if data:
             response = requests.request(
