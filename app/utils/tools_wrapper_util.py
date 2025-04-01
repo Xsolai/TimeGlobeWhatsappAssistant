@@ -106,6 +106,7 @@ def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: li
 
 
 def book_appointment(
+    mobileNumber,
     siteCd,
     customerId,
     reminderSms,
@@ -148,7 +149,7 @@ def book_appointment(
         }
 
         # Make the API call
-        result = _get_time_globe_service().book_appointment(payload)
+        result = _get_time_globe_service().book_appointment(payload,mobileNumber)
 
         execution_time = time.time() - start_time
 

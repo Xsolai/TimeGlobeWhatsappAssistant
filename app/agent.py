@@ -264,6 +264,7 @@ class AssistantManager:
                 ),
 
                 "bookAppointment": lambda args: book_appointment(
+                    mobileNumber=f"+{user_id}",
                     siteCd=args.get("siteCd"),
                     customerId=args.get("customerId"),
                     reminderSms=args.get("reminderSms", True),

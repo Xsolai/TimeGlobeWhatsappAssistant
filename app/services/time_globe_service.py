@@ -410,7 +410,7 @@ class TimeGlobeService:
         main_logger.info("Successfully fetched old orders")
         return response
 
-    def book_appointment(self, payload: dict):
+    def book_appointment(self, payload: dict,mobile_number):
         """Book one or more appointments with the updated API structure."""
         main_logger.debug("Booking appointment with new API format")
         
@@ -453,7 +453,7 @@ class TimeGlobeService:
             }
 
             # Use first position to extract mobile_number for header
-            mobile_number = payload.get("mobileNumber", None)
+            # mobile_number = payload.get("mobileNumber", None)
             if not mobile_number:
                 main_logger.warning("No mobile number provided in payload — sending request without it")
 
