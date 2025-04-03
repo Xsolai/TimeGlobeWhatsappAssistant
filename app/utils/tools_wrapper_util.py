@@ -300,7 +300,7 @@ def store_profile(
     full_name: str,
     first_name: str,
     last_name: str,
-    dpl_accepted: bool = False  # Neu hinzugefügt
+    dpl_accepted: int = 0  # Neu hinzugefügt
 ):
     """Store user profile"""
     # Handle missing parameters

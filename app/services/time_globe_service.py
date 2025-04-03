@@ -513,7 +513,7 @@ class TimeGlobeService:
         full_name: str,
         first_name: str,
         last_name: str,
-        dpl_accepted: bool = False  # <-- NEU
+        dpl_accepted: int = 0  # <-- NEU
     ):
         """Store user profile."""
         main_logger.debug(f"Storing profile for mobile number: {mobile_number}")
