@@ -532,6 +532,7 @@ class TimeGlobeService:
             "firstNm": first_name,
             "lastNm": last_name,
             "dplAccepted": dpl_accepted,  # <-- NEU
+            "mobile":mobile_number
         }
 
         main_logger.debug(f"Sending profile data to API: {payload}")
