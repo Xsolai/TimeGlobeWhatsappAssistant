@@ -302,6 +302,7 @@ class AssistantManager:
                     args.get("fullNm", ""),
                     args.get("first_name", ""),
                     args.get("last_name", ""),
+                    args.get("dplAccepted", 0)
                 ),
                 # Add direct mapping for store_profile (same function, different name)
                 "store_profile": lambda args: store_profile(
@@ -311,7 +312,7 @@ class AssistantManager:
                 args.get("fullNm", ""),
                 args.get("first_name", ""),
                 args.get("last_name", ""),
-                args.get("dplAccepted", False)
+                args.get("dplAccepted", 0)
             ),
 
             }
