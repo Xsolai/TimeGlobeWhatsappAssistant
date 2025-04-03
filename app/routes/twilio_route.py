@@ -22,6 +22,7 @@ from ..core.dependencies import (
 )
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -42,13 +43,15 @@ async def whatsapp_wbhook(
     incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
     sender_number = form_data.get("From", "")  # Sender's WhatsApp number
     number = "".join(filter(str.isdigit, sender_number))
-    logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
     try:
         # Get response from the assistant function
         _assistant_manager = AssistantManager(
             settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
         )
-        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
+        # Add Current Date and Time with msg
+        new_msg = f"{incoming_msg} \n current date: {datetime.today().date()} \n current time: {datetime.now(timezone.utc).time()}"
+        logging.info(f"Incoming message from {sender_number}: {new_msg}")
+        response = get_response_from_gpt(new_msg, number, _assistant_manager)
         response = format_response(response)
 
         logging.info(f"Response generated for {sender_number}: {response}")
