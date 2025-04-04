@@ -46,12 +46,12 @@ def get_sites():
         return {"status": "error", "message": str(e)}
 
 
-def get_products(site_code: str):
+def get_products(siteCd: str):
     """Get a list of available services for a specific salon"""
-    logger.info(f"Tool called: get_products(site_code={site_code})")
+    logger.info(f"Tool called: get_products(siteCd={siteCd})")
     start_time = time.time()
     try:
-        products = _get_time_globe_service().get_products(site_code)
+        products = _get_time_globe_service().get_products(siteCd)
         execution_time = time.time() - start_time
         logger.info(f"get_products() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "products": products}
@@ -61,15 +61,17 @@ def get_products(site_code: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_employee(item_no, site_code: str):
+def get_employee(items, siteCd, week):
     """Get a list of available employees for a specific service.
      Parameters:
-    item_no (int): The item number of the selected service for which employees are to be retrieved.
-    site_code (str): The siteCd of the salon"""
-    logger.info(f"Tool called: get_employee(item_no={item_no}, site_code={site_code})")
+    items (int): The item number of the selected service for which employees are to be retrieved.
+    siteCd (str): The siteCd of the salon"""
+    logger.info(
+        f"Tool called: get_employee(items={items}, siteCd={siteCd},week={week})"
+    )
     start_time = time.time()
     try:
-        employees = _get_time_globe_service().get_employee(item_no, site_code)
+        employees = _get_time_globe_service().get_employee(items, siteCd, week)
         execution_time = time.time() - start_time
         logger.info(f"get_employee() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "employees": employees}
@@ -79,71 +81,95 @@ def get_employee(item_no, site_code: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_suggestions(employee_id, item_no, site_code: str):
-    """Get available appointment slots for a selected employee,service and salon"""
+def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: list):
+    """Get available appointment slots for selected services and optionally specific employees at a given salon"""
     logger.info(
-        f"Tool called: get_suggestions(employee_id={employee_id}, item_no={item_no})"
+        f"Tool called: AppointmentSuggestion(customerCd={customerCd}, siteCd={siteCd}, week={week}, positions={positions})"
     )
     start_time = time.time()
     try:
-        suggestions = _get_time_globe_service().get_suggestions(
-            employee_id, item_no, site_code
+        suggestions = _get_time_globe_service().AppointmentSuggestion(
+            customerCd=customerCd, siteCd=siteCd, week=week, positions=positions
         )
         execution_time = time.time() - start_time
         logger.info(
-            f"get_suggestions() completed successfully in {execution_time:.2f}s"
+            f"AppointmentSuggestion() completed successfully in {execution_time:.2f}s"
         )
         return {"status": "success", "suggestions": suggestions}
     except Exception as e:
         execution_time = time.time() - start_time
         logger.error(
-            f"Error in get_suggestions(): {str(e)} - took {execution_time:.2f}s"
+            f"Error in AppointmentSuggestion(): {str(e)} - took {execution_time:.2f}s"
         )
         return {"status": "error", "message": str(e)}
 
 
 def book_appointment(
-    duration,
-    user_date_time,
-    mobile_number: str,
-    employee_id: int,
-    item_no: int,
-    item_name: int,
-    site_code: str,
+    receiver_nunmber,
+    mobileNumber,
+    siteCd,
+    customerId,
+    reminderSms,
+    reminderEmail,
+    positions,
 ):
-    """Book an appointment with the selected parameters"""
-    logger.info(
-        f"Tool called: book_appointment(duration={duration}, user_date_time={user_date_time})"
-    )
+    """Book one or more appointments using the updated API structure"""
+    logger.info("Tool called: book_appointment() with multiple positions")
     start_time = time.time()
+
     try:
-        # Try our own date parsing in case there's any issue with the format
-        # Used for debug, not actual conversion since time_globe_service has its own format_datetime
-        if not isinstance(user_date_time, str):
-            logger.warning(f"Invalid date/time types: date={type(user_date_time)}")
-            return {"status": "error", "message": "Date and time must be strings"}
+        # Validate beginTs in positions
+        for i, pos in enumerate(positions):
+            if not isinstance(pos.get("beginTs"), str):
+                logger.warning(
+                    f"Invalid beginTs format in position {i + 1}: {pos.get('beginTs')}"
+                )
+                return {
+                    "status": "error",
+                    "message": f"Invalid date format in position {i + 1}",
+                }
 
-        logger.info(f"Processing appointment with date and time={user_date_time}")
-
-        # Call the service function which has a local format_datetime
-        result = _get_time_globe_service().book_appointment(
-            duration=duration,
-            user_date_time=user_date_time,
-            mobile_number=mobile_number,
-            item_name=item_name,
-            item_no=item_no,
-            site_code=site_code,
-            employee_id=employee_id,
+        logger.info(
+            f"Processing appointment booking for customerId={customerId}, siteCd={siteCd}"
         )
+
+        # Construct the API payload
+        payload = {
+            "siteCd": siteCd,
+            "customerId": customerId,
+            "reminderSms": reminderSms,
+            "reminderEmail": reminderEmail,
+            "positions": [
+                {
+                    "ordinalPosition": i + 1,
+                    "beginTs": pos.get("beginTs"),
+                    "durationMillis": pos.get("durationMillis"),
+                    "employeeId": pos.get("employeeId"),
+                    "itemNo": pos.get("itemNo"),
+                    "itemNm": pos.get("itemNm"),
+                }
+                for i, pos in enumerate(positions)
+            ],
+        }
+
+        # Make the API call
+        result = _get_time_globe_service().book_appointment(
+            payload, mobileNumber, receiver_nunmber
+        )
+
         execution_time = time.time() - start_time
+
+        # Handle result codes
         if result.get("code") == 90:
             logger.info(
                 f"book_appointment() - user already has 2 appointments - took {execution_time:.2f}s"
             )
             return {
                 "status": "success",
-                "booking_result": "you already have 2 appointments in future \
-            in order to make another appointment please cancel one of them.",
+                "booking_result": (
+                    "You already have 2 future appointments. "
+                    "Please cancel one to book another."
+                ),
             }
         elif result.get("code") == 0:
             order_id = result.get("orderId")
@@ -152,16 +178,17 @@ def book_appointment(
             )
             return {
                 "status": "success",
-                "booking_result": f"appointment booked successfully orderID is {order_id}",
+                "booking_result": f"Appointment booked successfully. Order ID: {order_id}",
             }
         else:
             logger.warning(
-                f"book_appointment() - unexpected code: {result.get('code')} - took {execution_time:.2f}s"
+                f"book_appointment() - unexpected response code: {result.get('code')} - took {execution_time:.2f}s"
             )
             return {
                 "status": "error",
                 "message": f"Unexpected response code: {result.get('code')}",
             }
+
     except Exception as e:
         execution_time = time.time() - start_time
         logger.error(
@@ -170,18 +197,18 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(order_id, mobile_number, site_code):
+def cancel_appointment(orderId, mobileNumber, siteCd):
     """Cancel an existing appointment"""
-    logger.info(f"Tool called: cancel_appointment(order_id={order_id},sitecode={site_code})")
-    
+    logger.info(f"Tool called: cancel_appointment(orderId={orderId},sitecode={siteCd})")
+
     start_time = time.time()
     try:
-        if not order_id:
-            logger.warning("cancel_appointment() called without order_id")
-            return {"status": "error", "message": "order_id is required"}
+        if not orderId:
+            logger.warning("cancel_appointment() called without orderId")
+            return {"status": "error", "message": "orderId is required"}
 
         result = _get_time_globe_service().cancel_appointment(
-            order_id=order_id, mobile_number=mobile_number, site_code=site_code
+            orderId=orderId, mobileNumber=mobileNumber, siteCd=siteCd
         )
         execution_time = time.time() - start_time
 
@@ -278,6 +305,7 @@ def store_profile(
     mobile_number: str,
     email: str,
     gender: str,
+    full_name: str,
     first_name: str,
     last_name: str,
 ):
@@ -321,7 +349,7 @@ def store_profile(
     start_time = time.time()
     try:
         response = _get_time_globe_service().store_profile(
-            mobile_number, email, gender, first_name, last_name
+            mobile_number, email, gender, full_name, first_name, last_name
         )
         execution_time = time.time() - start_time
 
@@ -543,11 +571,11 @@ def format_datetime(user_date_time: str) -> str:
     raise ValueError(f"Invalid date-time format: {user_date_time}")
 
 
-def get_response_from_gpt(msg, user_id, _assistant_manager):
+def get_response_from_gpt(msg, user_id, _assistant_manager, receiver_nunmber):
     logger.info(f"Tool called: get_response_from_gpt(user_id={user_id})")
     start_time = time.time()
     try:
-        response = _assistant_manager.run_conversation(user_id, msg)
+        response = _assistant_manager.run_conversation(user_id, msg, receiver_nunmber)
         execution_time = time.time() - start_time
         logger.info(
             f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s"

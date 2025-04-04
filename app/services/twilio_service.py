@@ -84,7 +84,6 @@ class TwilioService:
 
     def register_whatsapp(self, sender_request: SenderRequest, user: User):
         main_logger.info(f"Registering WhatsApp sender: {sender_request.phone_number}")
-
         payload = {
             "sender_id": f"whatsapp:{sender_request.phone_number}",
             "waba_id": sender_request.waba_id,
@@ -112,6 +111,12 @@ class TwilioService:
         )
 
         main_logger.info(f"WhatsApp sender registration response: {response}")
+        if response.get("status"):
+            self.twilio_repository.create_whatsapp_sender(
+                sender_data=sender_request,
+                sender_id=sender_request.phone_number,
+                status=response.get("status"),
+            )
         return response
 
     def verify_sender(self, verification_request: VerificationRequest):

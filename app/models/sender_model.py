@@ -16,5 +16,7 @@ class SenderModel(Base):
     email = Column(String)
     website = Column(String)
     logo_url = Column(String)
+    status = Column(String)
     user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
     user = relationship("UserModel", back_populates="whatsapp_sender")
+    appointments = relationship("BookModel", back_populates="sender")

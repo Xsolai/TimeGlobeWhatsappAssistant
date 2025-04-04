@@ -124,7 +124,7 @@ class AssistantManager:
                     )
                     raise
 
-    def run_conversation(self, user_id: str, question: str) -> str:
+    def run_conversation(self, user_id: str, question: str,receiver_nunmber) -> str:
         """Run a conversation turn with thread safety and optimized error handling."""
         thread_id = self.get_or_create_thread(user_id)
         max_retries = 3
@@ -166,7 +166,7 @@ class AssistantManager:
                         return f"Unable to process your request: {str(run_error)}"
 
                     # More reasonable timeout - 60 seconds
-                    timeout = 60
+                    timeout = 180
                     start_time = time.time()
                     # Optimized polling strategy
                     backoff_interval = 0.5
@@ -190,6 +190,7 @@ class AssistantManager:
                                 current_run_id,
                                 run.required_action.submit_tool_outputs.tool_calls,
                                 user_id,
+                                receiver_nunmber,
                             )
                             # Reset backoff after handling tool calls
                             backoff_interval = 0.5
@@ -222,7 +223,7 @@ class AssistantManager:
 
             return "Failed to complete the conversation after multiple attempts."
 
-    def _get_function_mapping(self, user_id: str) -> Dict[str, Callable]:
+    def _get_function_mapping(self, user_id: str,receiver_nunmber:str) -> Dict[str, Callable]:
         """Get cached function mapping or create a new one."""
         if self._function_mapping is None:
             # Import only once when needed rather than on every tool call
@@ -230,7 +231,7 @@ class AssistantManager:
                 get_sites,
                 get_products,
                 get_employee,
-                get_suggestions,
+                AppointmentSuggestion,
                 book_appointment,
                 cancel_appointment,
                 get_profile,
@@ -244,9 +245,7 @@ class AssistantManager:
                 # Simple functions with one or no parameters
                 "getSites": lambda args: get_sites(),
                 "getProducts": lambda args: (
-                    get_products(**args)
-                    if args
-                    else get_products(args.get("site_code"))
+                    get_products(**args) if args else get_products(args.get("siteCd"))
                 ),
                 "getOrders": lambda args: get_orders(f"+{user_id}"),
                 "get_old_orders": lambda args: (
@@ -254,26 +253,38 @@ class AssistantManager:
                 ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
-                    args.get("item_no"), args.get("site_code")
+                    args.get("items"), args.get("siteCd"), args.get("week")
                 ),
-                "AppointmentSuggestion": lambda args: get_suggestions(
-                    employee_id=args.get("employee_id"),
-                    item_no=args.get("item_no"),
-                    site_code=args.get("site_code"),
+                 "AppointmentSuggestion": lambda args: AppointmentSuggestion(
+                    customerCd=args.get("customerCd"),
+                    siteCd=args.get("siteCd"),
+                    week=args.get("week"),
+                    positions=args.get("positions")
                 ),
+
                 "bookAppointment": lambda args: book_appointment(
-                    duration=args.get("duration"),
-                    user_date_time=args.get("user_date_time"),
-                    mobile_number=f"+{user_id}",
-                    employee_id=args.get("employee_id"),
-                    item_no=args.get("item_no"),
-                    item_name=args.get("item_name"),
-                    site_code=args.get("site_code"),
+                    receiver_nunmber=receiver_nunmber,
+                    mobileNumber=f"+{user_id}",
+                    siteCd=args.get("siteCd"),
+                    customerId=args.get("customerId"),
+                    reminderSms=args.get("reminderSms", True),
+                    reminderEmail=args.get("reminderEmail", False),
+                    positions=[
+                        {
+                            "ordinalPosition": i + 1,
+                            "beginTs": pos.get("beginTs"),
+                            "durationMillis": pos.get("durationMillis"),
+                            "employeeId": pos.get("employeeId"),
+                            "itemNo": pos.get("itemNo"),
+                            "itemNm": pos.get("itemNm")
+                        }
+                        for i, pos in enumerate(args.get("positions", []))
+                    ]
                 ),
                 "cancelAppointment": lambda args: cancel_appointment(
-                    order_id=args.get("order_id"),
-                    mobile_number=f"+{user_id}",
-                    site_code=args.get("site_code") if args.get("site_code") else args.get("sitecode",None),
+                    orderId=args.get("orderId"),
+                    mobileNumber=f"+{user_id}",
+                    siteCd=args.get("siteCd"),
                 ),
                 # "getProfile": lambda args: get_profile(
                 #     args.get(
@@ -287,6 +298,7 @@ class AssistantManager:
                     f"+{user_id}",
                     args.get("email", ""),
                     args.get("gender", ""),
+                    args.get("fullNm", ""),
                     args.get("first_name", ""),
                     args.get("last_name", ""),
                 ),
@@ -295,6 +307,7 @@ class AssistantManager:
                     f"+{user_id}",
                     args.get("email", ""),
                     args.get("gender", ""),
+                    args.get("fullNm", ""),
                     args.get("first_name", ""),
                     args.get("last_name", ""),
                 ),
@@ -308,10 +321,11 @@ class AssistantManager:
         run_id: str,
         tool_calls: List[Dict[Any, Any]],
         user_id: str,
+        receiver_nunmber:str
     ) -> None:
         """Handle tool calls with thread safety, improved error handling and performance."""
         tool_outputs = []
-        function_mapping = self._get_function_mapping(user_id)
+        function_mapping = self._get_function_mapping(user_id,receiver_nunmber)
 
         start_time = time.time()
         total_tool_calls = len(tool_calls)
