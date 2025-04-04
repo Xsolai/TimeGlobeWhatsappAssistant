@@ -68,7 +68,7 @@ class DashboardRepository:
             return {
                 "total_bookings": total_bookings,
                 "active_bookings": active_bookings,
-                "ai_agent_status": "active" if agent_status == "Online" else "inactive",
+                "ai_agent_status": "active" if agent_status == "ONLINE" else "inactive",
                 "subscription_plan": subscription_plan,
                 "renewal_date": renewal_date.strftime("%Y-%m-%d"),
                 "revenue_this_month": total_revenue if total_revenue else 0,

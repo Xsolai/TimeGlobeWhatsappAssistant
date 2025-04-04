@@ -116,6 +116,7 @@ class TwilioService:
                 sender_data=sender_request,
                 sender_id=sender_request.phone_number,
                 status=response.get("status"),
+                user=user
             )
         return response
 
