@@ -119,7 +119,13 @@ class TimeGlobeRepository:
                 f"Saving booking appointment for order_id: {booking_details.get('orderId')}"
             )
             sender=self.db.query(SenderModel).filter(SenderModel.phone_number==receiver_nunmber).first()
+            main_logger.info(
+                f"Line1"
+            )
             customer = self.get_customer(booking_details.get("mobileNumber"))
+            main_logger.info(
+                f"Line2"
+            )
             if not customer:
                 main_logger.error("Customer not found while saving appointment.")
                 raise Exception("Customer not found")
@@ -131,8 +137,14 @@ class TimeGlobeRepository:
                 customer_id=customer.id,
                 sender_id=sender.id if sender else 0
             )
+            main_logger.info(
+                f"Line3"
+            )
             self.db.add(book_appointment)
             self.db.commit()
+            main_logger.info(
+                f"Line4"
+            )
             main_logger.info(
                 f"Booking appointment saved with ID: {book_appointment.id}"
             )
