@@ -60,7 +60,7 @@ def get_ai_logs(
 
 
 @router.get("/ai-performance")
-def get_ai_performace(
+def get_ai_performance(
     current_user: User = Depends(get_current_user),
     service: DashboardService = Depends(get_dashboard_service),
 ):
