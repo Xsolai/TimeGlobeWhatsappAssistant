@@ -22,7 +22,7 @@ tools = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "site_code": {
+                    "siteCd": {
                         "type": "string",
                         "description": "Site code for the salon. Default is 'bonn'",
                     }
@@ -54,7 +54,7 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_suggestions",
+            "name": "AppointmentSuggestion",
             "description": "Get available appointment slots for a selected employee and service",
             "parameters": {
                 "type": "object",
@@ -106,7 +106,7 @@ tools = [
                         "description": "ID of the  appointment to cancel",
                     },
                 },
-                "required": ["site_code", "order_id"],
+                "required": ["siteCd", "order_id"],
             },
         },
     },

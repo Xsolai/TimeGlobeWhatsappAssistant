@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy.orm import Session
 from ..models.booked_appointment import BookModel
+from ..models.booked_appointment import BookModel
 from ..models.customer_model import CustomerModel
 from ..models.booking_detail import BookingDetail
 from ..models.services import ServicesModel
@@ -49,18 +50,20 @@ class TimeGlobeRepository:
             main_logger.info(f"Fetching customer with mobile number: {mobile_number}")
             customer = self.get_customer(mobile_number)
 
+            dpl_accepted = customer_data.get("dplAccepted", 0)  # <-- NEU
+
             if not customer:
                 main_logger.warning(
                     f"No customer found with mobile number: {mobile_number}"
                 )
 
-                # Extract required fields with defaults to avoid KeyErrors
                 new_customer = CustomerModel(
                     first_name=customer_data.get("firstNm", ""),
                     last_name=customer_data.get("lastNm", ""),
                     mobile_number=mobile_number,
                     email=customer_data.get("email", ""),
                     gender=customer_data.get("salutationCd", "M"),
+                    dpl_accepted=dpl_accepted,  # <-- NEU
                 )
 
                 main_logger.debug(f"Creating new customer with data: {customer_data}")
@@ -89,6 +92,7 @@ class TimeGlobeRepository:
                     customer.email = customer_data.get("email")
                 if customer_data.get("salutationCd"):
                     customer.gender = customer_data.get("salutationCd")
+                customer.dpl_accepted = dpl_accepted  # <-- NEU
 
                 try:
                     self.db.commit()
@@ -133,21 +137,21 @@ class TimeGlobeRepository:
                 f"Booking appointment saved with ID: {book_appointment.id}"
             )
 
-            for position in booking_details.get("positions", []):
-                main_logger.info(f"Processing booking position: {position}")
-                booking_detail = BookingDetail(
-                    begin_ts=datetime.strptime(
-                        position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ),
-                    duration_millis=position["durationMillis"],
-                    employee_id=position["employeeId"],
-                    item_no=position["itemNo"],
-                    book_id=book_appointment.id,
-                )
-                self.db.add(booking_detail)
+            # for position in booking_details.get("positions", []):
+            #     main_logger.info(f"Processing booking position: {position}")
+            #     booking_detail = BookingDetail(
+            #         begin_ts=datetime.strptime(
+            #             position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            #         ),
+            #         duration_millis=position["durationMillis"],
+            #         employee_id=position["employeeId"],
+            #         item_no=position["itemNo"],
+            #         item_nm=position["itemNm"],
+            #         book_id=book_appointment.id,
+            #     )
+            #     self.db.add(booking_detail)
 
             self.db.commit()
-
             main_logger.info(
                 f"Booking details saved for order_id: {booking_details.get('orderId')}"
             )

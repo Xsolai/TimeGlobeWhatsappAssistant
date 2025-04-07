@@ -20,7 +20,7 @@ class TwilioService:
         self.twilio_repository = TwilioRepository(db)
         self.user_repository = UserRepository(db)
         self.message_service_id = settings.TWILIO_MESSAGING_SERVICE_SID
-        self.client = Client(settings.account_sid, settings.auth_token)
+        self.client = Client(settings.ACCOUNT_SID, settings.AUTH_TOKEN)
 
     @property
     def _header(self):
@@ -29,7 +29,7 @@ class TwilioService:
     @property
     def _auth(self):
         """Return Twilio Auth account sid and auth token"""
-        return (settings.account_sid, settings.auth_token)
+        return (settings.ACCOUNT_SID, settings.AUTH_TOKEN)
 
     def _make_request(
         self,
@@ -71,7 +71,7 @@ class TwilioService:
             response = self.client.messages.create(
                 messaging_service_sid=self.message_service_id,
                 to=to,
-                from_=settings.from_whatsapp_number,
+                from_=settings.FROM_WHATSAPP_NUMBER,
                 body=message,
             )
             main_logger.info(f"WhatsApp message sent successfully: {response.sid}")

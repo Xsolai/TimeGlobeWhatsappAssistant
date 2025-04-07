@@ -13,7 +13,7 @@ from twilio.request_validator import RequestValidator
 
 
 async def validate_twilio_request(request: Request):
-    validator = RequestValidator(settings.auth_token)
+    validator = RequestValidator(settings.AUTH_TOKEN)
     params = await request.form()
     signature = request.headers.get("X-Twilio-Signature", "")
 

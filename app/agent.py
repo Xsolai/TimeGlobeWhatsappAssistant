@@ -167,6 +167,7 @@ class AssistantManager:
 
                     # More reasonable timeout - 60 seconds
                     timeout = 180
+                    timeout = 180
                     start_time = time.time()
                     # Optimized polling strategy
                     backoff_interval = 0.5
@@ -232,6 +233,7 @@ class AssistantManager:
                 get_products,
                 get_employee,
                 AppointmentSuggestion,
+                AppointmentSuggestion,
                 book_appointment,
                 cancel_appointment,
                 get_profile,
@@ -262,6 +264,7 @@ class AssistantManager:
                     positions=args.get("positions")
                 ),
 
+
                 "bookAppointment": lambda args: book_appointment(
                     receiver_nunmber=receiver_nunmber,
                     mobileNumber=f"+{user_id}",
@@ -285,6 +288,9 @@ class AssistantManager:
                     orderId=args.get("orderId"),
                     mobileNumber=f"+{user_id}",
                     siteCd=args.get("siteCd"),
+                    orderId=args.get("orderId"),
+                    mobileNumber=f"+{user_id}",
+                    siteCd=args.get("siteCd"),
                 ),
                 # "getProfile": lambda args: get_profile(
                 #     args.get(
@@ -299,18 +305,23 @@ class AssistantManager:
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("fullNm", ""),
-                    args.get("first_name", ""),
-                    args.get("last_name", ""),
-                ),
-                # Add direct mapping for store_profile (same function, different name)
-                "store_profile": lambda args: store_profile(
-                    f"+{user_id}",
-                    args.get("email", ""),
-                    args.get("gender", ""),
                     args.get("fullNm", ""),
                     args.get("first_name", ""),
                     args.get("last_name", ""),
+                    args.get("dplAccepted", 0)
                 ),
+                # Add direct mapping for store_profile (same function, different name)
+                "store_profile": lambda args: store_profile(
+                f"+{user_id}",
+                args.get("email", ""),
+                args.get("gender", ""),
+                args.get("fullNm", ""),
+                    args.get("fullNm", ""),
+                args.get("first_name", ""),
+                args.get("last_name", ""),
+                args.get("dplAccepted", 0)
+            ),
+
             }
 
         return self._function_mapping

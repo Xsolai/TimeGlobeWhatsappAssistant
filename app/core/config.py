@@ -5,9 +5,9 @@ import secrets
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./time_globe_assistant.db"
     SECRETE_KEY: str = secrets.token_urlsafe(32)
-    from_whatsapp_number: str
-    account_sid: str
-    auth_token: str
+    FROM_WHATSAPP_NUMBER: str
+    ACCOUNT_SID: str
+    AUTH_TOKEN: str
     TWILIO_API_URL: str
     WABA_ID: str
     TIME_GLOBE_LOGIN_USERNAME: str

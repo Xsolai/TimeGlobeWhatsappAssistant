@@ -45,12 +45,12 @@ def get_sites():
         logger.error(f"Error in get_sites(): {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
 
-
 def get_products(siteCd: str):
     """Get a list of available services for a specific salon"""
     logger.info(f"Tool called: get_products(siteCd={siteCd})")
     start_time = time.time()
     try:
+        products = _get_time_globe_service().get_products(siteCd)
         products = _get_time_globe_service().get_products(siteCd)
         execution_time = time.time() - start_time
         logger.info(f"get_products() completed successfully in {execution_time:.2f}s")
@@ -83,16 +83,23 @@ def get_employee(items, siteCd, week):
 
 def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: list):
     """Get available appointment slots for selected services and optionally specific employees at a given salon"""
+def AppointmentSuggestion(customerCd: str, siteCd: str, week: int, positions: list):
+    """Get available appointment slots for selected services and optionally specific employees at a given salon"""
     logger.info(
+        f"Tool called: AppointmentSuggestion(customerCd={customerCd}, siteCd={siteCd}, week={week}, positions={positions})"
         f"Tool called: AppointmentSuggestion(customerCd={customerCd}, siteCd={siteCd}, week={week}, positions={positions})"
     )
     start_time = time.time()
     try:
         suggestions = _get_time_globe_service().AppointmentSuggestion(
-            customerCd=customerCd, siteCd=siteCd, week=week, positions=positions
+            customerCd=customerCd,
+            siteCd=siteCd,
+            week=week,
+            positions=positions
         )
         execution_time = time.time() - start_time
         logger.info(
+            f"AppointmentSuggestion() completed successfully in {execution_time:.2f}s"
             f"AppointmentSuggestion() completed successfully in {execution_time:.2f}s"
         )
         return {"status": "success", "suggestions": suggestions}
@@ -111,13 +118,21 @@ def book_appointment(
     customerId,
     reminderSms,
     reminderEmail,
-    positions,
+    positions
 ):
     """Book one or more appointments using the updated API structure"""
     logger.info("Tool called: book_appointment() with multiple positions")
     start_time = time.time()
 
     try:
+        # Validate beginTs in positions
+        for i, pos in enumerate(positions):
+            if not isinstance(pos.get("beginTs"), str):
+                logger.warning(f"Invalid beginTs format in position {i + 1}: {pos.get('beginTs')}")
+                return {
+                    "status": "error",
+                    "message": f"Invalid date format in position {i + 1}"
+                }
         # Validate beginTs in positions
         for i, pos in enumerate(positions):
             if not isinstance(pos.get("beginTs"), str):
@@ -170,6 +185,10 @@ def book_appointment(
                     "You already have 2 future appointments. "
                     "Please cancel one to book another."
                 ),
+                "booking_result": (
+                    "You already have 2 future appointments. "
+                    "Please cancel one to book another."
+                ),
             }
         elif result.get("code") == 0:
             order_id = result.get("orderId")
@@ -182,7 +201,7 @@ def book_appointment(
             }
         else:
             logger.warning(
-                f"book_appointment() - unexpected response code: {result.get('code')} - took {execution_time:.2f}s"
+                f"book_appointment() - unexpected response response code: {result.get('code')} - took {execution_time:.2f}s"
             )
             return {
                 "status": "error",
@@ -191,11 +210,8 @@ def book_appointment(
 
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(
-            f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s"
-        )
+        logger.error(f"Error in book_appointment(): {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
-
 
 def cancel_appointment(orderId, mobileNumber, siteCd):
     """Cancel an existing appointment"""
@@ -308,6 +324,7 @@ def store_profile(
     full_name: str,
     first_name: str,
     last_name: str,
+    dpl_accepted: int = 0  # Neu hinzugefügt
 ):
     """Store user profile"""
     # Handle missing parameters
@@ -323,7 +340,6 @@ def store_profile(
         if mobile_number.startswith("00"):  # Common format for international numbers
             mobile_number = "+" + mobile_number[2:]
         elif not mobile_number.startswith("+"):
-            # Add + if doesn't have country code indicator
             mobile_number = "+" + mobile_number
 
     # Provide default values for optional parameters
@@ -344,20 +360,25 @@ def store_profile(
         last_name = ""
 
     logger.info(
-        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})"
+        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, "
+        f"gender={gender}, full_name={full_name}, first_name={first_name}, "
+        f"last_name={last_name}, dplAccepted={dpl_accepted})"
     )
+
     start_time = time.time()
     try:
+        # Übergib den neuen Parameter an den Service
         response = _get_time_globe_service().store_profile(
             mobile_number, email, gender, full_name, first_name, last_name
         )
+
         execution_time = time.time() - start_time
 
         if response.get("code") == 0:
             logger.info(
                 f"store_profile() - profile created successfully - took {execution_time:.2f}s"
             )
-            return {"status": "success", "message": "profile created successfully"}
+            return {"status": "success", "message": "Profile created successfully"}
         else:
             error_code = response.get("code", "unknown")
             error_msg = response.get("message", "Unknown error")

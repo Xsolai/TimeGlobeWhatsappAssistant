@@ -26,6 +26,7 @@ from ..models.booked_appointment import BookModel
 from ..models.booking_detail import BookingDetail
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone,timedelta
 from ..logger import main_logger
 
 router = APIRouter()
@@ -56,7 +57,11 @@ async def whatsapp_wbhook(
         _assistant_manager = AssistantManager(
             settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
         )
-        response = get_response_from_gpt(incoming_msg, number, _assistant_manager,receiver_nunmber.split(":")[1])
+        gmt_plus_2 = timezone(timedelta(hours=2))
+        # Add Current Date and Time with msg
+        new_msg = f"{incoming_msg} \n current date: {datetime.today().date()} \n current time: {datetime.now(gmt_plus_2).strftime('%H:%M:%S')}"
+        main_logger.info(f"Incoming message from {sender_number}: {new_msg}")
+        response = get_response_from_gpt(new_msg, number, _assistant_manager)
         response = format_response(response)
         main_logger.info(json.dumps(
                 {
