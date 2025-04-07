@@ -573,7 +573,7 @@ class TimeGlobeService:
             response = self.request(
                 "POST",
                 "/bot/book",
-                data=adjusted_adjusted_payload,
+                data=adjusted_payload,
                 is_header=True,
                 mobile_number=mobile_number,
             )
@@ -611,8 +611,7 @@ class TimeGlobeService:
             "/bot/cancel",
             data=payload,
             is_header=True,
-            mobile_number=mobileNumber,
-            mobile_number=mobileNumber,
+            mobile_number=mobileNumber
         )
         if response.get("code") == 0:
             main_logger.info(f"Appointment canceled successfully: {orderId}")
