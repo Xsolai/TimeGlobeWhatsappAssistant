@@ -127,6 +127,10 @@ class SubscriptionPlanService:
             logger.info(
                 "Cancelling subscription ID %d for user ID %d", subscription_id, user_id
             )
+            if not self.plan_repo.get_plan_by_id(subscription_id):
+                raise Exception("No plan with found!")
+            if self.plan_repo.get_user_subscribe_plan(user_id, subscription_id) is None:
+                raise Exception("no subscription found for this user")
             subscription = self.plan_repo.cancel_subscription(user_id, subscription_id)
             if not subscription:
                 logger.warning(
@@ -134,8 +138,8 @@ class SubscriptionPlanService:
                     subscription_id,
                     user_id,
                 )
-                raise HTTPException(
-                    status_code=500, detail="Error processing cancellation request"
+                raise Exception(
+                    "Error processing cancellation request"
                 )
             logger.info(
                 "Subscription ID %d canceled successfully for user ID %d",
@@ -145,4 +149,4 @@ class SubscriptionPlanService:
             return {"message": "Subscription canceled successfully"}
         except Exception as e:
             logger.error("Error canceling subscription: %s", str(e))
-            raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+            raise HTTPException(status_code=500, detail=str(e))

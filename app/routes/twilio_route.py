@@ -12,7 +12,8 @@ from ..core.config import settings
 from ..schemas.auth import User
 from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
-import logging
+import json
+from datetime import datetime,timezone
 from twilio.twiml.messaging_response import MessagingResponse
 from ..db.session import get_db
 from ..core.dependencies import (
@@ -20,9 +21,13 @@ from ..core.dependencies import (
     validate_twilio_request,
     get_current_user,
 )
+from ..models.customer_model import CustomerModel
+from ..models.booked_appointment import BookModel
+from ..models.booking_detail import BookingDetail
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone,timedelta
+from ..logger import main_logger
 
 router = APIRouter()
 
@@ -42,7 +47,11 @@ async def whatsapp_wbhook(
 
     incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
     sender_number = form_data.get("From", "")  # Sender's WhatsApp number
+    receiver_nunmber = form_data.get("To", "")
     number = "".join(filter(str.isdigit, sender_number))
+    main_logger.info(
+        f"Incoming message from {sender_number} to {receiver_nunmber}: {incoming_msg}"
+    )
     try:
         # Get response from the assistant function
         _assistant_manager = AssistantManager(
@@ -51,22 +60,32 @@ async def whatsapp_wbhook(
         gmt_plus_2 = timezone(timedelta(hours=2))
         # Add Current Date and Time with msg
         new_msg = f"{incoming_msg} \n current date: {datetime.today().date()} \n current time: {datetime.now(gmt_plus_2).strftime('%H:%M:%S')}"
-        logging.info(f"Incoming message from {sender_number}: {new_msg}")
+        main_logger.info(f"Incoming message from {sender_number}: {new_msg}")
         response = get_response_from_gpt(new_msg, number, _assistant_manager)
         response = format_response(response)
-
-        logging.info(f"Response generated for {sender_number}: {response}")
+        main_logger.info(json.dumps(
+                {
+                    "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                    "sender": sender_number,
+                    "receiver": receiver_nunmber,
+                    "message": incoming_msg,
+                    "response": response,  
+                }
+            ))
+        main_logger.info(f"Response generated for {sender_number}: {response}")
     except Exception as e:
-        logging.error(f"Error generating response for {sender_number}: {e}")
+        main_logger.error(f"Error generating response for {sender_number}: {e}")
         response = "I'm sorry, something went wrong while processing your message."
     # # Send the response back to the incoming message
-    print(f"Response ==>> {sender_number} with: {response}")
+    # print(f"Response ==>> {sender_number} with: {response}")
 
     # resp = MessagingResponse()
     # resp.message(response)
     resp = tiwilio_service.send_whatsapp(sender_number, response)
-    # logging.info(f"Responded to {sender_number} with: {response}")
-    print("Resp", str(resp))
+    main_logger.info(
+        f"Responded to  customer {sender_number} for question {incoming_msg} with response {response}"
+    )
+    # print("Resp", str(resp))
     return str(resp)  # Respond to Twilio's webhook with the message
 
 

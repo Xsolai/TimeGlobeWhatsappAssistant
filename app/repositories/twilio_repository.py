@@ -18,6 +18,7 @@ class TwilioRepository:
         self,
         sender_data: twilio_sender.SenderRequest,
         sender_id: str,
+        status: str,
         user: auth.User,
     ):
         main_logger.debug(f"Creating WhatsApp sender for user ID: {user.id}")
@@ -34,6 +35,7 @@ class TwilioRepository:
                 about=sender_data.about,
                 website=str(sender_data.website),
                 user_id=user.id,
+                status=status,
             )
             self.db.add(sender)
             self.db.commit()

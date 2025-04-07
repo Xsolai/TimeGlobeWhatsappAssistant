@@ -124,7 +124,7 @@ class AssistantManager:
                     )
                     raise
 
-    def run_conversation(self, user_id: str, question: str) -> str:
+    def run_conversation(self, user_id: str, question: str,receiver_nunmber) -> str:
         """Run a conversation turn with thread safety and optimized error handling."""
         thread_id = self.get_or_create_thread(user_id)
         max_retries = 3
@@ -167,6 +167,7 @@ class AssistantManager:
 
                     # More reasonable timeout - 60 seconds
                     timeout = 180
+                    timeout = 180
                     start_time = time.time()
                     # Optimized polling strategy
                     backoff_interval = 0.5
@@ -190,6 +191,7 @@ class AssistantManager:
                                 current_run_id,
                                 run.required_action.submit_tool_outputs.tool_calls,
                                 user_id,
+                                receiver_nunmber,
                             )
                             # Reset backoff after handling tool calls
                             backoff_interval = 0.5
@@ -222,7 +224,7 @@ class AssistantManager:
 
             return "Failed to complete the conversation after multiple attempts."
 
-    def _get_function_mapping(self, user_id: str) -> Dict[str, Callable]:
+    def _get_function_mapping(self, user_id: str,receiver_nunmber:str) -> Dict[str, Callable]:
         """Get cached function mapping or create a new one."""
         if self._function_mapping is None:
             # Import only once when needed rather than on every tool call
@@ -230,6 +232,7 @@ class AssistantManager:
                 get_sites,
                 get_products,
                 get_employee,
+                AppointmentSuggestion,
                 AppointmentSuggestion,
                 book_appointment,
                 cancel_appointment,
@@ -244,9 +247,7 @@ class AssistantManager:
                 # Simple functions with one or no parameters
                 "getSites": lambda args: get_sites(),
                 "getProducts": lambda args: (
-                    get_products(**args)
-                    if args
-                    else get_products(args.get("siteCd"))
+                    get_products(**args) if args else get_products(args.get("siteCd"))
                 ),
                 "getOrders": lambda args: get_orders(f"+{user_id}"),
                 "get_old_orders": lambda args: (
@@ -254,16 +255,18 @@ class AssistantManager:
                 ),
                 # Functions with specific required parameters
                 "getEmployees": lambda args: get_employee(
-                    args.get("items"), args.get("siteCd"),args.get("week")
+                    args.get("items"), args.get("siteCd"), args.get("week")
                 ),
-                "AppointmentSuggestion": lambda args: AppointmentSuggestion(
+                 "AppointmentSuggestion": lambda args: AppointmentSuggestion(
                     customerCd=args.get("customerCd"),
                     siteCd=args.get("siteCd"),
                     week=args.get("week"),
                     positions=args.get("positions")
                 ),
 
+
                 "bookAppointment": lambda args: book_appointment(
+                    receiver_nunmber=receiver_nunmber,
                     mobileNumber=f"+{user_id}",
                     siteCd=args.get("siteCd"),
                     customerId=args.get("customerId"),
@@ -281,8 +284,10 @@ class AssistantManager:
                         for i, pos in enumerate(args.get("positions", []))
                     ]
                 ),
-
                 "cancelAppointment": lambda args: cancel_appointment(
+                    orderId=args.get("orderId"),
+                    mobileNumber=f"+{user_id}",
+                    siteCd=args.get("siteCd"),
                     orderId=args.get("orderId"),
                     mobileNumber=f"+{user_id}",
                     siteCd=args.get("siteCd"),
@@ -300,6 +305,7 @@ class AssistantManager:
                     args.get("email", ""),
                     args.get("gender", ""),
                     args.get("fullNm", ""),
+                    args.get("fullNm", ""),
                     args.get("first_name", ""),
                     args.get("last_name", ""),
                     args.get("dplAccepted", 0)
@@ -310,6 +316,7 @@ class AssistantManager:
                 args.get("email", ""),
                 args.get("gender", ""),
                 args.get("fullNm", ""),
+                    args.get("fullNm", ""),
                 args.get("first_name", ""),
                 args.get("last_name", ""),
                 args.get("dplAccepted", 0)
@@ -325,10 +332,11 @@ class AssistantManager:
         run_id: str,
         tool_calls: List[Dict[Any, Any]],
         user_id: str,
+        receiver_nunmber:str
     ) -> None:
         """Handle tool calls with thread safety, improved error handling and performance."""
         tool_outputs = []
-        function_mapping = self._get_function_mapping(user_id)
+        function_mapping = self._get_function_mapping(user_id,receiver_nunmber)
 
         start_time = time.time()
         total_tool_calls = len(tool_calls)

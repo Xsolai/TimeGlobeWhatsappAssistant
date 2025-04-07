@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Depends, HTTPException, status
 from ..services.subscription_service import SubscriptionPlanService
 from ..schemas.subscription_plan import (
@@ -85,13 +86,14 @@ def get_subscription_by_id(
     return plan
 
 
-@router.get("/", response_model=List[SubscriptionPlanResponse])
-def get_all_subscriptions(
+@router.get("/plans/", response_class=JSONResponse)
+def get_all_plan(
     current_user: User = Depends(get_current_user),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Retrieves all available subscription plans."""
     main_logger.info(f"User {current_user.id} is fetching all subscription plans.")
+
     return service.get_all_plans()
 
 

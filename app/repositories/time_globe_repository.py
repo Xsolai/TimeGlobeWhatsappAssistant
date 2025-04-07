@@ -1,8 +1,11 @@
 import logging
 from sqlalchemy.orm import Session
 from ..models.booked_appointment import BookModel
+from ..models.booked_appointment import BookModel
 from ..models.customer_model import CustomerModel
 from ..models.booking_detail import BookingDetail
+from ..models.services import ServicesModel
+from ..models.sender_model import SenderModel
 from datetime import datetime
 from ..logger import (
     main_logger,
@@ -110,11 +113,12 @@ class TimeGlobeRepository:
             )
             raise Exception(f"Database Error {str(e)}")
 
-    def save_book_appointment(self, booking_details: dict):
+    def save_book_appointment(self, booking_details: dict,receiver_nunmber:str):
         try:
             main_logger.info(
                 f"Saving booking appointment for order_id: {booking_details.get('orderId')}"
             )
+            sender=self.db.query(SenderModel).filter(SenderModel.phone_number==receiver_nunmber).first()
             customer = self.get_customer(booking_details.get("mobileNumber"))
             if not customer:
                 main_logger.error("Customer not found while saving appointment.")
@@ -125,6 +129,7 @@ class TimeGlobeRepository:
                 order_id=booking_details.get("orderId"),
                 site_cd=site_cd,
                 customer_id=customer.id,
+                sender_id=sender.id if sender else 0
             )
             self.db.add(book_appointment)
             self.db.commit()
@@ -146,8 +151,7 @@ class TimeGlobeRepository:
             #     )
             #     self.db.add(booking_detail)
 
-            # self.db.commit()
-            
+            self.db.commit()
             main_logger.info(
                 f"Booking details saved for order_id: {booking_details.get('orderId')}"
             )
@@ -179,3 +183,38 @@ class TimeGlobeRepository:
             self.db.rollback()
             main_logger.error(f"Database error while deleting booking: {str(e)}")
             # raise Exception(f"Database error: {str(e)}")
+
+    def save_services(self, service_details: dict):
+        try:
+            main_logger.info(
+                f"Saving service with item_no: {service_details.get('itemNo')}"
+            )
+
+            # Check if service already exists (to prevent duplicates)
+            existing_service = (
+                self.db.query(ServicesModel)
+                .filter_by(item_no=service_details.get("itemNo"))
+                .first()
+            )
+            if existing_service:
+                main_logger.warning(
+                    f"Service with item_no {service_details.get('itemNo')} already exists. Skipping save."
+                )
+                return
+
+            # Create a new service entry
+            service = ServicesModel(
+                item_no=service_details.get("itemNo"),
+                item_name=service_details.get("onlineNm"),
+                min_price=service_details.get("priceMinValue"),
+            )
+            self.db.add(service)
+            self.db.commit()
+            main_logger.info(f"Service saved successfully with ID: {service.id}")
+
+            return service
+
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Database error while saving service: {str(e)}")
+            raise Exception(f"Database error: {str(e)}")

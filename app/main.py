@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import twilio_route, auth_route, subscription_route
+from .routes import twilio_route, auth_route, subscription_route, dashboard_route
 from .models.base import Base
 from .models import *  # This ensures all models are registered
 from .db.session import engine
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -29,6 +30,11 @@ app.include_router(
     router=subscription_route.router,
     prefix="/api/subscriptions",
     tags=["Subscriptions"],
+)
+app.include_router(
+    router=dashboard_route.router,
+    prefix="/api/dashboard",
+    tags=["Dashboard"],
 )
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0")

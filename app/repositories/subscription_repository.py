@@ -80,6 +80,15 @@ class SubscriptionPlanRepository:
             .all()
         )
 
+    def get_user_subscribe_plan(self, user_id: int, plan_id: int):
+        """Get User plan by plan id"""
+        return (
+            self.db.query(UserSubscription)
+            .filter(UserSubscription.subscription_id == plan_id)
+            .filter(UserSubscription.user_id == user_id)
+            .first()
+        )
+
     def update_plan(
         self, plan_id: int, plan_data: SubscriptionPlanUpdate
     ) -> SubscriptionPlan:

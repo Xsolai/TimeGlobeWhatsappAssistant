@@ -161,7 +161,7 @@ class AuthService:
         reset_tokens[reset_token] = user.id
 
         reset_link = f"https://frontend.d1qj820rqysre7.amplifyapp.com/reset-password/{user.id}/{reset_token}"
-
+        # reset_link = f"insert-link"
         subject = "Reset Your Password"
         body = f"Hello {user.name},\n\nClick the link below to reset your password:\n{reset_link}\n\nBest regards,\nYour App Team"
 
