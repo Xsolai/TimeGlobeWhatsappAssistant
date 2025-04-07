@@ -61,7 +61,7 @@ async def whatsapp_wbhook(
         # Add Current Date and Time with msg
         new_msg = f"{incoming_msg} \n current date: {datetime.today().date()} \n current time: {datetime.now(gmt_plus_2).strftime('%H:%M:%S')}"
         main_logger.info(f"Incoming message from {sender_number}: {new_msg}")
-        response = get_response_from_gpt(new_msg, number, _assistant_manager)
+        response = get_response_from_gpt(new_msg, number, _assistant_manager,receiver_nunmber)
         response = format_response(response)
         main_logger.info(json.dumps(
                 {
