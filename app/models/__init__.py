@@ -8,6 +8,8 @@ from .user import UserModel
 from .user_subscription import UserSubscription
 from .subscription_plan import SubscriptionPlan
 from .sender_model import SenderModel
+from .services import ServicesModel
+from .user import UserModel
 
 # This ensures all models are registered with SQLAlchemy
 __all__ = [
@@ -21,4 +23,5 @@ __all__ = [
     "UserSubscription",
     "SubscriptionPlan",
     "SenderModel",
+    "ServicesModel"
 ] 
