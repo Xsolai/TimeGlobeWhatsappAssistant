@@ -97,3 +97,9 @@ def get_user_profile(current_user: User = Depends(get_current_user)):
     """Fetches the logged-in user's profile."""
     main_logger.info(f"Fetching profile for {current_user.email}")
     return current_user
+
+
+
+
+
+

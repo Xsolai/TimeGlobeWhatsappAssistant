@@ -213,7 +213,6 @@ class TimeGlobeService:
         main_logger.debug(f"Making {method} request to {endpoint}")
         headers = {
             "Content-Type": "application/json;charset=UTF-8",
-            "Content-Type": "application/json;charset=UTF-8",
             "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
             "x-book-login-nm": mobile_number,
         }

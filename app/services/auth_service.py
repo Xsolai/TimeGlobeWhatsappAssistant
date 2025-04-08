@@ -53,6 +53,29 @@ class AuthService:
                 detail="Email already registered",
             )
         expiry = time.time() + 300  # OTP valid for 5 minutes
+        
+        # check if the timeglobe auth key is valid and it returns a customerCd from the timeglobe api
+        # if not valid, raise an exception
+        # if valid, store the customerCd in the user_data object
+        # Send request to API using the following endpoint /bot/getConfig using POST method and self.request method
+        # Headers
+        headers = {
+            "x-book-auth-key": user_data.time_globe_auth_key,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        response = self.request(
+                "GET",
+                "/bot/getConfig",
+                headers=headers,
+            )
+        if response.status_code != 200:
+            main_logger.warning(f"Invalid timeglobe auth key: {user_data.time_globe_auth_key}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid timeglobe auth key",
+            )
+            
+        customer_cd = response.json().get("customerCd")
         otp = self.generate_otp()
         otp_storage[user_data.email] = {
             "otp": otp,
@@ -61,6 +84,8 @@ class AuthService:
                 "name": user_data.name,
                 "email": user_data.email,
                 "password": user_data.password,
+                "customerCd": customer_cd,
+                "time_globe_auth_key": user_data.time_globe_auth_key,
             },
         }
         main_logger.debug(f"OTP generated for {user_data.email}: {otp}")
