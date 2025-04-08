@@ -28,65 +28,70 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone,timedelta
 from ..logger import main_logger
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from app.core.config import settings
 
 router = APIRouter()
 
+def get_assistant_manager(db: Session = Depends(get_db)) -> AssistantManager:
+    return AssistantManager(
+        settings.OPENAI_API_KEY,
+        settings.OPENAI_ASSISTANT_ID,
+        db
+    )
+
+def get_current_time_info():
+    tz = timezone(timedelta(hours=2))  # GMT+2
+    now = datetime.now(tz)
+    return datetime.today().date(), now.strftime('%H:%M:%S')
 
 @router.post("/incoming-whatsapp")
-async def whatsapp_wbhook(
+async def whatsapp_webhook(
     request: Request,
-    tiwilio_service: TwilioService = Depends(get_twilio_service),
-    db: Session = Depends(get_db),
+    twilio_service: TwilioService = Depends(get_twilio_service),
+    assistant_manager: AssistantManager = Depends(get_assistant_manager)
 ):
     """
-    Webhook to receive WhatsApp messages via Twilio.
-    Responds with the processed message from get_response_from_gpt.
+    Webhook to receive WhatsApp messages via Twilio and respond using GPT assistant.
     """
-    form_data = await request.form()
-    await validate_twilio_request(request)
-
-    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
-    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
-    receiver_nunmber = form_data.get("To", "")
-    number = "".join(filter(str.isdigit, sender_number))
-    main_logger.info(
-        f"Incoming message from {sender_number} to {receiver_nunmber}: {incoming_msg}"
-    )
     try:
-        # Get response from the assistant function
-        _assistant_manager = AssistantManager(
-            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
-        )
-        gmt_plus_2 = timezone(timedelta(hours=2))
-        # Add Current Date and Time with msg
-        new_msg = f"{incoming_msg} \n current date: {datetime.today().date()} \n current time: {datetime.now(gmt_plus_2).strftime('%H:%M:%S')}"
-        main_logger.info(f"Incoming message from {sender_number}: {new_msg}")
-        response = get_response_from_gpt(new_msg, number, _assistant_manager,receiver_nunmber)
-        response = format_response(response)
-        main_logger.info(json.dumps(
-                {
-                    "timestamp": datetime.now(tz=timezone.utc).isoformat(),
-                    "sender": sender_number,
-                    "receiver": receiver_nunmber,
-                    "message": incoming_msg,
-                    "response": response,  
-                }
-            ))
-        main_logger.info(f"Response generated for {sender_number}: {response}")
-    except Exception as e:
-        main_logger.error(f"Error generating response for {sender_number}: {e}")
-        response = "I'm sorry, something went wrong while processing your message."
-    # # Send the response back to the incoming message
-    # print(f"Response ==>> {sender_number} with: {response}")
+        form_data = await request.form()
+        await validate_twilio_request(request)
 
-    # resp = MessagingResponse()
-    # resp.message(response)
-    resp = tiwilio_service.send_whatsapp(sender_number, response)
-    main_logger.info(
-        f"Responded to  customer {sender_number} for question {incoming_msg} with response {response}"
-    )
-    # print("Resp", str(resp))
-    return str(resp)  # Respond to Twilio's webhook with the message
+        incoming_msg = form_data.get("Body", "").strip().lower()
+        sender = form_data.get("From", "")
+        receiver = form_data.get("To", "")
+        number = "".join(filter(str.isdigit, sender))
+
+        main_logger.info(f"Incoming message from {sender} to {receiver}: {incoming_msg}")
+
+        date_str, time_str = get_current_time_info()
+        enriched_msg = f"{incoming_msg}\nCurrent date: {date_str}\nCurrent time: {time_str}"
+
+        raw_response = get_response_from_gpt(enriched_msg, number, assistant_manager, receiver)
+        formatted_response = format_response(raw_response)
+
+        # Structured log
+        main_logger.info(json.dumps({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "sender": sender,
+            "receiver": receiver,
+            "message": incoming_msg,
+            "response": formatted_response,
+        }))
+
+        twilio_service.send_whatsapp(sender, formatted_response)
+
+        main_logger.info(
+            f"Responded to customer {sender} for question '{incoming_msg}' with response '{formatted_response}'"
+        )
+
+        return formatted_response
+
+    except Exception as e:
+        main_logger.error(f"Error in processing message from {form_data.get('From', '')}: {str(e)}")
+        return "I'm sorry, something went wrong while processing your message."
 
 
 @router.post(
