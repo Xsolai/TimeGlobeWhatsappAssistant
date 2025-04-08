@@ -41,13 +41,7 @@ app.include_router(
 )
 
 
-assistant_manager_instance = AssistantManager(
-    api_key=settings.OPENAI_API_KEY,
-    assistant_id=settings.OPENAI_ASSISTANT_ID
-)
 
-def get_assistant_manager_instance() -> AssistantManager:
-    return assistant_manager_instance
 
 
 

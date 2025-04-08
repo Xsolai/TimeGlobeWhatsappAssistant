@@ -32,9 +32,16 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.dependencies import get_assistant_manager
-from app.main import get_assistant_manager_instance
-router = APIRouter()
 
+
+router = APIRouter()
+assistant_manager_instance = AssistantManager(
+    api_key=settings.OPENAI_API_KEY,
+    assistant_id=settings.OPENAI_ASSISTANT_ID
+)
+
+def get_assistant_manager_instance() -> AssistantManager:
+    return assistant_manager_instance
 
 
 def get_current_time_info():
