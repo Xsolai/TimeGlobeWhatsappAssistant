@@ -12,6 +12,7 @@ class UserModel(Base):
     password = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    time_globe_auth_key = Column(String, nullable=False)
     whatsapp_sender = relationship(
         "SenderModel",
         uselist=False,
