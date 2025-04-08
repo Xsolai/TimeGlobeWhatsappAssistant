@@ -32,7 +32,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.dependencies import get_assistant_manager
-from main import get_assistant_manager_instance
+from app.main import get_assistant_manager_instance
 router = APIRouter()
 
 
