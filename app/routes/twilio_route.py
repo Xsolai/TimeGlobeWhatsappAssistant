@@ -32,7 +32,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.dependencies import get_assistant_manager
-
+from main import get_assistant_manager_instance
 router = APIRouter()
 
 
@@ -48,8 +48,12 @@ import time
 async def whatsapp_webhook(
     request: Request,
     twilio_service: TwilioService = Depends(get_twilio_service),
-    assistant_manager: AssistantManager = Depends(get_assistant_manager)
+    assistant_manager: AssistantManager = Depends(get_assistant_manager_instance),
+    db: Session = Depends(get_db),
 ):
+    assistant_manager.set_db(db)
+    ...
+
     """
     Webhook to receive WhatsApp messages via Twilio and respond using GPT assistant.
     Logs execution time of each step for performance analysis.

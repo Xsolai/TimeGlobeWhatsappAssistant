@@ -5,6 +5,9 @@ from .routes import twilio_route, auth_route, subscription_route, dashboard_rout
 from .models.base import Base
 from .models import *  # This ensures all models are registered
 from .db.session import engine
+from .config import settings
+from twilio.request_validator import RequestValidator
+from app.agent import AssistantManager
 
 
 app = FastAPI(
@@ -36,5 +39,17 @@ app.include_router(
     prefix="/api/dashboard",
     tags=["Dashboard"],
 )
+
+
+assistant_manager_instance = AssistantManager(
+    api_key=settings.OPENAI_API_KEY,
+    assistant_id=settings.OPENAI_ASSISTANT_ID
+)
+
+def get_assistant_manager_instance() -> AssistantManager:
+    return assistant_manager_instance
+
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0")
