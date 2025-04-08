@@ -5,9 +5,7 @@ from .routes import twilio_route, auth_route, subscription_route, dashboard_rout
 from .models.base import Base
 from .models import *  # This ensures all models are registered
 from .db.session import engine
-from .config import settings
-from twilio.request_validator import RequestValidator
-from app.agent import AssistantManager
+
 
 
 app = FastAPI(
