@@ -8,7 +8,7 @@ from fastapi import Depends, Request, HTTPException
 from ..db.session import get_db
 from .config import settings
 from twilio.request_validator import RequestValidator
-
+from app.agent import AssistantManager
 # from ..services.time_globe_service import TimeGlobeService
 
 
@@ -46,3 +46,10 @@ def get_dashboard_service(db: Session = Depends(get_db)):
 
 # def get_time_globe_service() -> TimeGlobeService:
 #     return TimeGlobeService()
+
+def get_assistant_manager(db: Session = Depends(get_db)) -> AssistantManager:
+    return AssistantManager(
+        settings.OPENAI_API_KEY,
+        settings.OPENAI_ASSISTANT_ID,
+        db
+    )

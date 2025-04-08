@@ -32,13 +32,12 @@ runs_lock = threading.RLock()  # For active_runs dict
 
 
 class AssistantManager:
-    def __init__(self, api_key: str, assistant_id: str, db: Session = Depends(get_db)):
-        """Initialize the AssistantManager with API key and assistant ID."""
+    def __init__(self, api_key: str, assistant_id: str, db: Session):
         self.client = OpenAI(api_key=api_key)
         self.assistant_id = assistant_id
         self.twilio_repo = TwilioRepository(db)
-        # Cache function mappings to avoid recreating on each tool call
         self._function_mapping = None
+
 
     def get_or_create_thread(self, user_id: str) -> str:
         """Get existing thread for user or create new one."""

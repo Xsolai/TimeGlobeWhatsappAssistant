@@ -31,20 +31,18 @@ from ..logger import main_logger
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.core.dependencies import get_assistant_manager
 
 router = APIRouter()
 
-def get_assistant_manager(db: Session = Depends(get_db)) -> AssistantManager:
-    return AssistantManager(
-        settings.OPENAI_API_KEY,
-        settings.OPENAI_ASSISTANT_ID,
-        db
-    )
+
 
 def get_current_time_info():
     tz = timezone(timedelta(hours=2))  # GMT+2
     now = datetime.now(tz)
     return datetime.today().date(), now.strftime('%H:%M:%S')
+
+import time
 
 @router.post("/incoming-whatsapp")
 async def whatsapp_webhook(
@@ -54,10 +52,16 @@ async def whatsapp_webhook(
 ):
     """
     Webhook to receive WhatsApp messages via Twilio and respond using GPT assistant.
+    Logs execution time of each step for performance analysis.
     """
+    start_time = time.perf_counter()
+
     try:
+        # STEP 1: Parse request + validate
+        step1_start = time.perf_counter()
         form_data = await request.form()
         await validate_twilio_request(request)
+        step1_end = time.perf_counter()
 
         incoming_msg = form_data.get("Body", "").strip().lower()
         sender = form_data.get("From", "")
@@ -66,13 +70,24 @@ async def whatsapp_webhook(
 
         main_logger.info(f"Incoming message from {sender} to {receiver}: {incoming_msg}")
 
+        # STEP 2: Enrich message with time
+        step2_start = time.perf_counter()
         date_str, time_str = get_current_time_info()
         enriched_msg = f"{incoming_msg}\nCurrent date: {date_str}\nCurrent time: {time_str}"
+        step2_end = time.perf_counter()
 
+        # STEP 3: Get GPT response
+        step3_start = time.perf_counter()
         raw_response = get_response_from_gpt(enriched_msg, number, assistant_manager, receiver)
-        formatted_response = format_response(raw_response)
+        step3_end = time.perf_counter()
 
-        # Structured log
+        # STEP 4: Format + send response
+        step4_start = time.perf_counter()
+        formatted_response = format_response(raw_response)
+        twilio_service.send_whatsapp(sender, formatted_response)
+        step4_end = time.perf_counter()
+
+        # Log structured response
         main_logger.info(json.dumps({
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "sender": sender,
@@ -81,11 +96,22 @@ async def whatsapp_webhook(
             "response": formatted_response,
         }))
 
-        twilio_service.send_whatsapp(sender, formatted_response)
-
         main_logger.info(
             f"Responded to customer {sender} for question '{incoming_msg}' with response '{formatted_response}'"
         )
+
+        # STEP 5: Log time summary
+        total_time = time.perf_counter() - start_time
+        main_logger.info(json.dumps({
+            "perf_log": True,
+            "step_durations": {
+                "parse_and_validate": round(step1_end - step1_start, 4),
+                "enrich_message": round(step2_end - step2_start, 4),
+                "gpt_response": round(step3_end - step3_start, 4),
+                "format_and_send": round(step4_end - step4_start, 4),
+                "total": round(total_time, 4)
+            }
+        }))
 
         return formatted_response
 
