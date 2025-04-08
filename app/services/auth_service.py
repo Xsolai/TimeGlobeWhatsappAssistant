@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Optional, Dict
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+import requests
 from ..repositories.user_repository import UserRepository
 from ..utils.security_util import verify_password, create_access_token, decode_token
 from ..schemas.auth import (
@@ -63,11 +64,14 @@ class AuthService:
             "x-book-auth-key": user_data.time_globe_auth_key,
             "Content-Type": "application/json;charset=UTF-8",
         }
-        response = self.request(
-                "GET",
-                "/bot/getConfig",
+        
+        url = f"{settings.TIME_GLOBE_BASE_URL}/bot/getConfig"
+        response = requests.request(
+                method='GET',
+                url=url,
                 headers=headers,
             )
+
         if response.status_code != 200:
             main_logger.warning(f"Invalid timeglobe auth key: {user_data.time_globe_auth_key}")
             raise HTTPException(
