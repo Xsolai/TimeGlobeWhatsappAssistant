@@ -11,7 +11,6 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     time_globe_auth_key: str = Field(..., min_length=8)
-    customer_cd: str = Field(...)
 
 
 class UserInDB(UserCreate):
