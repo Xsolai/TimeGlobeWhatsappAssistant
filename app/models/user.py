@@ -9,6 +9,10 @@ class UserModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     email = Column(String, unique=True, index=True)
+    phone_number = Column(String)  # ✅ New
+    business_name = Column(String)  # ✅ New
+    twilio_subaccount_sid = Column(String, nullable=True)
+    twilio_subaccount_token = Column(String, nullable=True)
     password = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))

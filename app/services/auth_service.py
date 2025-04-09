@@ -2,6 +2,8 @@ from datetime import timedelta
 from typing import Optional, Dict
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+
+from app.services.twilio_service import TwilioService
 from ..repositories.user_repository import UserRepository
 from ..utils.security_util import verify_password, create_access_token, decode_token
 from ..schemas.auth import (
@@ -55,14 +57,17 @@ class AuthService:
         expiry = time.time() + 300  # OTP valid for 5 minutes
         otp = self.generate_otp()
         otp_storage[user_data.email] = {
-            "otp": otp,
-            "expiry": expiry,
-            "data": {
-                "name": user_data.name,
-                "email": user_data.email,
-                "password": user_data.password,
-            },
-        }
+                                        "otp": otp,
+                                        "expiry": expiry,
+                                        "data": {
+                                            "name": user_data.name,
+                                            "email": user_data.email,
+                                            "password": user_data.password,
+                                            "phone_number": user_data.phone_number,  # ✅
+                                            "business_name": user_data.business_name  # ✅
+                                        },
+                                    }
+
         main_logger.debug(f"OTP generated for {user_data.email}: {otp}")
         body = f"Dear User,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
 
@@ -117,9 +122,23 @@ class AuthService:
             raise HTTPException(status_code=400, detail="Invalid OTP")
         user_data = stored_otp["data"]
         _user = UserCreate(**user_data)
-        self.user_repository.create(_user)
+
+        # ✅ Create user in DB
+        new_user = self.user_repository.create(_user)
+
+        # ✅ Create Twilio subaccount
+        twilio_service = TwilioService()
+        subaccount = twilio_service.create_subaccount(user_data["business_name"])
+
+        # ✅ Update user with Twilio subaccount credentials
+        self.user_repository.update_twilio_credentials(
+            new_user.id,
+            sub_sid=subaccount["sid"],
+            sub_auth=subaccount["auth_token"]
+        )
+
         otp_storage.pop(request.email)
-        main_logger.info(f"User registered successfully: {request.email}")
+        main_logger.info(f"User registered and Twilio subaccount created: {request.email}")
         return {"message": "Registration Successful"}
 
     def resend_otp(self, request: OTPVerificationRequest):

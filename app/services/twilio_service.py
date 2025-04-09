@@ -176,3 +176,35 @@ class TwilioService:
         return self._make_request(
             "DELETE", None, url, "WhatsApp sender deleted successfully"
         )
+    
+
+    def create_twilio_subaccount(self, business_name: str) -> dict:
+        """
+        Create a Twilio sub-account for isolating customer WABA setup.
+        """
+        main_logger.info(f"Creating Twilio subaccount for: {business_name}")
+        try:
+            sub_account = self.client.api.accounts.create(friendly_name=business_name)
+            main_logger.info(f"Sub-account created: SID = {sub_account.sid}")
+            return {
+                "sid": sub_account.sid,
+                "auth_token": sub_account.auth_token
+            }
+        except Exception as e:
+            main_logger.exception(f"Failed to create Twilio sub-account: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create Twilio sub-account"
+            )
+
+    def create_whatsapp_sender(self,phone_number: str, friendly_name: str) -> str:
+        try:
+            sender = self.client.messaging.v1.whatsapp.senders.create(
+                phone_number=phone_number,
+                friendly_name=friendly_name
+            )
+            return sender.sid
+        except Exception as e:
+            self.logger.exception("Failed to register WhatsApp sender")
+            raise HTTPException(status_code=500, detail=str(e))
+

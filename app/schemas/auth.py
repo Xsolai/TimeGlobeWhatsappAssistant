@@ -10,6 +10,8 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+    phone_number: str = Field(..., min_length=10)
+    business_name: str
 
 
 class UserInDB(UserCreate):

@@ -62,3 +62,11 @@ class UserRepository:
         self.db.commit()
         main_logger.info(f"User deleted successfully: {user.email}")
         return True
+    
+    def update_twilio_credentials(self, user_id: int, sub_sid: str, sub_auth: str):
+        user = self.db.query(UserModel).filter_by(id=user_id).first()
+        if user:
+            user.twilio_subaccount_sid = sub_sid
+            user.twilio_subaccount_token = sub_auth
+            self.db.commit()
+            self.db.refresh(user)

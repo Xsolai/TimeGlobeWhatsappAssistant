@@ -4,6 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import twilio_route, auth_route, subscription_route
 from .models.base import Base
 from .db.session import engine
+from app.routes import onboarding_route
+from app.models.onboarding_model import Business, WABAStatus
+
+
+
 
 
 app = FastAPI(
@@ -27,5 +32,8 @@ app.include_router(
     prefix="/api/subscriptions",
     tags=["Subscriptions"],
 )
+app.include_router(onboarding_route.router)
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0")
