@@ -4,16 +4,16 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.services.twilio_service import TwilioService
-from ..repositories.user_repository import UserRepository
+from ..repositories.business_repository import BusinessRepository
 from ..utils.security_util import verify_password, create_access_token, decode_token
 from ..schemas.auth import (
     Token,
-    UserCreate,
+    BusinessCreate,
     OTPVerificationRequest,
     ResetPasswordRequest,
-    User,
+    Business,
 )
-from ..models.user import UserModel
+from ..models.onboarding_model import Business
 from ..core.config import settings
 from ..utils import email_util
 import secrets, string, time
@@ -29,78 +29,77 @@ reset_tokens: Dict[str, int] = {}
 
 
 class AuthService:
-    def __init__(self, user_repository: UserRepository):
-        self.user_repository = user_repository
+    def __init__(self, business_repository: BusinessRepository):
+        self.business_repository = business_repository
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
-        main_logger.debug(f"Attempting to authenticate user with email: {email}")
-        user = self.user_repository.get_by_email(email)
-        if not user:
-            main_logger.warning(f"User with email {email} not found")
+    def authenticate_business(self, email: str, password: str) -> Optional[Business]:
+        main_logger.debug(f"Attempting to authenticate business with email: {email}")
+        business = self.business_repository.get_by_email(email)
+        if not business:
+            main_logger.warning(f"Business with email {email} not found")
             return None
-        if not verify_password(password, user.password):
-            main_logger.warning(f"Invalid password for user with email: {email}")
+        if not verify_password(password, business.password):
+            main_logger.warning(f"Invalid password for business with email: {email}")
             return None
-        main_logger.info(f"User authenticated successfully: {email}")
-        return user
+        main_logger.info(f"Business authenticated successfully: {email}")
+        return business
 
-    def create_user(self, user_data: UserCreate) -> dict:
-        main_logger.debug(f"Creating user with email: {user_data.email}")
+    def create_business(self, business_data: BusinessCreate) -> dict:
+        main_logger.debug(f"Creating business with email: {business_data.email}")
         # Check if email exists
-        existing_user = self.user_repository.get_by_email(user_data.email)
-        if existing_user:
-            main_logger.warning(f"Email already registered: {user_data.email}")
+        existing_business = self.business_repository.get_by_email(business_data.email)
+        if existing_business:
+            main_logger.warning(f"Email already registered: {business_data.email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
             )
         expiry = time.time() + 300  # OTP valid for 5 minutes
         otp = self.generate_otp()
-        otp_storage[user_data.email] = {
-                                        "otp": otp,
-                                        "expiry": expiry,
-                                        "data": {
-                                            "name": user_data.name,
-                                            "email": user_data.email,
-                                            "password": user_data.password,
-                                            "phone_number": user_data.phone_number,  # ✅
-                                            "business_name": user_data.business_name  # ✅
-                                        },
-                                    }
+        otp_storage[business_data.email] = {
+            "otp": otp,
+            "expiry": expiry,
+            "data": {
+                "business_name": business_data.business_name,
+                "email": business_data.email,
+                "password": business_data.password,
+                "phone_number": business_data.phone_number
+            },
+        }
 
-        main_logger.debug(f"OTP generated for {user_data.email}: {otp}")
-        body = f"Dear User,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
+        main_logger.debug(f"OTP generated for {business_data.email}: {otp}")
+        body = f"Dear Business Owner,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
 
-        email_util.send_email(user_data.email, "OTP Verification", body)
-        main_logger.info(f"OTP sent to {user_data.email}")
+        email_util.send_email(business_data.email, "OTP Verification", body)
+        main_logger.info(f"OTP sent to {business_data.email}")
 
         return {
             "message": "OTP sent to your email. Please verify to complete registration."
         }
 
-    def create_token(self, user_email: str) -> Token:
-        main_logger.debug(f"Creating token for user: {user_email}")
+    def create_token(self, business_email: str) -> Token:
+        main_logger.debug(f"Creating token for business: {business_email}")
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_TIME)
         access_token = create_access_token(
-            subject=user_email, expire_time=access_token_expires
+            subject=business_email, expire_time=access_token_expires
         )
-        main_logger.info(f"Token created for user: {user_email}")
+        main_logger.info(f"Token created for business: {business_email}")
         return Token(access_token=access_token, token_type="bearer")
 
-    def get_current_user(self, token: str = Depends(oauth2_scheme)) -> UserModel:
-        main_logger.debug("Fetching current user from token")
+    def get_current_business(self, token: str = Depends(oauth2_scheme)) -> Business:
+        main_logger.debug("Fetching current business from token")
         payload = decode_token(token)
-        user_email: str = payload.get("sub")
-        user = self.user_repository.get_by_email(user_email)
-        if user is None:
-            main_logger.warning(f"User not found for token: {token}")
+        business_email: str = payload.get("sub")
+        business = self.business_repository.get_by_email(business_email)
+        if business is None:
+            main_logger.warning(f"Business not found for token: {token}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found",
+                detail="Business not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        main_logger.info(f"Current user fetched: {user_email}")
-        return user
+        main_logger.info(f"Current business fetched: {business_email}")
+        return business
 
     def generate_otp(self, length=6):
         otp = "".join(secrets.choice(string.digits) for _ in range(length))
@@ -120,25 +119,14 @@ class AuthService:
         if stored_otp["otp"] != request.otp:
             main_logger.warning(f"Invalid OTP for email: {request.email}")
             raise HTTPException(status_code=400, detail="Invalid OTP")
-        user_data = stored_otp["data"]
-        _user = UserCreate(**user_data)
+        business_data = stored_otp["data"]
+        _business = BusinessCreate(**business_data)
 
-        # ✅ Create user in DB
-        new_user = self.user_repository.create(_user)
-
-        # ✅ Create Twilio subaccount
-        twilio_service = TwilioService()
-        subaccount = twilio_service.create_subaccount(user_data["business_name"])
-
-        # ✅ Update user with Twilio subaccount credentials
-        self.user_repository.update_twilio_credentials(
-            new_user.id,
-            sub_sid=subaccount["sid"],
-            sub_auth=subaccount["auth_token"]
-        )
+        # Create business in DB
+        new_business = self.business_repository.create(_business)
 
         otp_storage.pop(request.email)
-        main_logger.info(f"User registered and Twilio subaccount created: {request.email}")
+        main_logger.info(f"Business registered successfully: {request.email}")
         return {"message": "Registration Successful"}
 
     def resend_otp(self, request: OTPVerificationRequest):
@@ -157,7 +145,7 @@ class AuthService:
 
         otp_storage[request.email]["otp"] = otp
         otp_storage[request.email]["expiry"] = expiry
-        body = f"Dear User,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
+        body = f"Dear Business Owner,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
 
         email_util.send_email(request.email, "Registration OTP", body)
         main_logger.info(f"OTP resent to {request.email}")
@@ -169,22 +157,22 @@ class AuthService:
         main_logger.debug(
             f"Processing forgot password request for email: {request.email}"
         )
-        user = self.user_repository.get_by_email(request.email)
-        if not user:
-            main_logger.warning(f"User not found for email: {request.email}")
+        business = self.business_repository.get_by_email(request.email)
+        if not business:
+            main_logger.warning(f"Business not found for email: {request.email}")
             raise HTTPException(
-                status_code=404, detail="User with this email does not exist"
+                status_code=404, detail="Business with this email does not exist"
             )
 
         reset_token = str(uuid4())
-        reset_tokens[reset_token] = user.id
+        reset_tokens[reset_token] = business.id
 
-        reset_link = f"https://frontend.d1qj820rqysre7.amplifyapp.com/reset-password/{user.id}/{reset_token}"
+        reset_link = f"https://frontend.d1qj820rqysre7.amplifyapp.com/reset-password/{business.id}/{reset_token}"
 
         subject = "Reset Your Password"
-        body = f"Hello {user.name},\n\nClick the link below to reset your password:\n{reset_link}\n\nBest regards,\nYour App Team"
+        body = f"Hello {business.business_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nBest regards,\nYour App Team"
 
-        email_util.send_email(user.email, subject, body)
+        email_util.send_email(business.email, subject, body)
         main_logger.info(f"Reset password link sent to {request.email}")
         return {"message": "Reset password link has been sent to your email."}
 
@@ -196,16 +184,13 @@ class AuthService:
                 status_code=400, detail="Invalid or expired reset token"
             )
 
-        user_id = reset_tokens[data.token]
-        user = self.user_repository.get_by_id(user_id)
+        business_id = reset_tokens[data.token]
+        business = self.business_repository.get_by_id(business_id)
+        if not business:
+            main_logger.warning(f"Business not found for ID: {business_id}")
+            raise HTTPException(status_code=404, detail="Business not found")
 
-        if not user:
-            main_logger.warning(f"User not found for reset token: {data.token}")
-            raise HTTPException(status_code=404, detail="User not found")
-
-        self.user_repository.update(user.id, data.new_password)
-        reset_tokens.pop(data.token, None)
-        main_logger.info(f"Password reset successfully for user: {user.email}")
-        return {
-            "message": "Password reset successfully. You can now log in with your new password."
-        }
+        self.business_repository.update_password(business_id, data.new_password)
+        reset_tokens.pop(data.token)
+        main_logger.info(f"Password reset for business: {business.email}")
+        return {"message": "Password has been reset successfully"}

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from ..models.subscription_plan import SubscriptionPlan
-from ..models.user_subscription import UserSubscription
+from ..models.business_subscription import BusinessSubscription
 from ..schemas.subscription_plan import SubscriptionPlanCreate, SubscriptionPlanUpdate
 from datetime import datetime, timezone
 
@@ -17,17 +17,17 @@ class SubscriptionPlanRepository:
         self.db.refresh(new_plan)
         return new_plan
 
-    def subscribe_user(self, user_id: int, subscription_id: int) -> UserSubscription:
-        """Subscribe a user to a subscription plan"""
+    def subscribe_business(self, business_id: int, subscription_id: int) -> BusinessSubscription:
+        """Subscribe a business to a subscription plan"""
         subscription_plan = (
             self.db.query(SubscriptionPlan).filter_by(id=subscription_id).first()
         )
         if not subscription_plan:
             return None  # Subscription plan doesn't exist
 
-        new_subscription = UserSubscription(
-            user_id=user_id,
-            subscription_id=subscription_id,
+        new_subscription = BusinessSubscription(
+            business_id=business_id,
+            subscription_plan_id=subscription_id,
             start_date=datetime.now(timezone.utc),
         )
         new_subscription.activate_subscription(subscription_plan.duration_in_days)
@@ -37,23 +37,24 @@ class SubscriptionPlanRepository:
         self.db.refresh(new_subscription)
         return new_subscription
 
-    def get_user_subscriptions(self, user_id: int):
-        """Get all active subscriptions of a user"""
+    def get_business_subscriptions(self, business_id: int):
+        """Get all active subscriptions of a business"""
         return (
-            self.db.query(UserSubscription)
+            self.db.query(BusinessSubscription)
             .filter(
-                UserSubscription.user_id == user_id, UserSubscription.is_active == True
+                BusinessSubscription.business_id == business_id, 
+                BusinessSubscription.is_active == True
             )
             .all()
         )
 
-    def cancel_subscription(self, user_id: int, subscription_id: int) -> bool:
+    def cancel_subscription(self, business_id: int, subscription_id: int) -> bool:
         """Cancel an active subscription"""
         subscription = (
-            self.db.query(UserSubscription)
+            self.db.query(BusinessSubscription)
             .filter(
-                UserSubscription.user_id == user_id,
-                UserSubscription.subscription_id == subscription_id,
+                BusinessSubscription.business_id == business_id,
+                BusinessSubscription.subscription_plan_id == subscription_id,
             )
             .first()
         )

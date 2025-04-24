@@ -1,27 +1,26 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 
 from app.agent import AssistantManager
-from ..services.twilio_service import TwilioService
-from ..schemas.twilio_sender import (
+from ..services.dialog360_service import Dialog360Service
+from ..schemas.dialog360_sender import (
     SenderRequest,
     VerificationRequest,
     SenderId,
     UpdateSenderRequest,
 )
 from ..core.config import settings
-from ..schemas.auth import User
+from ..models.onboarding_model import Business
 from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
-from twilio.twiml.messaging_response import MessagingResponse
 from ..db.session import get_db
 from ..core.dependencies import (
-    get_twilio_service,
-    validate_twilio_request,
-    get_current_user,
+    get_dialog360_service,
+    get_current_business,
 )
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from app.utils.message_cache import MessageCache
 
 router = APIRouter()
 
@@ -29,41 +28,105 @@ router = APIRouter()
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
     request: Request,
-    tiwilio_service: TwilioService = Depends(get_twilio_service),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
     db: Session = Depends(get_db),
 ):
     """
-    Webhook to receive WhatsApp messages via Twilio.
+    Webhook to receive WhatsApp messages via WhatsApp Business API.
     Responds with the processed message from get_response_from_gpt.
     """
-    form_data = await request.form()
-    await validate_twilio_request(request)
-
-    incoming_msg = form_data.get("Body", "").lower()  # The incoming message body
-    sender_number = form_data.get("From", "")  # Sender's WhatsApp number
-    number = "".join(filter(str.isdigit, sender_number))
-    logging.info(f"Incoming message from {sender_number}: {incoming_msg}")
+    # Parse incoming JSON payload
+    data = await request.json()
+    
     try:
-        # Get response from the assistant function
+        # Only use this for debugging, otherwise it will fill up logs
+        # print(f"Data =============================================>> {data}")
+        
+        # Check object first - should be whatsapp_business_account
+        if data.get('object') != 'whatsapp_business_account':
+            logging.info(f"Ignoring non-WhatsApp webhook object: {data.get('object')}")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+            
+        # Extract the key components in a simplified way
+        entry = data.get('entry', [])
+        if not entry or not entry[0].get('changes', []):
+            logging.info("Ignoring webhook with empty entry or changes")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+            
+        # Get the value field that contains message data
+        value = entry[0].get('changes', [])[0].get('value', {})
+        
+        # Verify this is a message event (should have messages array)
+        messages = value.get('messages', [])
+        if not messages:
+            logging.info("Ignoring webhook without messages field")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+        
+        # Get the first message
+        message = messages[0]
+        message_type = message.get('type')
+        message_id = message.get('id', '')
+        
+        # Only process text messages
+        if message_type != 'text':
+            logging.info(f"Ignoring non-text message of type: {message_type}")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+        
+        # Get the contact info
+        contacts = value.get('contacts', [])
+        if not contacts:
+            logging.error("No contact information in the webhook payload")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+        
+        # Extract the key information we need
+        wa_id = contacts[0].get('wa_id')
+        sender_number = message.get('from')
+        number = wa_id or sender_number
+        
+        if not number:
+            logging.error("No sender number found in the request")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+            
+        # Format the number
+        number = "".join(filter(str.isdigit, number))
+        
+        # Get the message text
+        incoming_msg = message.get('text', {}).get('body', '').lower()
+        if not incoming_msg:
+            logging.error("No message text found in the request")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+        
+        # CRITICAL: Check if we've already processed this message
+        # Use a simple in-memory cache to prevent duplicates
+        message_cache = MessageCache.get_instance()
+        
+        # Check if we've already processed this message ID
+        if message_cache.is_processed(message_id):
+            logging.info(f"Skipping already processed message ID: {message_id}")
+            return JSONResponse(content={"status": "success"}, status_code=200)
+            
+        # Mark this message as processed
+        message_cache.mark_as_processed(message_id)
+        
+        profile_name = contacts[0].get('profile', {}).get('name', '') if contacts else ''
+        logging.info(f"Processing message from {number} (contact: {profile_name}): {incoming_msg}")
+        
+        # Process the message with your AI assistant
         _assistant_manager = AssistantManager(
             settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
         )
         response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
         response = format_response(response)
-
-        logging.info(f"Response generated for {sender_number}: {response}")
+        
+        # Send the response
+        logging.info(f"Sending response to {number}: {response}")
+        resp = dialog360_service.send_whatsapp(number, response)
+        
+        return JSONResponse(content={"status": "success"}, status_code=200)
+        
     except Exception as e:
-        logging.error(f"Error generating response for {sender_number}: {e}")
-        response = "I'm sorry, something went wrong while processing your message."
-    # # Send the response back to the incoming message
-    print(f"Response ==>> {sender_number} with: {response}")
-
-    # resp = MessagingResponse()
-    # resp.message(response)
-    resp = tiwilio_service.send_whatsapp(sender_number, response)
-    # logging.info(f"Responded to {sender_number} with: {response}")
-    print("Resp", str(resp))
-    return str(resp)  # Respond to Twilio's webhook with the message
+        logging.error(f"Error processing webhook: {str(e)}")
+        return JSONResponse(content={"status": "success"}, status_code=200)
 
 
 @router.post(
@@ -73,11 +136,11 @@ async def whatsapp_wbhook(
 )
 async def register_whatsapp(
     sender_request: SenderRequest,
-    twilio_service: TwilioService = Depends(get_twilio_service),
-    current_user: User = Depends(get_current_user),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
+    current_business: Business = Depends(get_current_business),
 ):
     """Register Whatsapp"""
-    return twilio_service.register_whatsapp(sender_request, current_user)
+    return dialog360_service.register_whatsapp(sender_request, current_business)
 
 
 @router.post(
@@ -88,11 +151,11 @@ async def register_whatsapp(
 async def verification_sender(
     sender_id: str,
     verification_request: VerificationRequest,
-    twilio_service: TwilioService = Depends(get_twilio_service),
-    current_user: User = Depends(get_current_user),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
+    current_business: Business = Depends(get_current_business),
 ):
     """Verify WhatsApp Sender"""
-    return twilio_service.verify_sender(verification_request)
+    return dialog360_service.verify_sender(verification_request)
 
 
 @router.get(
@@ -100,10 +163,10 @@ async def verification_sender(
 )
 async def get_whatsapp_sender(
     sender_id: str,
-    twilio_service: TwilioService = Depends(get_twilio_service),
-    current_user: User = Depends(get_current_user),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
+    current_business: Business = Depends(get_current_business),
 ):
-    return twilio_service.get_whatsapp_sender(sender_id)
+    return dialog360_service.get_whatsapp_sender(sender_id)
 
 
 @router.post(
@@ -111,17 +174,16 @@ async def get_whatsapp_sender(
 )
 async def update_whatsapp_sender(
     update_sender: UpdateSenderRequest,
-    twilio_service: TwilioService = Depends(get_twilio_service),
-    current_user: User = Depends(get_current_user),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
+    current_business: Business = Depends(get_current_business),
 ):
-
-    return twilio_service.update_whatsapp_sender(update_sender)
+    return dialog360_service.update_whatsapp_sender(update_sender)
 
 
 @router.delete("/sender", status_code=status.HTTP_200_OK, response_class=JSONResponse)
 async def delete_whatsapp_sender(
     sender_id: SenderId,
-    twilio_service: TwilioService = Depends(get_twilio_service),
-    current_user: User = Depends(get_current_user),
+    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
+    current_business: Business = Depends(get_current_business),
 ):
-    return twilio_service.delete_whatsapp_sender(sender_id)
+    return dialog360_service.delete_whatsapp_sender(sender_id)

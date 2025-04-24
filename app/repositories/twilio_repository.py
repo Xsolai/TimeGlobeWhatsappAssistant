@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import Optional
-from ..models.sender_model import SenderModel
-from ..models.user import UserModel
-from ..schemas import twilio_sender, auth
+from ..models.sender_model import WASenderModel
+from ..schemas import twilio_sender
+from ..schemas.auth import Business
 from ..logger import main_logger
 from ..models.thread import ThreadModel
 from ..schemas import thread
@@ -17,11 +17,11 @@ class TwilioRepository:
         self,
         sender_data: twilio_sender.SenderRequest,
         sender_id: str,
-        user: auth.User,
+        business: Business,
     ):
-        main_logger.debug(f"Creating WhatsApp sender for user ID: {user.id}")
+        main_logger.debug(f"Creating WhatsApp sender for business ID: {business.id}")
         try:
-            sender = SenderModel(
+            sender = WASenderModel(
                 sender_id=sender_id,
                 phone_number=sender_data.phone_number,
                 business_name=sender_data.business_name,
@@ -32,7 +32,7 @@ class TwilioRepository:
                 description=sender_data.description,
                 about=sender_data.about,
                 website=str(sender_data.website),
-                user_id=user.id,
+                business_id=business.id,
             )
             self.db.add(sender)
             self.db.commit()
@@ -50,8 +50,8 @@ class TwilioRepository:
         main_logger.debug(f"Fetching sender with ID: {sender_id}")
         try:
             sender = (
-                self.db.query(SenderModel)
-                .filter(SenderModel.sender_id == sender_id)
+                self.db.query(WASenderModel)
+                .filter(WASenderModel.sender_id == sender_id)
                 .first()
             )
             if not sender:

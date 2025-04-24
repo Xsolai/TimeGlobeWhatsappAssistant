@@ -92,55 +92,55 @@ class SubscriptionPlanService:
                 status_code=500, detail="Failed to delete subscription plan"
             )
 
-    def subscribe_user(self, user_id: int, subscription_id: int):
-        """Subscribe a user"""
+    def subscribe_business(self, business_id: int, subscription_id: int):
+        """Subscribe a business"""
         try:
             logger.info(
-                "Subscribing user ID %d to subscription ID %d", user_id, subscription_id
+                "Subscribing business ID %d to subscription ID %d", business_id, subscription_id
             )
-            subscriber = self.plan_repo.subscribe_user(user_id, subscription_id)
+            subscriber = self.plan_repo.subscribe_business(business_id, subscription_id)
             if not subscriber:
-                logger.warning("Subscription failed for user ID %d", user_id)
+                logger.warning("Subscription failed for business ID %d", business_id)
                 raise HTTPException(
                     status_code=500, detail="Error processing subscription request"
                 )
-            logger.info("User ID %d subscribed successfully", user_id)
+            logger.info("Business ID %d subscribed successfully", business_id)
             return {"message": "Subscription successful", "subscription": subscriber}
         except Exception as e:
-            logger.error("Error subscribing user: %s", str(e))
-            raise HTTPException(status_code=500, detail="Failed to subscribe user")
+            logger.error("Error subscribing business: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to subscribe business")
 
-    def get_user_subscriptions(self, user_id: int):
-        """Fetch active subscriptions for a user"""
+    def get_business_subscriptions(self, business_id: int):
+        """Fetch active subscriptions for a business"""
         try:
-            logger.info("Fetching subscriptions for user ID: %d", user_id)
-            return self.plan_repo.get_user_subscriptions(user_id)
+            logger.info("Fetching subscriptions for business ID: %d", business_id)
+            return self.plan_repo.get_business_subscriptions(business_id)
         except Exception as e:
-            logger.error("Error fetching user subscriptions: %s", str(e))
+            logger.error("Error fetching business subscriptions: %s", str(e))
             raise HTTPException(
-                status_code=500, detail="Failed to fetch user subscriptions"
+                status_code=500, detail="Failed to fetch business subscriptions"
             )
 
-    def cancel_subscription(self, user_id: int, subscription_id: int):
-        """Cancel a user's subscription"""
+    def cancel_subscription(self, business_id: int, subscription_id: int):
+        """Cancel a business's subscription"""
         try:
             logger.info(
-                "Cancelling subscription ID %d for user ID %d", subscription_id, user_id
+                "Cancelling subscription ID %d for business ID %d", subscription_id, business_id
             )
-            subscription = self.plan_repo.cancel_subscription(user_id, subscription_id)
+            subscription = self.plan_repo.cancel_subscription(business_id, subscription_id)
             if not subscription:
                 logger.warning(
-                    "Failed to cancel subscription ID %d for user ID %d",
+                    "Failed to cancel subscription ID %d for business ID %d",
                     subscription_id,
-                    user_id,
+                    business_id,
                 )
                 raise HTTPException(
                     status_code=500, detail="Error processing cancellation request"
                 )
             logger.info(
-                "Subscription ID %d canceled successfully for user ID %d",
+                "Subscription ID %d canceled successfully for business ID %d",
                 subscription_id,
-                user_id,
+                business_id,
             )
             return {"message": "Subscription canceled successfully"}
         except Exception as e:

@@ -16,7 +16,7 @@ def create_access_token(subject: str, expire_time: timedelta = None):
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_TIME
         )
-    print(f"sub==>> {subject}")
+    # print(f"sub==>> {subject}")
     to_encode = {"exp": expire, "sub": subject}
     encoded_token = jwt.encode(to_encode, algorithm="HS256", key=settings.SECRETE_KEY)
     return encoded_token
@@ -37,7 +37,7 @@ def decode_token(token: str):
 
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError as e:
-        print(f"exception==>> {str(e)}")
+        # print(f"exception==>> {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 

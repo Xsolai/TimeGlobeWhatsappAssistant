@@ -1,38 +1,35 @@
-from ..services.twilio_service import TwilioService
+from ..services.dialog360_service import Dialog360Service
 from ..services.auth_service import AuthService, oauth2_scheme
 from ..services.subscription_service import SubscriptionPlanService
-from ..repositories.user_repository import UserRepository
 from sqlalchemy.orm import Session
 from fastapi import Depends, Request, HTTPException
 from ..db.session import get_db
 from .config import settings
-from twilio.request_validator import RequestValidator
-
-# from ..services.time_globe_service import TimeGlobeService
-
-
-async def validate_twilio_request(request: Request):
-    validator = RequestValidator(settings.auth_token)
-    params = await request.form()
-    signature = request.headers.get("X-Twilio-Signature", "")
-
-    if not validator.validate(params=params, signature=signature, uri=str(request.url)):
-        raise HTTPException(status_code=400, detail="Invalid Twilio request")
+from fastapi.security import OAuth2PasswordBearer
+from typing import Generator
+from ..db.session import SessionLocal
+from ..repositories.business_repository import BusinessRepository
+from ..models.onboarding_model import Business
 
 
-def get_twilio_service(db: Session = Depends(get_db)) -> TwilioService:
-    return TwilioService(db)
+def get_dialog360_service(db: Session = Depends(get_db)) -> Dialog360Service:
+    return Dialog360Service(db)
 
 
-def get_auth_service(db: Session = Depends(get_db)):
-    user_repository = UserRepository(db)
-    return AuthService(user_repository)
+def get_business_repository(db: Session = Depends(get_db)) -> BusinessRepository:
+    return BusinessRepository(db)
 
 
-def get_current_user(
-    db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
-):
-    return get_auth_service(db).get_current_user(token)
+def get_auth_service(business_repository: BusinessRepository = Depends(get_business_repository)) -> AuthService:
+    return AuthService(business_repository)
+
+
+async def get_current_business(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> Business:
+    auth_service = AuthService(db)
+    business = await auth_service.get_current_business(token)
+    return business
 
 
 def get_subscription_service(db: Session = Depends(get_db)):
@@ -41,3 +38,11 @@ def get_subscription_service(db: Session = Depends(get_db)):
 
 # def get_time_globe_service() -> TimeGlobeService:
 #     return TimeGlobeService()
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

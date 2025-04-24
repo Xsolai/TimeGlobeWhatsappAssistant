@@ -5,13 +5,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from ..schemas.auth import (
     Token,
-    UserCreate,
-    User,
+    BusinessCreate,
+    Business,
     OTPVerificationRequest,
     ResetPasswordRequest,
 )
 from ..services.auth_service import AuthService
-from ..core.dependencies import get_auth_service, get_current_user
+from ..core.dependencies import get_auth_service, get_current_business
 
 from ..logger import main_logger  # Ensure you have a logging setup
 
@@ -20,16 +20,16 @@ router = APIRouter()
 
 @router.post("/register", response_class=JSONResponse)
 def register(
-    user_data: UserCreate, auth_service: AuthService = Depends(get_auth_service)
+    business_data: BusinessCreate, auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Handles user registration."""
-    main_logger.info(f"Registering new user: {user_data.email}")
+    """Handles business registration."""
+    main_logger.info(f"Registering new business: {business_data.email}")
     try:
-        result = auth_service.create_user(user_data)
-        main_logger.info(f"User registered successfully: {user_data.email}")
+        result = auth_service.create_business(business_data)
+        main_logger.info(f"Business registered successfully: {business_data.email}")
         return result
     except Exception as e:
-        main_logger.error(f"Registration failed for {user_data.email}: {e}")
+        main_logger.error(f"Registration failed for {business_data.email}: {e}")
         raise HTTPException(status_code=400, detail="Registration failed")
 
 
@@ -38,18 +38,18 @@ def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    """Handles user login and token generation."""
+    """Handles business login and token generation."""
     main_logger.info(f"Login attempt for {form_data.username}")
-    user = auth_service.authenticate_user(form_data.username, form_data.password)
-    if not user:
+    business = auth_service.authenticate_business(form_data.username, form_data.password)
+    if not business:
         main_logger.warning(f"Failed login attempt for {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = auth_service.create_token(user.email)
-    main_logger.info(f"User {form_data.username} logged in successfully")
+    token = auth_service.create_token(business.email)
+    main_logger.info(f"Business {form_data.username} logged in successfully")
     return token
 
 
@@ -58,7 +58,7 @@ def verify_otp(
     request: OTPVerificationRequest,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    """Verifies the OTP for a user."""
+    """Verifies the OTP for a business."""
     main_logger.info(f"Verifying OTP for {request.email}")
     return auth_service.verify_otp(request)
 
@@ -68,7 +68,7 @@ def resend_otp(
     request: OTPVerificationRequest,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    """Resends OTP to the user's email."""
+    """Resends OTP to the business's email."""
     main_logger.info(f"Resending OTP for {request.email}")
     return auth_service.resend_otp(request)
 
@@ -87,13 +87,13 @@ def forget_password(
 def reset_password(
     request: ResetPasswordRequest, auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Resets user password after OTP verification."""
+    """Resets business password after OTP verification."""
     main_logger.info(f"Resetting password for {request.email}")
     return auth_service.reset_password(request)
 
 
-@router.get("/users/me", response_model=User)
-def get_user_profile(current_user: User = Depends(get_current_user)):
-    """Fetches the logged-in user's profile."""
-    main_logger.info(f"Fetching profile for {current_user.email}")
-    return current_user
+@router.get("/business/me", response_model=Business)
+def get_business_profile(current_business: Business = Depends(get_current_business)):
+    """Fetches the logged-in business's profile."""
+    main_logger.info(f"Fetching profile for {current_business.email}")
+    return current_business

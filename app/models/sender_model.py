@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
 
-class SenderModel(Base):
+class WASenderModel(Base):
     __tablename__ = "WhatsAppSenders"
     id = Column(Integer, primary_key=True, index=True)
     sender_id = Column(String, unique=True, index=True)
@@ -16,5 +16,5 @@ class SenderModel(Base):
     email = Column(String)
     website = Column(String)
     logo_url = Column(String)
-    user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
-    user = relationship("UserModel", back_populates="whatsapp_sender")
+    business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False)
+    business = relationship("Business", back_populates="whatsapp_sender")

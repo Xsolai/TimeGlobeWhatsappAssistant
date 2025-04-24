@@ -1,40 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
-
-
-class UserBase(BaseModel):
-    name: str
-    email: EmailStr
-
-
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
-    phone_number: str = Field(..., min_length=10)
-    business_name: str
-
-
-class UserInDB(UserCreate):
-    id: int
-    is_active: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class User(UserInDB):
-    pass
-
-
-class OTPVerificationRequest(BaseModel):
-    email: str
-    otp: str = None
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+from uuid import UUID
 
 
 class Token(BaseModel):
@@ -42,5 +9,42 @@ class Token(BaseModel):
     token_type: str
 
 
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+
+class BusinessBase(BaseModel):
+    business_name: str
+    email: EmailStr
+    phone_number: Optional[str] = None
+
+
+class BusinessCreate(BusinessBase):
+    password: str
+
+
+class Business(BusinessBase):
+    id: str
+    is_active: bool
+    created_at: datetime
+    twilio_subaccount_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OTPVerificationRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 class TokenPayload(BaseModel):
-    sub: Optional[int] = None
+    sub: str
+    exp: int

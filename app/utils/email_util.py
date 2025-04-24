@@ -36,7 +36,7 @@ def send_email(recipient_email, subject, body):
             server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
             server.quit()
 
-        print("Registration email sent successfully!")
+        # print("Registration email sent successfully!")
 
     except smtplib.SMTPException as smtp_err:
         print(f"SMTP error occurred: {smtp_err}")

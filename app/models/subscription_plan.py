@@ -1,15 +1,16 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean
 from .base import Base
+from sqlalchemy import Column, String, Integer, Float, Boolean
 from sqlalchemy.orm import relationship
 
 
 class SubscriptionPlan(Base):
-    __tablename__ = "SubscriptionPlans"
+    __tablename__ = "subscription_plans"
 
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    name = Column(String, nullable=False, unique=True)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
     price = Column(Float, nullable=False)
-    duration_in_days = Column(Integer, nullable=False)
+    duration_days = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
-    trial_days = Column(Integer, default=0)
-    users = relationship("UserSubscription", back_populates="subscription")
+
+    business_subscriptions = relationship("BusinessSubscription", back_populates="subscription_plan")

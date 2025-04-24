@@ -7,8 +7,8 @@ from ..schemas.subscription_plan import (
     SubscriptionPlanUpdate,
     SubscriptionPlanResponse,
 )
-from ..schemas.auth import User
-from ..core.dependencies import get_subscription_service, get_current_user
+from ..schemas.auth import Business
+from ..core.dependencies import get_subscription_service, get_current_business
 
 # Configure logger
 from ..logger import main_logger  # Ensure logger setup exists
@@ -19,11 +19,11 @@ router = APIRouter()
 @router.post("/create", response_model=SubscriptionPlanResponse)
 def create_subscription(
     plan_data: SubscriptionPlanCreate,
-    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Creates a new subscription plan."""
-    main_logger.info(f"User {current_user.id} is creating a new subscription plan.")
+    main_logger.info(f"Business {current_business.id} is creating a new subscription plan.")
     try:
         plan = service.create_plan(plan_data)
         main_logger.info(f"Subscription plan '{plan.name}' created successfully.")
@@ -38,37 +38,37 @@ def create_subscription(
 @router.post("/{subscription_id}")
 def subscribe_user(
     subscription_id: int,
-    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Subscribes the current user to a subscription plan."""
     main_logger.info(
-        f"User {current_user.id} is subscribing to plan {subscription_id}."
+        f"Business {current_business.id} is subscribing to plan {subscription_id}."
     )
-    return service.subscribe_user(current_user.id, subscription_id)
+    return service.subscribe_user(current_business.id, subscription_id)
 
 
 @router.get("/")
 def get_user_subscriptions(
-    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Retrieves all subscriptions for the current user."""
-    main_logger.info(f"Fetching subscriptions for user {current_user.id}.")
-    return service.get_user_subscriptions(current_user.id)
+    main_logger.info(f"Fetching subscriptions for user {current_business.id}.")
+    return service.get_user_subscriptions(current_business.id)
 
 
 @router.delete("/{subscription_id}")
 def cancel_subscription(
     subscription_id: int,
-    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Cancels a user's subscription."""
     main_logger.info(
-        f"User {current_user.id} is canceling subscription {subscription_id}."
+        f"Business {current_business.id} is canceling subscription {subscription_id}."
     )
-    return service.cancel_subscription(current_user.id, subscription_id)
+    return service.cancel_subscription(current_business.id, subscription_id)
 
 
 @router.get("/{plan_id}", response_model=SubscriptionPlanResponse)
@@ -87,11 +87,11 @@ def get_subscription_by_id(
 
 @router.get("/", response_model=List[SubscriptionPlanResponse])
 def get_all_subscriptions(
-    current_user: User = Depends(get_current_user),
+    current_business: Business = Depends(get_current_business),
     service: SubscriptionPlanService = Depends(get_subscription_service),
 ):
     """Retrieves all available subscription plans."""
-    main_logger.info(f"User {current_user.id} is fetching all subscription plans.")
+    main_logger.info(f"Business {current_business.id} is fetching all subscription plans.")
     return service.get_all_plans()
 
 

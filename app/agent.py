@@ -93,6 +93,25 @@ class AssistantManager:
                 finally:
                     self.delete_active_run(thread_id)
 
+    def check_and_cancel_active_runs(self, thread_id: str) -> None:
+        """Check if there are any active runs for this thread and cancel them"""
+        logger.info(f"Checking for active runs on thread: {thread_id}")
+        try:
+            # List runs for the thread
+            runs = self.client.beta.threads.runs.list(thread_id=thread_id)
+            for run in runs.data:
+                # Check if the run is in an active state
+                if run.status in ["queued", "in_progress", "requires_action"]:
+                    logger.info(f"Found active run {run.id} with status {run.status}. Cancelling...")
+                    # Cancel the run
+                    self.client.beta.threads.runs.cancel(
+                        thread_id=thread_id,
+                        run_id=run.id
+                    )
+                    logger.info(f"Run {run.id} cancelled successfully")
+        except Exception as e:
+            logger.error(f"Error checking/cancelling active runs: {str(e)}")
+
     def add_message_to_thread(self, user_id: str, question: str) -> None:
         """Add a message to the user's thread with active run check."""
         thread_id = self.get_or_create_thread(user_id)
@@ -100,6 +119,9 @@ class AssistantManager:
 
         current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         question = f"{question}\n\n(Current Date and Time: {current_datetime})"
+
+        # First, check and cancel any active runs
+        self.check_and_cancel_active_runs(thread_id)
 
         # Optimized retry logic with shorter initial delay
         max_retries = 3
@@ -495,19 +517,19 @@ def test_chatbot():
         try:
             question = input("\nYou: ").strip()
             if question.lower() == "exit":
-                print("Goodbye!")
+                # print("Goodbye!")
                 break
             elif question.lower() == "new":
                 with threads_lock:
                     user_threads.clear()
-                print("Started new conversation")
+                # print("Started new conversation")
                 continue
             elif not question:
                 continue
 
-            print("Processing your request...")
+            # print("Processing your request...")
             response = assistant_manager.run_conversation("923188335998", question)
-            print(f"\nAssistant: {response}")
+            # print(f"\nAssistant: {response}")
 
         except KeyboardInterrupt:
             print(
@@ -515,8 +537,8 @@ def test_chatbot():
             )
         except Exception as e:
             logger.exception("Error in chat loop")
-            print(f"\nError: {str(e)}")
-            print("You can continue with your next question or type 'exit' to quit.")
+            # print(f"\nError: {str(e)}")
+            # print("You can continue with your next question or type 'exit' to quit.")
 
 
 if __name__ == "__main__":
