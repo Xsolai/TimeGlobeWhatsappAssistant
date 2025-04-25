@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 
 from app.agent import AssistantManager
+from app.chat_agent import ChatAgent
 from ..services.dialog360_service import Dialog360Service
 from ..schemas.dialog360_sender import (
     SenderRequest,
@@ -14,6 +15,7 @@ from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
 from ..db.session import get_db
+from ..repositories.conversation_repository import ConversationRepository
 from ..core.dependencies import (
     get_dialog360_service,
     get_current_business,
@@ -112,10 +114,8 @@ async def whatsapp_wbhook(
         logging.info(f"Processing message from {number} (contact: {profile_name}): {incoming_msg}")
         
         # Process the message with your AI assistant
-        _assistant_manager = AssistantManager(
-            settings.OPENAI_API_KEY, settings.OPENAI_ASSISTANT_ID, db
-        )
-        response = get_response_from_gpt(incoming_msg, number, _assistant_manager)
+        # Using the tools_wrapper_util function directly without instantiating AssistantManager
+        response = get_response_from_gpt(incoming_msg, number)
         response = format_response(response)
         
         # Send the response
@@ -187,3 +187,32 @@ async def delete_whatsapp_sender(
     current_business: Business = Depends(get_current_business),
 ):
     return dialog360_service.delete_whatsapp_sender(sender_id)
+
+
+@router.delete("/clear-chat-history/{mobile_number}", status_code=status.HTTP_200_OK, response_class=JSONResponse)
+async def clear_chat_history(
+    mobile_number: str,
+    db: Session = Depends(get_db),
+    current_business: Business = Depends(get_current_business),
+):
+    """Clear the conversation history for a user"""
+    try:
+        conversation_repo = ConversationRepository(db)
+        success = conversation_repo.delete_conversation_history(mobile_number)
+        
+        if success:
+            return JSONResponse(
+                content={"status": "success", "message": f"Chat history cleared for {mobile_number}"},
+                status_code=200,
+            )
+        else:
+            return JSONResponse(
+                content={"status": "success", "message": "No chat history found to clear"},
+                status_code=200,
+            )
+    except Exception as e:
+        logging.error(f"Error clearing chat history: {str(e)}")
+        return JSONResponse(
+            content={"status": "error", "message": str(e)},
+            status_code=500,
+        )

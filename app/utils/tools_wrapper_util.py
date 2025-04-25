@@ -3,12 +3,14 @@ import logging
 import time
 from datetime import datetime
 from ..core.config import settings
+from typing import List, Dict
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 # Remove circular imports - use lazy loading instead
 _assistant_manager = None
+_chat_agent = None
 _time_globe_service = None
 
 
@@ -19,6 +21,20 @@ def _get_assistant_manager():
         from ..agent import AssistantManager
 
     return _assistant_manager
+
+
+def _get_chat_agent():
+    """Lazy initialization of the ChatAgent to avoid circular imports"""
+    global _chat_agent
+    if _chat_agent is None:
+        from ..chat_agent import ChatAgent
+        from ..core.config import settings
+        from ..db.session import SessionLocal
+        
+        # Create a new session for the chat agent
+        db = SessionLocal()
+        _chat_agent = ChatAgent(api_key=settings.OPENAI_API_KEY, db=db)
+    return _chat_agent
 
 
 def _get_time_globe_service():
@@ -79,7 +95,7 @@ def get_employee(items, siteCd,week):
         return {"status": "error", "message": str(e)}
 
 
-def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
+def AppointmentSuggestion(week, employeeid, itemno, siteCd: str):
     """Get available appointment slots for a selected employee,service and salon"""
     logger.info(
         f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd})"
@@ -103,36 +119,40 @@ def AppointmentSuggestion(week,employeeid, itemno, siteCd: str):
 
 
 def book_appointment(
-    beginTs,
-    durationMillis,
-    mobileNumber,
-    employeeId,
-    itemNo,
-    siteCd
+    mobileNumber: str,
+    siteCd: str,
+    positions: list,
+    reminderSms: bool = True,
+    reminderEmail: bool = True
 ):
-    """Book an appointment with the selected parameters"""
+    """Book appointments with the selected parameters. Supports multiple positions."""
     logger.info(
-        f"Tool called: book_appointment(duration={durationMillis}, user_date_time={beginTs})"
+        f"Tool called: book_appointment(positions={positions}, siteCd={siteCd})"
     )
     start_time = time.time()
     try:
-        # Try our own date parsing in case there's any issue with the format
-        # Used for debug, not actual conversion since time_globe_service has its own format_datetime
-        if not isinstance(beginTs, str):
-            logger.warning(f"Invalid date/time types: date={type(beginTs)}")
-            return {"status": "error", "message": "Date and time must be strings"}
+        # Format mobile number if needed
+        if not mobileNumber.startswith("+"):
+            mobileNumber = f"+{mobileNumber}"
+            
+        # Validate each position has required fields
+        for pos in positions:
+            if not all(k in pos for k in ["beginTs", "durationMillis", "employeeId", "itemNo", "ordinalPosition"]):
+                missing = [k for k in ["beginTs", "durationMillis", "employeeId", "itemNo", "ordinalPosition"] if k not in pos]
+                logger.warning(f"Missing required fields in position: {missing}")
+                return {"status": "error", "message": f"Missing required fields in position: {missing}"}
+            
+            logger.info(f"Processing appointment with date and time={pos.get('beginTs')}")
 
-        logger.info(f"Processing appointment with date and time={beginTs}")
-
-        # Call the service function which has a local format_datetime
+        # Call the service function with multiple positions
         result = _get_time_globe_service().book_appointment(
-                    beginTs,
-                    durationMillis,
-                    mobileNumber,
-                    employeeId,
-                    itemNo,
-                    siteCd
+            mobileNumber=mobileNumber,
+            siteCd=siteCd,
+            positions=positions,
+            reminderSms=reminderSms,
+            reminderEmail=reminderEmail
         )
+        
         execution_time = time.time() - start_time
         if result.get("code") == 90:
             logger.info(
@@ -276,9 +296,11 @@ def store_profile(
     mobile_number: str,
     email: str,
     gender: str,
+    title: str,
     full_name: str,
     first_name: str,
     last_name: str,
+    dplAccepted: bool = False
 ):
     """Store user profile"""
     # Handle missing parameters
@@ -300,27 +322,39 @@ def store_profile(
     # Provide default values for optional parameters
     if not email:
         logger.warning("store_profile() called without email, using default")
-        email = ""
+        email = None
 
     if not gender:
         logger.warning("store_profile() called without gender, using default")
-        gender = "M"  # Default to Male
+        gender = None  # Default to Male
 
     if not first_name:
         logger.warning("store_profile() called without first_name, using default")
-        first_name = "User"
+        first_name = None
 
     if not last_name:
         logger.warning("store_profile() called without last_name, using default")
-        last_name = ""
+        last_name = None
+
+    if not full_name:
+        logger.warning("store_profile() called without full_name, using default")
+        full_name = None
+    
+    if not dplAccepted:
+        logger.warning("store_profile() called without dplAccepted, using default")
+        dplAccepted = None
+
+    if not title:
+        logger.warning("store_profile() called without title, using default")
+        title = None
 
     logger.info(
-        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, first_name={first_name}, last_name={last_name})"
+        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, title={title}, first_name={first_name}, last_name={last_name}, dplAccepted={dplAccepted})"
     )
     start_time = time.time()
     try:
         response = _get_time_globe_service().store_profile(
-            mobile_number, email, gender, full_name, first_name, last_name
+            mobile_number, email, gender, title, full_name, first_name, last_name, dplAccepted
         )
         execution_time = time.time() - start_time
 
@@ -347,9 +381,14 @@ def store_profile(
 
 
 def format_response(text):
-    logger.debug(f"Tool called: format_response(text length={len(text)})")
+    logger.debug(f"Tool called: format_response(text length={len(text) if text else 0})")
     start_time = time.time()
     try:
+        # Handle None or empty text
+        if not text:
+            logger.warning("Empty text passed to format_response")
+            return "I'm sorry, I couldn't generate a proper response. Please try again."
+            
         final_response = replace_double_with_single_asterisks(text)  # removing single *
         final_response = remove_sources(final_response)  # removing sources if any
         final_response = remove_brackets(
@@ -369,7 +408,7 @@ def format_response(text):
         logger.error(
             f"Error in format_response(): {str(e)} - took {execution_time:.4f}s"
         )
-        return text  # Return original text if formatting fails
+        return text or "I'm sorry, I couldn't generate a proper response. Please try again."  # Return original text or default message if formatting fails
 
 
 def replace_double_with_single_asterisks(text):
@@ -542,11 +581,13 @@ def format_datetime(user_date_time: str) -> str:
     raise ValueError(f"Invalid date-time format: {user_date_time}")
 
 
-def get_response_from_gpt(msg, user_id, _assistant_manager):
+def get_response_from_gpt(msg, user_id, _assistant_manager=None):
     logger.info(f"Tool called: get_response_from_gpt(user_id={user_id})")
     start_time = time.time()
     try:
-        response = _assistant_manager.run_conversation(user_id, msg)
+        # Use the new ChatAgent instead of AssistantManager
+        chat_agent = _get_chat_agent()
+        response = chat_agent.run_conversation(user_id, msg)
         execution_time = time.time() - start_time
         logger.info(
             f"get_response_from_gpt() for user {user_id} completed in {execution_time:.2f}s"
@@ -558,3 +599,94 @@ def get_response_from_gpt(msg, user_id, _assistant_manager):
             f"Error in get_response_from_gpt(): {str(e)} - took {execution_time:.2f}s"
         )
         return f"Error processing request: {str(e)}"
+
+
+# Function aliases to match the German function names
+def getSites():
+    return get_sites()
+
+def getProducts(siteCd: str):
+    return get_products(siteCd)
+
+def getEmployees(siteCd: str, week: int, items: List[str]):
+    # Convert to match the original get_employee format
+    if len(items) > 0:
+        # Currently our implementation takes a single item, so use the first one
+        return get_employee(items, siteCd, week)
+    return {"status": "error", "message": "No items specified"}
+
+def getProfile(mobile_number:str=None):
+    """Wrapper for get_profile that accepts mobile_number"""
+    # Directly call the time_globe_service method to avoid recursive calls
+    try:
+        # Make sure we have a valid mobile number
+        if not mobile_number:
+            mobile_number = ""
+        logger.info(f"getProfile wrapper called with mobile_number={mobile_number}")
+        return _get_time_globe_service().get_profile(mobile_number)
+    except Exception as e:
+        logger.error(f"Error in getProfile wrapper: {str(e)}")
+        return {"status": "error", "message": f"Error retrieving profile: {str(e)}"}
+
+def getOrders(mobile_number:str=None):
+    """Wrapper for get_orders that accepts mobile_number"""
+    # Directly call the time_globe_service method to avoid recursive calls
+    try:
+        # Make sure we have a valid mobile number
+        if not mobile_number:
+            mobile_number = ""
+        logger.info(f"getOrders wrapper called with mobile_number={mobile_number}")
+        return _get_time_globe_service().get_orders(mobile_number)
+    except Exception as e:
+        logger.error(f"Error in getOrders wrapper: {str(e)}")
+        return {"status": "error", "message": f"Error retrieving orders: {str(e)}"}
+
+def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict]):
+    """Wrapper for AppointmentSuggestion to match the new schema"""
+    # Convert from the new format to the old format
+    if not positions or len(positions) == 0:
+        return {"status": "error", "message": "No positions specified"}
+    
+    # Take the first position
+    position = positions[0]
+    
+    # Call the original function with the extracted parameters
+    # Note: The original function expects employeeid, itemno in that specific format
+    return AppointmentSuggestion(
+        week=week,
+        employeeid=position.get("employeeId", 0),  # Use 0 or some default if not specified
+        itemno=position.get("itemNo"),
+        siteCd=siteCd
+    )
+
+def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positions: List[Dict], customerId: str = None):
+    """Wrapper for book_appointment that handles multiple positions"""
+    if not positions or len(positions) == 0:
+        return {"status": "error", "message": "No positions specified"}
+    
+    # Pass all positions to the booking function
+    return book_appointment(
+        mobileNumber=customerId,
+        siteCd=siteCd,
+        positions=positions,
+        reminderSms=reminderSms,
+        reminderEmail=reminderEmail
+    )
+
+def cancelAppointment(siteCd: str, orderId: int, mobileNumber: str = ""):
+    # The mobileNumber will be provided by the handler
+    return cancel_appointment(orderId=str(orderId), mobileNumber=mobileNumber, siteCd=siteCd)
+
+def store_profile_wrapper(fullNm=None, email=None, gender=None, title=None, first_name=None, last_name=None, dplAccepted=None, mobile_number=None):
+    """Wrapper for store_profile that accepts German schema parameters"""
+    # Map the German parameters to the existing function
+    return store_profile(
+        mobile_number=mobile_number or "",
+        email=email or "",
+        gender=gender or "M",
+        title=title or "",
+        full_name=fullNm or "",
+        first_name=first_name or "",
+        last_name=last_name or "",
+        dplAccepted=dplAccepted or False
+    )

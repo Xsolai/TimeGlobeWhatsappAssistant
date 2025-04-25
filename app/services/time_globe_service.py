@@ -210,6 +210,10 @@ class TimeGlobeService:
     ):
         """Generic method to make authenticated requests."""
         main_logger.debug(f"Making {method} request to {endpoint}")
+
+        if mobile_number and not mobile_number.startswith("+"):
+            mobile_number = f"+{mobile_number}"
+
         headers = {
             "Content-Type": "application/json",
             "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
@@ -217,6 +221,7 @@ class TimeGlobeService:
         }
         url = f"{self.base_url}{endpoint}"
         main_logger.debug(f"Request payload: {data}")
+        main_logger.debug(f"Request headers: {headers}")
 
         if data:
             response = requests.request(
@@ -254,6 +259,12 @@ class TimeGlobeService:
             )
         main_logger.info(f"Successfully fetched {len(sites)} salons")
         return sites
+    
+    def get_config(self):
+        """Retrieve the customer config from time globe"""
+        main_logger.debug("Fetching customer config")
+        response = self.request("POST", "/bot/getConfig")
+        return response
 
     def get_products(self, siteCd: str):
         """Retrieve a list of available services for a selected salon."""
@@ -264,7 +275,7 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched products for site: {siteCd}")
         return response
 
-    def get_employee(self, items: str, siteCd: str,week: int):
+    def get_employee(self, items: list, siteCd: str,week: int):
         """Retrieve a list of available employees for a studio."""
         main_logger.debug(f"Fetching employees for item: {items}")
         payload = {
@@ -273,6 +284,7 @@ class TimeGlobeService:
             "week": week,
             "items": items,
         }
+
         # self.item_no = item_no
         # self.item_name = item_name
         response = self.request("POST", "/browse/getEmployees", data=payload)
@@ -282,14 +294,66 @@ class TimeGlobeService:
     def AppointmentSuggestion(self, week: int, employee_id: int, item_no: int, siteCd: str):
         """Retrieve available appointment slots for selected services."""
         main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
+
+        if int(employee_id) == 0:
+            positions = [{"itemNo": item_no}]
+        else:
+            positions = [{"itemNo": item_no, "employeeId": employee_id}]
+
         # self.employee_id = employee_id
         payload = {
             "customerCd": "demo",
             "siteCd": siteCd,
             "week": week,
-            "positions": [{"itemNo": item_no, "employeeId": employee_id}],
+            "positions": positions,
         }
         response = self.request("POST", "/browse/getSuggestions", data=payload)
+        
+        # Define the cutoff date (April 1st, 2025)
+        cutoff_date = datetime(2025, 4, 1)
+        main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+        
+        # Increment beginTs based on the date
+        if response and "suggestions" in response:
+            main_logger.info(f"Processing {len(response['suggestions'])} appointment suggestions")
+            for idx, suggestion in enumerate(response["suggestions"], 1):
+                try:
+                    # Increment the main beginTs
+                    original_dt = datetime.strptime(suggestion["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_add = 2 if original_dt >= cutoff_date else 1
+                    adjusted_dt = original_dt.replace(hour=original_dt.hour + hours_to_add)
+                    suggestion["beginTs"] = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    main_logger.info(
+                        f"Suggestion {idx}: Adjusted main beginTs from {original_dt.strftime('%Y-%m-%d %H:%M')} "
+                        f"to {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (+{hours_to_add} hour{'s' if hours_to_add > 1 else ''})"
+                    )
+                    
+                    # Increment beginTs in positions
+                    for pos_idx, position in enumerate(suggestion["positions"], 1):
+                        try:
+                            pos_original_dt = datetime.strptime(position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                            pos_hours_to_add = 2 if pos_original_dt >= cutoff_date else 1
+                            pos_adjusted_dt = pos_original_dt.replace(hour=pos_original_dt.hour + pos_hours_to_add)
+                            position["beginTs"] = pos_adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                            
+                            main_logger.info(
+                                f"Suggestion {idx}, Position {pos_idx}: Adjusted beginTs from "
+                                f"{pos_original_dt.strftime('%Y-%m-%d %H:%M')} to "
+                                f"{pos_adjusted_dt.strftime('%Y-%m-%d %H:%M')} "
+                                f"(+{pos_hours_to_add} hour{'s' if pos_hours_to_add > 1 else ''})"
+                            )
+                        except Exception as pos_e:
+                            main_logger.error(
+                                f"Error adjusting time for suggestion {idx}, position {pos_idx}: {str(pos_e)}"
+                            )
+                            continue
+                except Exception as e:
+                    main_logger.error(f"Error processing suggestion {idx}: {str(e)}")
+                    continue
+        else:
+            main_logger.warning("No suggestions found in response or invalid response format")
+        
         main_logger.info(
             f"Successfully fetched suggestions for employee: {employee_id}"
         )
@@ -298,6 +362,9 @@ class TimeGlobeService:
     def get_profile(self, mobile_number: str):
         """Retrieve the profile data for a given phone number."""
         main_logger.debug(f"Fetching profile for mobile number: {mobile_number}")
+        # Make sure the number includes country code and starts with +
+        if not mobile_number.startswith("+"):
+            mobile_number = f"+{mobile_number}"
         # self.mobile_number = mobile_number
         response = self.request(
             method="POST",
@@ -317,9 +384,44 @@ class TimeGlobeService:
     def get_orders(self, mobile_number):
         """Retrieve a list of open appointments."""
         main_logger.debug("Fetching open orders")
+        if not mobile_number.startswith("+"):
+            mobile_number = f"+{mobile_number}"
         response = self.request(
             "POST", "/bot/getOrders", is_header=True, mobile_number=mobile_number
         )
+        
+        # Define the cutoff date (April 1st, 2025)
+        cutoff_date = datetime(2025, 4, 1)
+        main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+        
+        # Adjust order times based on the date
+        if response and isinstance(response, list):
+            main_logger.info(f"Processing {len(response)} open orders")
+            for idx, order in enumerate(response, 1):
+                try:
+                    # Adjust orderBegin
+                    begin_dt = datetime.strptime(order["orderBegin"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_add = 2 if begin_dt >= cutoff_date else 1
+                    adjusted_begin_dt = begin_dt.replace(hour=begin_dt.hour + hours_to_add)
+                    order["orderBegin"] = adjusted_begin_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    # Adjust orderEnd
+                    end_dt = datetime.strptime(order["orderEnd"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    adjusted_end_dt = end_dt.replace(hour=end_dt.hour + hours_to_add)
+                    order["orderEnd"] = adjusted_end_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                    
+                    main_logger.info(
+                        f"Order {idx} (ID: {order.get('orderId')}): Adjusted times - "
+                        f"Begin: {begin_dt.strftime('%Y-%m-%d %H:%M')} → {adjusted_begin_dt.strftime('%Y-%m-%d %H:%M')} "
+                        f"(+{hours_to_add} hour{'s' if hours_to_add > 1 else ''}), "
+                        f"End: {end_dt.strftime('%Y-%m-%d %H:%M')} → {adjusted_end_dt.strftime('%Y-%m-%d %H:%M')}"
+                    )
+                except Exception as e:
+                    main_logger.error(f"Error adjusting times for order {idx}: {str(e)}")
+                    continue
+        else:
+            main_logger.warning("No orders found in response or invalid response format")
+            
         main_logger.info("Successfully fetched open orders")
         return response
 
@@ -333,32 +435,67 @@ class TimeGlobeService:
 
     def book_appointment(
         self,
-        beginTs: str,
-        durationMillis: int,
         mobileNumber: str,
-        employeeId: int,
-        itemNo: int,
         siteCd: str,
+        positions: list,
+        reminderSms: bool = True,
+        reminderEmail: bool = True
     ):
-        """Book an appointment."""
-        main_logger.debug("Booking appointment")
+        """
+        Book an appointment with multiple positions.
+        
+        Args:
+            mobileNumber: Client's mobile number
+            siteCd: Site code
+            positions: List of position dictionaries with keys:
+                - beginTs: Timestamp when the appointment begins
+                - durationMillis: Duration in milliseconds
+                - employeeId: ID of the employee
+                - itemNo: Service item number
+                - ordinalPosition: Position in sequence
+            reminderSms: Whether to send SMS reminders
+            reminderEmail: Whether to send email reminders
+        """
+        main_logger.debug("Booking appointment with multiple positions")
         try:
-            # main_logger.debug(f"Formatting date/time: {user_date_time}")
-            # formatted_datetime = format_datetime(user_date_time)
-            main_logger.debug(f"datetime: {beginTs}")
+            if not mobileNumber.startswith("+"):
+                mobileNumber = f"+{mobileNumber}"
+            
+            # Define the cutoff date for time adjustment
+            cutoff_date = datetime(2025, 4, 1)
+            main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
 
+            # Adjust beginTs in all positions by subtracting hours (reverse of what we do when displaying times)
+            adjusted_positions = []
+            for i, pos in enumerate(positions):
+                main_logger.debug(f"Original position data: {pos}")
+                
+                try:
+                    original_dt = datetime.strptime(pos["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    hours_to_subtract = 2 if original_dt >= cutoff_date else 1
+                    adjusted_dt = original_dt.replace(hour=original_dt.hour - hours_to_subtract)
+                    adjusted_beginTs = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+                    main_logger.info(
+                        f"[Position {i+1}] Adjusting appointment time - "
+                        f"Original: {original_dt.strftime('%Y-%m-%d %H:%M')} → "
+                        f"Adjusted: {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (-{hours_to_subtract} hour{'s' if hours_to_subtract > 1 else ''})"
+                    )
+
+                    # Create adjusted position with updated beginTs
+                    adjusted_position = pos.copy()
+                    adjusted_position["beginTs"] = adjusted_beginTs
+                    adjusted_positions.append(adjusted_position)
+
+                except Exception as e:
+                    main_logger.warning(f"Could not adjust beginTs for position {i+1}: {str(e)}")
+                    adjusted_positions.append(pos)  # fallback to original if parsing fails
+                
             payload = {
                 "siteCd": siteCd,
-                "reminderSms": True,
-                "reminderEmail": True,
-                "positions": [
-                    {
-                        "beginTs": beginTs,  # "2025-02-25T12:00:00.000Z"
-                        "durationMillis": durationMillis,
-                        "employeeId": employeeId,
-                        "itemNo": itemNo,
-                    }
-                ],
+                "reminderSms": reminderSms,
+                "reminderEmail": reminderEmail,
+                "positions": adjusted_positions
             }
             
             response = self.request(
@@ -368,17 +505,17 @@ class TimeGlobeService:
                 is_header=True,
                 mobile_number=mobileNumber,
             )
+            
             if response.get("code") == 0:
-                main_logger.info("Appointment booked successfully")
-                payload.update(
-                    {
-                        "mobileNumber": mobileNumber,
-                        "orderId": response.get("orderId"),
-                    }
-                )
-                self.time_globe_repo.save_book_appointment(payload)
+                main_logger.info("Appointment with multiple positions booked successfully")
+                payload.update({
+                    "mobileNumber": mobileNumber,
+                    "orderId": response.get("orderId"),
+                })
+                self.time_globe_repo.save_book_appointment(payload, mobileNumber)
             else:
                 main_logger.error(f"Failed to book appointment: {response}")
+                
             return response
         except Exception as e:
             main_logger.error(f"Error in book_appointment: {str(e)}")
@@ -410,9 +547,11 @@ class TimeGlobeService:
         mobile_number: str,
         email: str,
         gender: str,
+        title: str,
         full_name: str,
         first_name: str,
         last_name: str,
+        dplAccepted: bool = False
     ):
         """Store user profile."""
         main_logger.debug(f"Storing profile for mobile number: {mobile_number}")
@@ -426,14 +565,16 @@ class TimeGlobeService:
 
         # self.mobile_number = mobile_number
         # full_name = first_name + " " + last_name
-
+        
         # Create the payload with proper field names
         payload = {
             "salutationCd": gender,
             "email": email,
+            "title": title,
             "fullNm": full_name,
             "firstNm": first_name,
             "lastNm": last_name,
+            "dplAccepted": dplAccepted
         }
 
         # Add extra debugging
@@ -466,6 +607,7 @@ class TimeGlobeService:
                         "fullNm": full_name,
                         "firstNm": first_name,
                         "lastNm": last_name,
+                        "dplAccepted": dplAccepted
                     }
                     self.time_globe_repo.create_customer(customer_data, mobile_number)
                     return {"code": 0, "message": "Profile created successfully"}

@@ -16,6 +16,10 @@ class TimeGlobeRepository:
     def get_customer(self, mobile_number: str) -> CustomerModel:
         try:
             main_logger.info(f"Fetching customer with mobile number: {mobile_number}")
+
+            if not mobile_number.startswith("+"):
+                mobile_number = f"+{mobile_number}"
+
             customer = (
                 self.db.query(CustomerModel)
                 .filter(CustomerModel.mobile_number == mobile_number)
@@ -58,7 +62,8 @@ class TimeGlobeRepository:
                     last_name=customer_data.get("lastNm", ""),
                     mobile_number=mobile_number,
                     email=customer_data.get("email", ""),
-                    gender=customer_data.get("salutationCd", "M"),
+                    gender=customer_data.get("salutationCd", ""),
+                    dplAccepted=customer_data.get("dplAccepted", False)
                 )
 
                 main_logger.debug(f"Creating new customer with data: {customer_data}")
@@ -107,12 +112,12 @@ class TimeGlobeRepository:
             )
             raise Exception(f"Database Error {str(e)}")
 
-    def save_book_appointment(self, booking_details: dict):
+    def save_book_appointment(self, booking_details: dict,mobileNumber: str):
         try:
             main_logger.info(
                 f"Saving booking appointment for order_id: {booking_details.get('order_id')}"
             )
-            customer = self.get_customer(booking_details.get("mobile_number"))
+            customer = self.get_customer(mobileNumber)
             if not customer:
                 main_logger.error("Customer not found while saving appointment.")
                 raise Exception("Customer not found")
@@ -129,21 +134,21 @@ class TimeGlobeRepository:
                 f"Booking appointment saved with ID: {book_appointment.id}"
             )
 
-            for position in booking_details.get("positions", []):
-                main_logger.info(f"Processing booking position: {position}")
-                booking_detail = BookingDetail(
-                    begin_ts=datetime.strptime(
-                        position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ),
-                    duration_millis=position["durationMillis"],
-                    employee_id=position["employeeId"],
-                    item_no=position["itemNo"],
-                    item_nm=position["itemNm"],
-                    book_id=book_appointment.id,
-                )
-                self.db.add(booking_detail)
+            # for position in booking_details.get("positions", []):
+            #     main_logger.info(f"Processing booking position: {position}")
+            #     booking_detail = BookingDetail(
+            #         begin_ts=datetime.strptime(
+            #             position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            #         ),
+            #         duration_millis=position["durationMillis"],
+            #         employee_id=position["employeeId"],
+            #         item_no=position["itemNo"],
+            #         item_nm=position["itemNm"],
+            #         book_id=book_appointment.id,
+            #     )
+            #     self.db.add(booking_detail)
 
-            self.db.commit()
+            # self.db.commit()
             main_logger.info(
                 f"Booking details saved for order_id: {booking_details.get('order_id')}"
             )
