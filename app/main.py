@@ -5,6 +5,8 @@ from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
 from .models.base import Base
+from dotenv import load_dotenv
+load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 # Import all models to ensure they are registered with SQLAlchemy
 from .models.all_models import (
     Business, 
