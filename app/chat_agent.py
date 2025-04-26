@@ -27,6 +27,7 @@ threads_lock = threading.RLock()
 class ChatAgent:
     def __init__(self, api_key: str, model: str = "gpt-4.1", db: Session = None):
         """Initialize the ChatAgent with API key and model name."""
+        print('api key {}'.format(api_key))
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self._function_mapping = None
