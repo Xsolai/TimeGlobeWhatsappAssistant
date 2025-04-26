@@ -12,7 +12,7 @@ from .schemas.thread import ThreadCreate
 from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
-load_dotenv()
+load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 
 # Set up logging
 logging.basicConfig(

@@ -5,7 +5,7 @@ from chat_agent import ChatAgent
 from sqlalchemy.orm import Session
 from db.session import SessionLocal
 
-load_dotenv()
+load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 
 def test_chat_agent():
     """Test the ChatAgent implementation with a simple conversation"""

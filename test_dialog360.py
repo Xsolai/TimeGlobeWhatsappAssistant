@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 
 # Get API key from environment
 api_key = os.getenv("DIALOG360_API_KEY")

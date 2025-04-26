@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from .schemas.thread import ThreadCreate
 
-load_dotenv()
+load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 
 # Set up logging
 logging.basicConfig(
