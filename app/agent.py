@@ -6,7 +6,7 @@ from openai import OpenAI
 import os
 import json
 import logging
-from dotenv import load_dotenv
+from .core.env import load_env
 from .core.config import settings
 from .repositories.twilio_repository import TwilioRepository
 from .db.session import get_db
@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from .schemas.thread import ThreadCreate
 
-load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
+# Load environment variables
+load_env()
 
 # Set up logging
 logging.basicConfig(
