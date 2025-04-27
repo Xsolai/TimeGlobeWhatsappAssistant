@@ -6,7 +6,6 @@ from openai import OpenAI
 import os
 import json
 import logging
-from .core.env import load_env
 from .core.config import settings
 from .repositories.twilio_repository import TwilioRepository
 from .db.session import get_db
@@ -14,18 +13,11 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from .schemas.thread import ThreadCreate
 
-# Load environment variables
-load_env()
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# # Global state - moved outside the class
-# user_threads: Dict[str, str] = {}  # Store thread IDs for each user
-# active_runs: Dict[str, str] = {}  # Track active runs for each thread
 
 # Add global locks for thread-safe operations
 threads_lock = threading.RLock()  # For user_threads dict

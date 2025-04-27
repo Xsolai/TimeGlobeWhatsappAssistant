@@ -6,10 +6,18 @@ from .logger import main_logger
 from .db.session import engine
 from .models.base import Base
 from .core.env import load_env
-import os
+import logging
+
+# Configure logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Load environment variables at startup
-load_env()
+main_logger.info("Loading environment variables...")
+env = load_env()
+main_logger.info("Environment variables loaded")
 
 # Import all models to ensure they are registered with SQLAlchemy
 from .models.all_models import (

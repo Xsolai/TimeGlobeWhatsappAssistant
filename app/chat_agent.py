@@ -6,15 +6,11 @@ from typing import Any, Dict, List, Callable, Optional
 from openai import OpenAI
 import os
 import logging
-from .core.env import load_env
 from sqlalchemy.orm import Session
 from .schemas.thread import ThreadCreate
 from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
-
-# Load environment variables
-load_env()
 
 # Set up logging
 logging.basicConfig(

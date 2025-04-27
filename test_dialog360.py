@@ -40,8 +40,8 @@ try:
     # print(f"Response body: {json.dumps(response.json(), indent=2)}")
     
     if response.status_code in [200, 201, 202]:
-        # print("Message sent successfully!")
+        pass  # print("Message sent successfully!")
     else:
-        # print(f"Failed to send message. Error: {response.text}")
+        pass  # print(f"Failed to send message. Error: {response.text}")
 except Exception as e:
-    # print(f"Exception occurred: {str(e)}") 
+    pass  # print(f"Exception occurred: {str(e)}") 
