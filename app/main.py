@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from .routes import auth_route, onboarding_route, twilio_route, subscription_route, twilio_webhook_route
 from .core.config import settings
 from .logger import main_logger
@@ -60,6 +61,49 @@ app.include_router(onboarding_route.router, prefix="/api/onboarding", tags=["Onb
 app.include_router(twilio_route.router, prefix="/api/whatsapp", tags=["WhatsApp"])
 app.include_router(subscription_route.router, prefix="/api/subscription", tags=["Subscription"])
 app.include_router(twilio_webhook_route.router, prefix="/api/twilio", tags=["Twilio Webhooks"])
+
+
+
+@app.post("/webhook")
+async def receive_webhook(request: Request):
+    try:
+        payload = await request.json()
+        logging.info(f"Received webhook: {payload}")
+       
+        return {"status": "success"}
+    except Exception as e:
+        logging.error(f"Error processing webhook: {e}")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+@app.get("/redirect", response_class=HTMLResponse)
+async def handle_redirect(request: Request):
+    # Get query parameters
+    params = dict(request.query_params)
+    client_id = params.get("client")
+    channels = params.get("channels")
+    revoked = params.get("revoked")
+
+    # Log or save the data as needed
+    print(f"✅ Received onboarding data: client_id={client_id}, channels={channels}, revoked={revoked}")
+
+    # Here you can save this info in DB or memory (optional)
+
+    # Show a success message to the user
+    html_content = f"""
+    <html>
+        <head>
+            <title>Onboarding Completed</title>
+        </head>
+        <body style="font-family:Arial;text-align:center;margin-top:50px;">
+            <h1>🎉 Onboarding Completed!</h1>
+            <p><strong>Client ID:</strong> {client_id}</p>
+            <p><strong>Channels:</strong> {channels}</p>
+            <p>Now you can close this page and start using WhatsApp API!</p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
+
 
 @app.get("/")
 async def root():
