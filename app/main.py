@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import auth_route, onboarding_route, twilio_route, subscription_route, twilio_webhook_route
-from .core.config import settings
+from app.core.config import settings
 from .logger import main_logger
 from .db.session import engine
 from .models.base import Base
@@ -26,32 +25,31 @@ from .models.all_models import (
 )
 # Import database setup function
 from .db.setup_db import setup_database
-import os
 
 app = FastAPI(
-    title="TimeGlobe WhatsApp Assistant API",
-    version="1.0.0",
-    description="TimeGlobe WhatsApp Assistant API powered by 360dialog",
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description=settings.DESCRIPTION
 )
 
 # Initialize database and ensure all tables are created
 setup_database()
 
-# CORS middleware configuration
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth_route.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(onboarding_route.router, prefix="/api/onboarding", tags=["Onboarding"])
-app.include_router(twilio_route.router, prefix="/api/whatsapp", tags=["WhatsApp"])
-app.include_router(subscription_route.router, prefix="/api/subscription", tags=["Subscription"])
-app.include_router(twilio_webhook_route.router, prefix="/api/twilio", tags=["Twilio Webhooks"])
+# Import and include routers
+from app.routers import whatsapp, auth, appointments
+
+app.include_router(whatsapp.router, prefix="/api/v1", tags=["whatsapp"])
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
+app.include_router(appointments.router, prefix="/api/v1", tags=["appointments"])
 
 @app.get("/")
 async def root():

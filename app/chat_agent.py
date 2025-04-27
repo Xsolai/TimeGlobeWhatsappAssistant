@@ -12,6 +12,9 @@ from .schemas.thread import ThreadCreate
 from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
+from app.core.config import settings
+from app.services.openai_service import OpenAIService
+from app.services.dialog360_service import Dialog360Service
 load_dotenv(dotenv_path="/home/ec2-user/TimeGlobeWhatsappAssistant/.env")
 
 # Set up logging
@@ -25,19 +28,25 @@ threads_lock = threading.RLock()
 
 
 class ChatAgent:
-    def __init__(self, api_key: str, model: str = "gpt-4.1", db: Session = None):
-        """Initialize the ChatAgent with API key and model name."""
-        logger.info('api key {}'.format(api_key))
-        self.client = OpenAI(api_key=api_key)
-        self.model = model
-        self._function_mapping = None
-        self.db = db
+    def __init__(self):
+        self.openai_service = OpenAIService(
+            api_key=settings.OPENAI_API_KEY,
+            assistant_id=settings.OPENAI_ASSISTANT_ID
+        )
+        self.dialog360_service = Dialog360Service(
+            api_key=settings.DIALOG360_API_KEY,
+            api_url=settings.DIALOG360_API_URL,
+            phone_number=settings.DIALOG360_PHONE_NUMBER
+        )
+
+    async def process_message(self, message: str, phone_number: str):
+        # Get response from OpenAI
+        response = await self.openai_service.get_response(message)
         
-        # Load available functions from the tools wrapper
-        self.available_functions = self._get_available_functions()
+        # Send response via Dialog360
+        await self.dialog360_service.send_message(phone_number, response)
         
-        # Initialize repository if db is provided
-        self.conversation_repo = ConversationRepository(db) if db else None
+        return response
 
     def _get_available_functions(self) -> List[Dict[str, Any]]:
         """Define the functions available to the model."""
