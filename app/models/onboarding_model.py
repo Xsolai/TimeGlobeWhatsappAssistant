@@ -21,19 +21,13 @@ class Business(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     
-    # Twilio fields
-    twilio_subaccount_sid = Column(String, nullable=True)
-    twilio_auth_token = Column(String(255), nullable=True)
-    whatsapp_number = Column(String, nullable=True)
-    phone_number_sid = Column(String, nullable=True)  # To store the purchased phone number SID
-    messaging_service_sid = Column(String, nullable=True)  # To store the Twilio messaging service SID
+    # 360dialog WhatsApp Business API fields
+    client_id = Column(String, nullable=True)
+    channel_id = Column(String, nullable=True)
+    api_key = Column(String, nullable=True)
+    api_endpoint = Column(String, nullable=True)  # This will store the address
+    app_id = Column(String, nullable=True)
     waba_status = Column(Enum(WABAStatus), default=WABAStatus.pending)
-    
-    # WhatsApp Sender fields
-    whatsapp_sender_sid = Column(String, nullable=True)
-    whatsapp_sender_id = Column(String, nullable=True)
-    waba_id = Column(String, nullable=True)
-    whatsapp_status = Column(String, nullable=True)
     whatsapp_profile = Column(JSON, nullable=True)
 
     # Relationships

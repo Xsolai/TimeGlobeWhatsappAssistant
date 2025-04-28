@@ -8,6 +8,7 @@ from .db.session import engine
 from .models.base import Base
 from .core.env import load_env
 import logging
+import requests
 
 # Configure logging first
 logging.basicConfig(
@@ -63,17 +64,110 @@ app.include_router(subscription_route.router, prefix="/api/subscription", tags=[
 app.include_router(twilio_webhook_route.router, prefix="/api/twilio", tags=["Twilio Webhooks"])
 
 
-
 @app.post("/webhook")
 async def receive_webhook(request: Request):
     try:
         payload = await request.json()
         logging.info(f"Received webhook: {payload}")
-       
+
+        event_type = payload.get("event")
+        data = payload.get("data", {})
+        client_id = data.get("client_id")
+        channel_id = data.get("id")
+        status = data.get("status")
+
+        if event_type == "channel_permission_granted" and status == "ready":
+            # ✅ Channel is ready, now create an API key
+            api_key = create_api_key(settings.PARTNER_ID or "MalHtRPA", channel_id)
+            logging.info(f"🎯 API Key created for client {client_id}: {api_key}")
+
+            # TODO: Save api_key securely in DB or wherever you want
         return {"status": "success"}
+    
     except Exception as e:
         logging.error(f"Error processing webhook: {e}")
-        raise HTTPException(status_code=400, detail="Invalid payload")
+        raise HTTPException(status_code=400, detail="Invalid webhook payload")
+    
+
+    
+def create_api_key(partner_id, channel_id):
+    url = f"https://hub.360dialog.io/api/v2/partners/{partner_id}/channels/{channel_id}/api_keys"
+    headers = {
+        "Content-Type": "application/json",
+        "D360-API-KEY": "794c76fd-7b5c-49a2-ae32-e123fabcac74"  
+    }
+
+    logging.info(f"Creating API key for partner {partner_id} and channel {channel_id}")
+    logging.info(f"Headers: {headers}")
+    logging.info(f"URL: {url}") 
+    
+    response = requests.post(url, headers=headers)
+    if response.status_code == 201:
+        result = response.json()
+        api_data = {
+            "address": result.get("address"),
+            "api_key": result.get("api_key"),
+            "app_id": result.get("app_id"),
+            "id": result.get("id")
+        }
+        # set webhook url, for this channel now 
+        # link https://waba-v2.360dialog.io/v1/configs/webhook
+        #  body {
+        #   "url": "https://solasolution.ecomtask.de/app3/api/whatsapp/incoming-whatsapp",
+        #   "headers": {}
+        # }
+        # d360-api-key the api key we get in the result
+        # Content-Type application/json
+        # url is https://solasolution.ecomtask.de/app3/api/whatsapp/incoming-whatsapp
+        
+        
+        #start code
+        url = f"https://waba-v2.360dialog.io/v1/configs/webhook"
+        headers = {
+            "Content-Type": "application/json",
+            "D360-API-KEY": api_data["api_key"]
+        }   
+        data = {
+            "url": "https://solasolution.ecomtask.de/app3/api/whatsapp/incoming-whatsapp",
+            "headers": {}
+        }
+        response = requests.post(url, headers=headers, json=data)
+        logging.info(f"Webhook set response: {response.json()}")    
+        
+        
+        # Save to database
+        try:
+            from sqlalchemy.orm import Session
+            from .models.onboarding_model import Business, WABAStatus
+            
+            with Session(engine) as db:
+                # Find or create business record
+                business = db.query(Business).filter(Business.client_id == partner_id).first()
+                if not business:
+                    business = Business(
+                        client_id=partner_id,
+                        channel_id=channel_id,
+                        waba_status=WABAStatus.connected
+                    )
+                    db.add(business)
+                
+                # Update business with API information
+                business.api_key = api_data["api_key"]
+                business.api_endpoint = api_data["address"]
+                business.app_id = api_data["app_id"]
+                business.waba_status = WABAStatus.connected
+                
+                db.commit()
+                
+                logging.info(f"✅ Successfully saved API information for business with client_id {partner_id}")
+        
+        except Exception as e:
+            logging.error(f"❌ Failed to save API information to database: {str(e)}")
+            
+        return api_data
+    else:
+        logging.error(f"❌ Failed to create API Key: {response.status_code} - {response.text}")
+        return None
 
 @app.get("/redirect", response_class=HTMLResponse)
 async def handle_redirect(request: Request):

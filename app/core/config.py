@@ -11,6 +11,10 @@ class Settings(BaseSettings):
         "DATABASE_URL", "sqlite:///./timeglobewhatsappassistant.db"
     )
 
+    # Partner API Settings
+    PARTNER_API_KEY: str = env.get("PARTNER_API_KEY", "")
+    PARTNER_ID: str = env.get("PARTNER_ID", "")
+
     # Twilio Settings - keeping for backwards compatibility
     account_sid: str = env.get("TWILIO_ACCOUNT_SID", "")
     auth_token: str = env.get("TWILIO_AUTH_TOKEN", "")

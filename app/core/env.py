@@ -25,6 +25,7 @@ def load_env():
     
     # Load the .env file
     load_dotenv(dotenv_path=str(env_path))
+
     
     # Log critical environment variables (without values for security)
     critical_vars = [
@@ -35,7 +36,9 @@ def load_env():
         "TIME_GLOBE_LOGIN_USERNAME",
         "TIME_GLOBE_LOGIN_PASSWORD",
         "TIME_GLOBE_API_KEY",
-        "WABA_ID"
+        "WABA_ID",
+        "PARTNER_API_KEY",
+        "PARTNER_ID"
     ]
     
     for var in critical_vars:
