@@ -36,7 +36,7 @@ class TimeGlobeRepository:
             main_logger.error(f"Error fetching customer: {str(e)}")
             raise Exception(f"Database Error {str(e)}")
 
-    def create_customer(self, customer_data: dict, mobile_number: str):
+    def create_customer(self, customer_data: dict, mobile_number: str, business_phone_number: str = None):
         try:
             main_logger.info(
                 f"Creating/updating customer with mobile number: {mobile_number}"
@@ -47,6 +47,22 @@ class TimeGlobeRepository:
                 mobile_number = "".join(
                     c for c in mobile_number if c.isdigit() or c == "+"
                 )
+                
+            # Find the business if business_phone_number is provided
+            business = None
+            if business_phone_number:
+                main_logger.info(f"Looking up business with WhatsApp number: {business_phone_number}")
+                # Remove the + prefix if present for consistency with how we store it
+                if business_phone_number.startswith("+"):
+                    business_phone_number = business_phone_number[1:]
+                    
+                from ..models.business_model import Business
+                business = self.db.query(Business).filter(Business.whatsapp_number == business_phone_number).first()
+                
+                if business:
+                    main_logger.info(f"Found business: {business.business_name} (ID: {business.id})")
+                else:
+                    main_logger.warning(f"No business found with WhatsApp number: {business_phone_number}")
 
             main_logger.info(f"Fetching customer with mobile number: {mobile_number}")
             customer = self.get_customer(mobile_number)
@@ -63,10 +79,13 @@ class TimeGlobeRepository:
                     mobile_number=mobile_number,
                     email=customer_data.get("email", ""),
                     gender=customer_data.get("salutationCd", ""),
-                    dplAccepted=customer_data.get("dplAccepted", False)
+                    dplAccepted=customer_data.get("dplAccepted", False),
+                    business_id=business.id if business else None
                 )
 
                 main_logger.debug(f"Creating new customer with data: {customer_data}")
+                if business:
+                    main_logger.info(f"Linking new customer to business: {business.business_name}")
 
                 try:
                     self.db.add(new_customer)
@@ -92,6 +111,11 @@ class TimeGlobeRepository:
                     customer.email = customer_data.get("email")
                 if customer_data.get("salutationCd"):
                     customer.gender = customer_data.get("salutationCd")
+                    
+                # Update business_id if we found a business and the customer isn't already linked
+                if business and not customer.business_id:
+                    customer.business_id = business.id
+                    main_logger.info(f"Linking existing customer to business: {business.business_name}")
 
                 try:
                     self.db.commit()
@@ -112,46 +136,64 @@ class TimeGlobeRepository:
             )
             raise Exception(f"Database Error {str(e)}")
 
-    def save_book_appointment(self, booking_details: dict,mobileNumber: str):
+    def save_book_appointment(self, booking_details: dict, mobileNumber: str, business_phone_number: str = None):
         try:
-            main_logger.info(
-                f"Saving booking appointment for order_id: {booking_details.get('order_id')}"
-            )
+            # Look for orderId (from TimeGlobe service) or order_id (fallback)
+            order_id = booking_details.get('orderId') or booking_details.get('order_id')
+            
+            main_logger.info(f"Saving booking appointment for order_id: {order_id}")
+            
+            if not order_id:
+                main_logger.error("No order ID found in booking details")
+                main_logger.debug(f"Booking details: {booking_details}")
+                raise Exception("No order ID found in booking details")
+                
             customer = self.get_customer(mobileNumber)
             if not customer:
                 main_logger.error("Customer not found while saving appointment.")
                 raise Exception("Customer not found")
 
             site_cd = booking_details.get("siteCd")
+            
+            # Create the BookModel with the business phone number if provided
             book_appointment = BookModel(
-                order_id=booking_details.get("order_id"),
+                order_id=order_id,
                 site_cd=site_cd,
                 customer_id=customer.id,
+                business_phone_number=business_phone_number
             )
+            
+            main_logger.info(f"Creating booking with business phone: {business_phone_number}")
             self.db.add(book_appointment)
             self.db.commit()
-            main_logger.info(
-                f"Booking appointment saved with ID: {book_appointment.id}"
-            )
+            self.db.refresh(book_appointment)
+            main_logger.info(f"Booking appointment saved with ID: {book_appointment.id}")
 
-            # for position in booking_details.get("positions", []):
-            #     main_logger.info(f"Processing booking position: {position}")
-            #     booking_detail = BookingDetail(
-            #         begin_ts=datetime.strptime(
-            #             position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            #         ),
-            #         duration_millis=position["durationMillis"],
-            #         employee_id=position["employeeId"],
-            #         item_no=position["itemNo"],
-            #         item_nm=position["itemNm"],
-            #         book_id=book_appointment.id,
-            #     )
-            #     self.db.add(booking_detail)
+            # Save booking details (positions)
+            for position in booking_details.get("positions", []):
+                main_logger.info(f"Processing booking position: {position}")
+                try:
+                    booking_detail = BookingDetail(
+                        begin_ts=datetime.strptime(
+                            position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                        ),
+                        duration_millis=position["durationMillis"],
+                        employee_id=position["employeeId"],
+                        item_no=position["itemNo"],
+                        item_nm=position.get("itemNm", ""), # Make itemNm optional
+                        book_id=book_appointment.id,
+                    )
+                    self.db.add(booking_detail)
+                    main_logger.info(f"Added booking detail for position: {position.get('ordinalPosition', 'unknown')}")
+                except Exception as detail_error:
+                    main_logger.error(f"Error saving booking detail: {str(detail_error)}")
+                    main_logger.error(f"Position data: {position}")
+                    # Continue with other positions even if one fails
+                    continue
 
-            # self.db.commit()
-            main_logger.info(
-                f"Booking details saved for order_id: {booking_details.get('order_id')}"
-            )
+            self.db.commit()
+            main_logger.info(f"Booking details saved for order_id: {order_id}")
+            return book_appointment
 
         except Exception as e:
             self.db.rollback()

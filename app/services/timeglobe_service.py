@@ -1,7 +1,7 @@
 from ..core.config import settings
 import requests, time, json
 from fastapi import HTTPException, status
-from ..repositories.time_globe_repository import TimeGlobeRepository
+from ..repositories.timeglobe_repository import TimeGlobeRepository
 from ..db.session import get_db
 from ..logger import main_logger
 from datetime import datetime
@@ -161,17 +161,85 @@ def format_datetime(user_date_time: str) -> str:
 
 class TimeGlobeService:
     def __init__(self):
-        self.base_url = settings.TIME_GLOBE_BASE_URL
-        self.username = settings.TIME_GLOBE_LOGIN_USERNAME
-        self.password = settings.TIME_GLOBE_LOGIN_PASSWORD
-        self.time_globe_repo = TimeGlobeRepository(next(get_db()))
+        self.base_url = settings.TIMEGLOBE_BASE_URL
+        self.username = settings.TIMEGLOBE_LOGIN_USERNAME
+        self.password = settings.TIMEGLOBE_LOGIN_PASSWORD
+        self.timeglobe_repo = TimeGlobeRepository(next(get_db()))
+        self.logger = main_logger
         self.token = None
         self.expire_time = 3600  # 1 hour
-        # self.siteCd = "bonn"  # None
-        # self.item_no = None
-        # self.employee_id = None
-        # self.item_name = None
-        # self.mobile_number = None
+        self.db = next(get_db())
+
+    def get_business_by_phone(self, phone_number: str):
+        """
+        Get the business record associated with a phone number
+        """
+        from ..models.business_model import Business
+        
+        if not phone_number:
+            return None
+            
+        # Normalize phone number
+        normalized_phone = phone_number
+        if phone_number.startswith("whatsapp:"):
+            normalized_phone = phone_number.replace("whatsapp:", "")
+            
+        # Try different formats (with and without + prefix)
+        formats_to_try = []
+        if normalized_phone.startswith("+"):
+            formats_to_try.append(normalized_phone)  # +923463109994
+            formats_to_try.append(normalized_phone[1:])  # 923463109994
+        else:
+            formats_to_try.append(normalized_phone)  # 923463109994
+            formats_to_try.append(f"+{normalized_phone}")  # +923463109994
+            
+        self.logger.info(f"Looking for business with phone formats: {formats_to_try}")
+        
+        # Try each format
+        for phone_format in formats_to_try:
+            business = self.db.query(Business).filter(Business.whatsapp_number == phone_format).first()
+            if business:
+                self.logger.info(f"Found business: {business.business_name} with phone: {phone_format}")
+                return business
+                
+        self.logger.warning(f"No business found for phone number: {phone_number}")
+        return None
+        
+    def get_customer_cd(self, mobile_number: str = None):
+        """
+        Get the customerCd to use for TimeGlobe API calls
+        If a mobile number is provided, looks up the business and returns its customerCd
+        Otherwise falls back to the default "demo"
+        """
+        if mobile_number:
+            business = self.get_business_by_phone(mobile_number)
+            if business and business.customer_cd:
+                self.logger.info(f"Using customerCd: {business.customer_cd} for phone: {mobile_number}")
+                return business.customer_cd
+                
+            # If no business found or no customerCd set, log a warning
+            if business:
+                self.logger.warning(f"Business found for {mobile_number} but no customerCd set")
+            
+        # Fall back to default
+        self.logger.info("Using default customerCd: demo")
+        return "demo"
+        
+    def get_auth_key(self, mobile_number: str = None):
+        """
+        Get the auth key to use for TimeGlobe API calls
+        If a mobile number is provided, looks up the business and returns its auth key
+        Otherwise falls back to the default from settings
+        """
+        if mobile_number:
+            business = self.get_business_by_phone(mobile_number)
+            if business and business.timeglobe_auth_key:
+                self.logger.info(f"Using TimeGlobe auth key from business: {business.business_name}")
+                return business.timeglobe_auth_key
+                
+        # Fall back to default
+        self.logger.info("Using default TimeGlobe auth key from settings")
+        return settings.TIMEGLOBE_API_KEY
 
     def login(self) -> None:
         """Authenticate and retrieve a new JWT token."""
@@ -214,9 +282,12 @@ class TimeGlobeService:
         if mobile_number and not mobile_number.startswith("+"):
             mobile_number = f"+{mobile_number}"
 
+        # Get auth key based on mobile number
+        auth_key = self.get_auth_key(mobile_number)
+
         headers = {
             "Content-Type": "application/json",
-            "x-book-auth-key": settings.TIME_GLOBE_API_KEY,
+            "x-book-auth-key": auth_key,
             "x-book-login-nm": mobile_number,
         }
         url = f"{self.base_url}{endpoint}"
@@ -247,11 +318,12 @@ class TimeGlobeService:
 
         return response.json()
 
-    def get_sites(self):
+    def get_sites(self, mobile_number: str = None):
         """Get the available salons."""
         main_logger.debug("Fetching available salons")
-        payload = {"customerCd": "demo"}
-        response = self.request("POST", "/browse/getSites", data=payload)
+        customer_cd = self.get_customer_cd(mobile_number)
+        payload = {"customerCd": customer_cd}
+        response = self.request("POST", "/browse/getSites", mobile_number=mobile_number, data=payload)
         sites = []
         for item in response.get("sites"):
             sites.append(
@@ -260,38 +332,37 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched {len(sites)} salons")
         return sites
     
-    def get_config(self):
+    def get_config(self, mobile_number: str = None):
         """Retrieve the customer config from time globe"""
         main_logger.debug("Fetching customer config")
-        response = self.request("POST", "/bot/getConfig")
+        response = self.request("POST", "/bot/getConfig", mobile_number=mobile_number)
         return response
 
-    def get_products(self, siteCd: str):
+    def get_products(self, siteCd: str, mobile_number: str = None):
         """Retrieve a list of available services for a selected salon."""
         main_logger.debug(f"Fetching products for site: {siteCd}")
-        # self.siteCd = siteCd
-        payload = {"customerCd": "demo", "siteCd": siteCd}
-        response = self.request("POST", "/browse/getProducts", data=payload)
+        customer_cd = self.get_customer_cd(mobile_number)
+        payload = {"customerCd": customer_cd, "siteCd": siteCd}
+        response = self.request("POST", "/browse/getProducts", mobile_number=mobile_number, data=payload)
         main_logger.info(f"Successfully fetched products for site: {siteCd}")
         return response
 
-    def get_employee(self, items: list, siteCd: str,week: int):
+    def get_employee(self, items: list, siteCd: str, week: int, mobile_number: str = None):
         """Retrieve a list of available employees for a studio."""
         main_logger.debug(f"Fetching employees for item: {items}")
+        customer_cd = self.get_customer_cd(mobile_number)
         payload = {
-            "customerCd": "demo",
+            "customerCd": customer_cd,
             "siteCd": siteCd,
             "week": week,
             "items": items,
         }
 
-        # self.item_no = item_no
-        # self.item_name = item_name
-        response = self.request("POST", "/browse/getEmployees", data=payload)
+        response = self.request("POST", "/browse/getEmployees", mobile_number=mobile_number, data=payload)
         main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
-    def AppointmentSuggestion(self, week: int, employee_id: int, item_no: int, siteCd: str):
+    def AppointmentSuggestion(self, week: int, employee_id: int, item_no: int, siteCd: str, mobile_number: str = None):
         """Retrieve available appointment slots for selected services."""
         main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
 
@@ -300,14 +371,14 @@ class TimeGlobeService:
         else:
             positions = [{"itemNo": item_no, "employeeId": employee_id}]
 
-        # self.employee_id = employee_id
+        customer_cd = self.get_customer_cd(mobile_number)
         payload = {
-            "customerCd": "demo",
+            "customerCd": customer_cd,
             "siteCd": siteCd,
             "week": week,
             "positions": positions,
         }
-        response = self.request("POST", "/browse/getSuggestions", data=payload)
+        response = self.request("POST", "/browse/getSuggestions", mobile_number=mobile_number, data=payload)
         
         # Define the cutoff date (April 1st, 2025)
         cutoff_date = datetime(2025, 4, 1)
@@ -359,8 +430,14 @@ class TimeGlobeService:
         )
         return response
 
-    def get_profile(self, mobile_number: str):
-        """Retrieve the profile data for a given phone number."""
+    def get_profile(self, mobile_number: str, business_phone: str = None):
+        """
+        Retrieve the profile data for a given phone number.
+        
+        Args:
+            mobile_number: The customer's mobile number
+            business_phone: The business phone number from webhook (if available)
+        """
         main_logger.debug(f"Fetching profile for mobile number: {mobile_number}")
         # Make sure the number includes country code and starts with +
         if not mobile_number.startswith("+"):
@@ -375,7 +452,18 @@ class TimeGlobeService:
 
         if response and response.get("code") != -3:
             main_logger.info(f"Profile found for mobile number: {mobile_number}")
-            self.time_globe_repo.create_customer(response, mobile_number)
+            
+            # Save profile to database with proper error handling
+            try:
+                # Pass the business_phone to link the customer with the business
+                self.timeglobe_repo.create_customer(response, mobile_number, business_phone)
+                main_logger.info(f"Successfully saved/updated profile in database for {mobile_number}")
+                if business_phone:
+                    main_logger.info(f"Customer linked to business phone: {business_phone}")
+            except Exception as e:
+                main_logger.error(f"Error saving profile to database: {str(e)}")
+                # Continue execution even if database save fails
+                # We want to return the profile data regardless of DB save success
         else:
             main_logger.warning(f"No profile found for mobile number: {mobile_number}")
 
@@ -425,21 +513,49 @@ class TimeGlobeService:
         main_logger.info("Successfully fetched open orders")
         return response
 
-    def get_old_orders(self, customer_code: str = "demo"):
+    def get_old_orders(self, mobile_number: str = None):
         """Retrieve a list of past appointments."""
         main_logger.debug("Fetching old orders")
-        payload = {"customerCd": customer_code}
-        response = self.request("POST", "/book/getOldOrders", data=payload)
+        customer_cd = self.get_customer_cd(mobile_number)
+        payload = {"customerCd": customer_cd}
+        response = self.request("POST", "/book/getOldOrders", mobile_number=mobile_number, data=payload)
         main_logger.info("Successfully fetched old orders")
         return response
 
+    def get_item_name(self, item_no, siteCd, mobile_number=None):
+        """
+        Get the name of an item by its item number
+        
+        Args:
+            item_no: The item number to look up
+            siteCd: The site code
+            mobile_number: The mobile number for context
+            
+        Returns:
+            str: The item name or a default string if not found
+        """
+        try:
+            products = self.get_products(siteCd, mobile_number)
+            if products and "products" in products:
+                for product in products["products"]:
+                    if product.get("itemNo") == item_no:
+                        return product.get("itemNm", "")
+                        
+            # If we get here, item was not found
+            self.logger.warning(f"Item name not found for item_no {item_no} in site {siteCd}")
+            return f"Service {item_no}"
+        except Exception as e:
+            self.logger.error(f"Error getting item name: {str(e)}")
+            return f"Service {item_no}"
+            
     def book_appointment(
         self,
         mobileNumber: str,
         siteCd: str,
         positions: list,
         reminderSms: bool = True,
-        reminderEmail: bool = True
+        reminderEmail: bool = True,
+        business_phone_number: str = None
     ):
         """
         Book an appointment with multiple positions.
@@ -455,6 +571,7 @@ class TimeGlobeService:
                 - ordinalPosition: Position in sequence
             reminderSms: Whether to send SMS reminders
             reminderEmail: Whether to send email reminders
+            business_phone_number: The phone number of the business from the webhook
         """
         main_logger.debug("Booking appointment with multiple positions")
         try:
@@ -471,6 +588,14 @@ class TimeGlobeService:
                 main_logger.debug(f"Original position data: {pos}")
                 
                 try:
+                    # Make sure itemNm is present
+                    if "itemNm" not in pos or not pos["itemNm"]:
+                        item_no = pos.get("itemNo")
+                        if item_no:
+                            item_name = self.get_item_name(item_no, siteCd, mobileNumber)
+                            pos["itemNm"] = item_name
+                            main_logger.info(f"Added missing itemNm: {item_name} for item {item_no}")
+                
                     original_dt = datetime.strptime(pos["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
                     hours_to_subtract = 2 if original_dt >= cutoff_date else 1
                     adjusted_dt = original_dt.replace(hour=original_dt.hour - hours_to_subtract)
@@ -498,6 +623,9 @@ class TimeGlobeService:
                 "positions": adjusted_positions
             }
             
+            # Log the final payload for debugging
+            main_logger.debug(f"Final booking payload: {payload}")
+            
             response = self.request(
                 "POST",
                 "/bot/book",
@@ -508,11 +636,26 @@ class TimeGlobeService:
             
             if response.get("code") == 0:
                 main_logger.info("Appointment with multiple positions booked successfully")
-                payload.update({
-                    "mobileNumber": mobileNumber,
-                    "orderId": response.get("orderId"),
-                })
-                self.time_globe_repo.save_book_appointment(payload, mobileNumber)
+                # Make sure we pass orderId correctly
+                orderId = response.get("orderId")
+                main_logger.debug(f"Order ID from TimeGlobe: {orderId}")
+                
+                # Add the orderId and mobileNumber to the payload
+                booking_payload = {
+                    "orderId": orderId, 
+                    "siteCd": siteCd,
+                    "positions": adjusted_positions,
+                    "reminderSms": reminderSms, 
+                    "reminderEmail": reminderEmail
+                }
+                
+                try:
+                    # Log the business phone number being used
+                    main_logger.info(f"Saving appointment with orderId: {orderId}, business phone: {business_phone_number}")
+                    self.timeglobe_repo.save_book_appointment(booking_payload, mobileNumber, business_phone_number)
+                    main_logger.info(f"Successfully saved appointment to database")
+                except Exception as db_error:
+                    main_logger.error(f"Error saving appointment to database: {str(db_error)}")
             else:
                 main_logger.error(f"Failed to book appointment: {response}")
                 
@@ -537,11 +680,134 @@ class TimeGlobeService:
         )
         if response.get("code") == 0:
             main_logger.info(f"Appointment canceled successfully: {orderId}")
-            self.time_globe_repo.delete_booking(orderId)
+            self.timeglobe_repo.delete_booking(orderId)
         else:
             main_logger.error(f"Failed to cancel appointment: {orderId}")
         return response
-
+    def validate_auth_key(self, auth_key: str):
+        """
+        Validates a TimeGlobe authentication key by making an API call and returns customerCd if valid
+        
+        Args:
+            auth_key: The authentication key to validate
+            
+        Returns:
+            dict: A dictionary containing validation result and customerCd if successful
+        """
+        try:
+            # Endpoint for validation (as shown in the screenshot)
+            url = f"{self.base_url}/bot/getConfig"
+            
+            # Headers with the auth key
+            headers = {
+                "Content-Type": "application/json",
+                "x-book-auth-key": auth_key
+            }
+            
+            self.logger.info(f"Validating TimeGlobe auth key: {auth_key[:5]}*****")
+            
+            # Make the API call
+            response = requests.get(url, headers=headers)
+            
+            # Process the response
+            if response.status_code == 200:
+                data = response.json()
+                self.logger.info(f"TimeGlobe auth key validation response: {data}")
+                
+                # Check if response contains an error code
+                if data.get("code") == -1003 and "unauthorized" in data.get("text", "").lower():
+                    self.logger.warning("TimeGlobe auth key is unauthorized")
+                    return {
+                        "valid": False,
+                        "message": "The TimeGlobe authentication key is invalid. Please get a valid API key from TimeGlobe."
+                    }
+                
+                # Check if response contains customerCd
+                if "customerCd" in data:
+                    customer_cd = data.get("customerCd")
+                    self.logger.info(f"TimeGlobe auth key is valid with customerCd: {customer_cd}")
+                    return {
+                        "valid": True,
+                        "customer_cd": customer_cd
+                    }
+                
+                # Fallback error if format is unexpected
+                self.logger.warning(f"Unexpected TimeGlobe validation response format: {data}")
+                return {
+                    "valid": False,
+                    "message": "The TimeGlobe API response was in an unexpected format."
+                }
+                
+            else:
+                self.logger.error(f"TimeGlobe auth key validation failed: {response.status_code} - {response.text}")
+                return {
+                    "valid": False,
+                    "message": f"The TimeGlobe API returned an error: {response.text}"
+                }
+                
+        except Exception as e:
+            self.logger.exception(f"Error validating TimeGlobe auth key: {str(e)}")
+            return {
+                "valid": False,
+                "message": f"Error connecting to TimeGlobe API: {str(e)}"
+            }
+    
+    def make_api_call(self, endpoint: str, method: str = "GET", data: dict = None, customer_cd: str = None, auth_key: str = None):
+        """
+        Makes an API call to TimeGlobe with the proper authentication
+        
+        Args:
+            endpoint: The API endpoint to call
+            method: HTTP method (GET, POST, etc.)
+            data: The payload for the request
+            customer_cd: The customer code to use (will be included in the data)
+            auth_key: The authentication key to use (if not using the default)
+            
+        Returns:
+            dict: The API response
+        """
+        try:
+            url = f"{self.base_url}/{endpoint}"
+            
+            # Use provided auth key or default from settings
+            headers = {
+                "Content-Type": "application/json",
+                "x-book-auth-key": auth_key or settings.TIMEGLOBE_API_KEY
+            }
+            
+            # Add customerCd to the data if provided
+            if data is None:
+                data = {}
+            
+            if customer_cd:
+                data["customerCd"] = customer_cd
+                
+            self.logger.info(f"Making {method} request to TimeGlobe {endpoint} with customerCd: {customer_cd}")
+            
+            # Make the API call
+            response = requests.request(
+                method=method,
+                url=url,
+                json=data if method.upper() in ["POST", "PUT", "PATCH"] else None,
+                params=data if method.upper() == "GET" else None,
+                headers=headers
+            )
+            
+            if response.status_code in [200, 201, 202]:
+                result = response.json()
+                self.logger.info(f"TimeGlobe API call successful: {endpoint}")
+                return result
+            else:
+                error_message = f"TimeGlobe API call failed: {response.status_code} - {response.text}"
+                self.logger.error(error_message)
+                raise HTTPException(status_code=response.status_code, detail=error_message)
+                
+        except Exception as e:
+            error_message = f"Error making TimeGlobe API call: {str(e)}"
+            self.logger.exception(error_message)
+            raise HTTPException(status_code=500, detail=error_message) 
+        
+        
     def store_profile(
         self,
         mobile_number: str,
@@ -609,7 +875,7 @@ class TimeGlobeService:
                         "lastNm": last_name,
                         "dplAccepted": dplAccepted
                     }
-                    self.time_globe_repo.create_customer(customer_data, mobile_number)
+                    self.timeglobe_repo.create_customer(customer_data, mobile_number)
                     return {"code": 0, "message": "Profile created successfully"}
                 else:
                     main_logger.error(f"API returned error code: {code}")

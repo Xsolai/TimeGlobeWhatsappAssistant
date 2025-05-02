@@ -11,6 +11,7 @@ from .schemas.thread import ThreadCreate
 from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
+from .core.config import settings
 
 # Set up logging
 logging.basicConfig(
@@ -23,9 +24,11 @@ threads_lock = threading.RLock()
 
 
 class ChatAgent:
-    def __init__(self, api_key: str, model: str = "gpt-4.1", db: Session = None):
+    def __init__(self, api_key: str = None, model: str = "gpt-4.1", db: Session = None):
         """Initialize the ChatAgent with API key and model name."""
-        logger.info('api key {}'.format(api_key))
+        # Use the provided API key or fall back to the one from settings
+        api_key = api_key or settings.OPENAI_API_KEY
+        logger.info(f'Using OpenAI API key from settings: {api_key[:5]}...' if api_key else 'No API key provided')
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self._function_mapping = None
@@ -72,27 +75,29 @@ class ChatAgent:
         return self._function_mapping
 
     def handle_tool_calls(self, tool_calls: List[Any], user_id: str) -> List[Dict]:
-        """Execute the tool calls and return the results."""
+        """Execute the specified functions and return the results."""
+        logger.info(f"Handling {len(tool_calls)} tool calls for user {user_id}")
+        
         function_mapping = self._get_function_mapping()
-        
-        # Import needed functions for error handling
-        from .utils.tools_wrapper_util import getProfile, getOrders
-        
         results = []
         
+        # Get business phone for this user if it's stored in the cache
+        from app.utils.message_cache import MessageCache
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(user_id)
+        if business_phone:
+            logger.info(f"Found business phone number for user {user_id}: {business_phone}")
+        
         for tool_call in tool_calls:
-            # Print for debugging
-            print(f"--------------------------------------------------------------------------------------Tool call: {tool_call}")
-            
-            # Extract function name and arguments from ChatCompletionMessageToolCall
+            # Handle different object formats
             try:
                 function_name = tool_call.function.name
                 function_args = json.loads(tool_call.function.arguments)
                 tool_call_id = tool_call.id
-            except Exception as e:
-                logger.error(f"Error extracting info from tool call: {str(e)}")
-                # Fallback to dictionary access if object access fails
+            except AttributeError as e:
+                logger.error(f"Error accessing function attributes as object: {str(e)}")
                 try:
+                    # Try accessing attributes as dictionary
                     function_name = tool_call["function"]["name"]
                     function_args = json.loads(tool_call["function"]["arguments"])
                     tool_call_id = tool_call["id"]
@@ -117,6 +122,12 @@ class ChatAgent:
                     # Add customerId if not provided
                     if "customerId" not in function_args:
                         function_args["customerId"] = user_id
+                    
+                    # Add business_phone_number if available
+                    if business_phone and "business_phone_number" not in function_args:
+                        logger.info(f"Adding business phone {business_phone} to bookAppointment call")
+                        function_args["business_phone_number"] = business_phone
+                        
                 elif function_name == "cancelAppointment":
                     # Add mobileNumber if needed by the wrapper
                     function_args["mobileNumber"] = user_id

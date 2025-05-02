@@ -1,4 +1,4 @@
-from ..services.time_globe_service import TimeGlobeService
+from ..services.timeglobe_service import TimeGlobeService
 
 service = TimeGlobeService()
 

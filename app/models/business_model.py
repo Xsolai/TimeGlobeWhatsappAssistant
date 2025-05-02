@@ -29,7 +29,11 @@ class Business(Base):
     app_id = Column(String, nullable=True)
     waba_status = Column(Enum(WABAStatus), default=WABAStatus.pending)
     whatsapp_profile = Column(JSON, nullable=True)
+    whatsapp_number = Column(String, nullable=True)  # Store the WhatsApp number
+    
+    # TimeGlobe-specific fields
+    timeglobe_auth_key = Column(String, nullable=True)
+    customer_cd = Column(String, nullable=True)  # Used for API calls to TimeGlobe
 
-    # Relationships
-    whatsapp_sender = relationship("WASenderModel", back_populates="business", uselist=False)
     subscriptions = relationship("BusinessSubscription", back_populates="business")
+    customers = relationship("CustomerModel", back_populates="business")

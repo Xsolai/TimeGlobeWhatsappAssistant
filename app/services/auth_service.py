@@ -14,6 +14,7 @@ from ..schemas.auth import (
 from ..models.business_model import Business
 from ..core.config import settings
 from ..utils import email_util
+from ..services.timeglobe_service import TimeGlobeService
 import secrets, string, time
 from uuid import uuid4
 from ..logger import main_logger
@@ -52,6 +53,27 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
             )
+            
+        # Validate TimeGlobe auth key if provided
+        customer_cd = None
+        if business_data.timeglobe_auth_key:
+            timeglobe_service = TimeGlobeService()
+            validation_result = timeglobe_service.validate_auth_key(business_data.timeglobe_auth_key)
+            
+            if not validation_result.get("valid", False):
+                main_logger.warning(f"Invalid TimeGlobe auth key for {business_data.email}: {validation_result.get('message')}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=validation_result.get('message', "Invalid TimeGlobe authentication key")
+                )
+                
+            customer_cd = validation_result.get("customer_cd")
+            main_logger.info(f"Valid TimeGlobe auth key with customerCd: {customer_cd} for {business_data.email}")
+        else:
+            return {
+                "message": "TimeGlobe auth key is required"
+            }
+
         expiry = time.time() + 300  # OTP valid for 5 minutes
         otp = self.generate_otp()
         otp_storage[business_data.email] = {
@@ -61,7 +83,9 @@ class AuthService:
                 "business_name": business_data.business_name,
                 "email": business_data.email,
                 "password": business_data.password,
-                "phone_number": business_data.phone_number
+                "phone_number": business_data.phone_number,
+                "timeglobe_auth_key": business_data.timeglobe_auth_key,
+                "customer_cd": customer_cd
             },
         }
 
@@ -117,11 +141,18 @@ class AuthService:
         if stored_otp["otp"] != request.otp:
             main_logger.warning(f"Invalid OTP for email: {request.email}")
             raise HTTPException(status_code=400, detail="Invalid OTP")
+            
         business_data = stored_otp["data"]
-        _business = BusinessCreate(**business_data)
-
-        # Create business in DB
-        new_business = self.business_repository.create(_business)
+        
+        # Create business using repository
+        new_business = self.business_repository.create_business(
+            business_name=business_data["business_name"],
+            email=business_data["email"],
+            password=business_data["password"],
+            phone_number=business_data["phone_number"],
+            timeglobe_auth_key=business_data.get("timeglobe_auth_key"),
+            customer_cd=business_data.get("customer_cd")
+        )
 
         otp_storage.pop(request.email)
         main_logger.info(f"Business registered successfully: {request.email}")

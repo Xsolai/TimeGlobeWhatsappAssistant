@@ -15,6 +15,8 @@ class MessageCache:
         # Store processed message IDs with a timestamp
         # Using a dict instead of a set to potentially expire old entries
         self.processed_messages = {}
+        # Store business phone numbers per user
+        self.business_phones = {}
         # Maximum cache size to prevent memory issues
         self.max_cache_size = 1000
         
@@ -40,3 +42,20 @@ class MessageCache:
             # Keep only the newest max_cache_size/2 entries
             keep_count = self.max_cache_size // 2
             self.processed_messages = dict(sorted_items[:keep_count]) 
+            
+    def set_business_phone(self, user_number, business_phone):
+        """Store the business phone number for a user"""
+        if not user_number or not business_phone:
+            return False
+        
+        import logging
+        logging.info(f"Storing business phone {business_phone} for user {user_number}")
+        self.business_phones[user_number] = business_phone
+        return True
+        
+    def get_business_phone(self, user_number):
+        """Get the stored business phone number for a user"""
+        if not user_number:
+            return None
+            
+        return self.business_phones.get(user_number) 

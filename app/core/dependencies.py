@@ -1,6 +1,7 @@
 from ..services.dialog360_service import Dialog360Service
 from ..services.auth_service import AuthService, oauth2_scheme
 from ..services.subscription_service import SubscriptionPlanService
+from ..services.timeglobe_service import TimeGlobeService
 from sqlalchemy.orm import Session
 from fastapi import Depends, Request, HTTPException
 from ..db.session import get_db
@@ -14,6 +15,10 @@ from ..models.business_model import Business
 
 def get_dialog360_service(db: Session = Depends(get_db)) -> Dialog360Service:
     return Dialog360Service(db)
+
+
+def get_timeglobe_service() -> TimeGlobeService:
+    return TimeGlobeService()
 
 
 def get_business_repository(db: Session = Depends(get_db)) -> BusinessRepository:
@@ -36,7 +41,7 @@ def get_subscription_service(db: Session = Depends(get_db)):
     return SubscriptionPlanService(db)
 
 
-# def get_time_globe_service() -> TimeGlobeService:
+# def get_timeglobe_service() -> TimeGlobeService:
 #     return TimeGlobeService()
 
 

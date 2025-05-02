@@ -20,7 +20,8 @@ class BusinessRepository:
             business_name=business_data.business_name,
             email=business_data.email,
             password=hashed_password,
-            phone_number=business_data.phone_number
+            phone_number=business_data.phone_number,
+            timeglobe_auth_key=business_data.timeglobe_auth_key
         )
         self.db.add(db_business)
         self.db.commit()
@@ -33,3 +34,23 @@ class BusinessRepository:
             {"password": hashed_password}
         )
         self.db.commit()
+
+    def create_business(self, business_name: str, email: str, password: str, 
+                       phone_number: str = None, timeglobe_auth_key: str = None, 
+                       customer_cd: str = None) -> Business:
+        """
+        Create a business with all fields explicitly defined
+        """
+        hashed_password = get_password_hash(password)
+        db_business = Business(
+            business_name=business_name,
+            email=email,
+            password=hashed_password,
+            phone_number=phone_number,
+            timeglobe_auth_key=timeglobe_auth_key,
+            customer_cd=customer_cd
+        )
+        self.db.add(db_business)
+        self.db.commit()
+        self.db.refresh(db_business)
+        return db_business

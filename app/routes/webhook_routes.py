@@ -40,7 +40,7 @@ async def whatsapp_wbhook(
     
     try:
         # Only use this for debugging, otherwise it will fill up logs
-        # print(f"Data =============================================>> {data}")
+        print(f"Data =============================================>> {data}")
         
         # Check object first - should be whatsapp_business_account
         if data.get('object') != 'whatsapp_business_account':
@@ -55,6 +55,11 @@ async def whatsapp_wbhook(
             
         # Get the value field that contains message data
         value = entry[0].get('changes', [])[0].get('value', {})
+        
+        # Extract the display_phone_number from metadata
+        metadata = value.get('metadata', {})
+        business_phone_number = metadata.get('display_phone_number')
+        logging.info(f"Business phone number from webhook: {business_phone_number}")
         
         # Verify this is a message event (should have messages array)
         messages = value.get('messages', [])
@@ -78,6 +83,7 @@ async def whatsapp_wbhook(
             logging.error("No contact information in the webhook payload")
             return JSONResponse(content={"status": "success"}, status_code=200)
         
+        print("---------------------------------message", message)
         # Extract the key information we need
         wa_id = contacts[0].get('wa_id')
         sender_number = message.get('from')
@@ -110,6 +116,11 @@ async def whatsapp_wbhook(
         
         profile_name = contacts[0].get('profile', {}).get('name', '') if contacts else ''
         logging.info(f"Processing message from {number} (contact: {profile_name}): {incoming_msg}")
+        
+        # Store the business phone number in the conversation context or user session
+        # Here we're using MessageCache to store this information 
+        message_cache.set_business_phone(number, business_phone_number)
+        logging.info(f"Stored business phone {business_phone_number} for user {number}")
         
         # Process the message with your AI assistant
         # Using the tools_wrapper_util function directly without instantiating AssistantManager

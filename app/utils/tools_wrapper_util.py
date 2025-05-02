@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Remove circular imports - use lazy loading instead
 _assistant_manager = None
 _chat_agent = None
-_time_globe_service = None
+_timeglobe_service = None
 
 
 def _get_assistant_manager():
@@ -33,18 +33,18 @@ def _get_chat_agent():
         
         # Create a new session for the chat agent
         db = SessionLocal()
-        _chat_agent = ChatAgent(api_key=settings.OPENAI_API_KEY, db=db)
+        _chat_agent = ChatAgent(db=db)  # No need to pass the API key, it will use from settings
     return _chat_agent
 
 
-def _get_time_globe_service():
+def _get_timeglobe_service():
     """Lazy initialization of the TimeGlobeService to avoid circular imports"""
-    global _time_globe_service
-    if _time_globe_service is None:
-        from ..services.time_globe_service import TimeGlobeService
+    global _timeglobe_service
+    if _timeglobe_service is None:
+        from ..services.timeglobe_service import TimeGlobeService
 
-        _time_globe_service = TimeGlobeService()
-    return _time_globe_service
+        _timeglobe_service = TimeGlobeService()
+    return _timeglobe_service
 
 
 def get_sites():
@@ -52,7 +52,7 @@ def get_sites():
     logger.info("Tool called: get_sites()")
     start_time = time.time()
     try:
-        sites = _get_time_globe_service().get_sites()
+        sites = _get_timeglobe_service().get_sites()
         execution_time = time.time() - start_time
         logger.info(f"get_sites() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "sites": sites}
@@ -67,7 +67,7 @@ def get_products(siteCd: str):
     logger.info(f"Tool called: get_products(siteCd={siteCd})")
     start_time = time.time()
     try:
-        products = _get_time_globe_service().get_products(siteCd)
+        products = _get_timeglobe_service().get_products(siteCd)
         execution_time = time.time() - start_time
         logger.info(f"get_products() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "products": products}
@@ -85,7 +85,7 @@ def get_employee(items, siteCd,week):
     logger.info(f"Tool called: get_employee(items={items}, siteCd={siteCd},week={week})")
     start_time = time.time()
     try:
-        employees = _get_time_globe_service().get_employee(items, siteCd,week)
+        employees = _get_timeglobe_service().get_employee(items, siteCd,week)
         execution_time = time.time() - start_time
         logger.info(f"get_employee() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "employees": employees}
@@ -102,7 +102,7 @@ def AppointmentSuggestion(week, employeeid, itemno, siteCd: str):
     )
     start_time = time.time()
     try:
-        suggestions = _get_time_globe_service().AppointmentSuggestion(
+        suggestions = _get_timeglobe_service().AppointmentSuggestion(
             week,employeeid, itemno, siteCd
         )
         execution_time = time.time() - start_time
@@ -123,11 +123,12 @@ def book_appointment(
     siteCd: str,
     positions: list,
     reminderSms: bool = True,
-    reminderEmail: bool = True
+    reminderEmail: bool = True,
+    business_phone_number: str = None
 ):
     """Book appointments with the selected parameters. Supports multiple positions."""
     logger.info(
-        f"Tool called: book_appointment(positions={positions}, siteCd={siteCd})"
+        f"Tool called: book_appointment(positions={positions}, siteCd={siteCd}, business_phone_number={business_phone_number})"
     )
     start_time = time.time()
     try:
@@ -136,21 +137,28 @@ def book_appointment(
             mobileNumber = f"+{mobileNumber}"
             
         # Validate each position has required fields
+        required_fields = ["beginTs", "durationMillis", "employeeId", "itemNo", "ordinalPosition"]
         for pos in positions:
-            if not all(k in pos for k in ["beginTs", "durationMillis", "employeeId", "itemNo", "ordinalPosition"]):
-                missing = [k for k in ["beginTs", "durationMillis", "employeeId", "itemNo", "ordinalPosition"] if k not in pos]
+            missing = [k for k in required_fields if k not in pos]
+            if missing:
                 logger.warning(f"Missing required fields in position: {missing}")
                 return {"status": "error", "message": f"Missing required fields in position: {missing}"}
             
+            # Ensure itemNm is present, use itemNo as fallback
+            if "itemNm" not in pos or not pos["itemNm"]:
+                pos["itemNm"] = f"Service {pos.get('itemNo')}"
+                logger.info(f"Added default itemNm for itemNo: {pos.get('itemNo')}")
+                
             logger.info(f"Processing appointment with date and time={pos.get('beginTs')}")
 
         # Call the service function with multiple positions
-        result = _get_time_globe_service().book_appointment(
+        result = _get_timeglobe_service().book_appointment(
             mobileNumber=mobileNumber,
             siteCd=siteCd,
             positions=positions,
             reminderSms=reminderSms,
-            reminderEmail=reminderEmail
+            reminderEmail=reminderEmail,
+            business_phone_number=business_phone_number
         )
         
         execution_time = time.time() - start_time
@@ -198,7 +206,7 @@ def cancel_appointment(orderId, mobileNumber, siteCd):
             logger.warning("cancel_appointment() called without orderId")
             return {"status": "error", "message": "orderId is required"}
 
-        result = _get_time_globe_service().cancel_appointment(
+        result = _get_timeglobe_service().cancel_appointment(
             orderId=orderId, mobileNumber=mobileNumber, siteCd=siteCd
         )
         execution_time = time.time() - start_time
@@ -232,13 +240,39 @@ def get_profile(mobile_number: str):
     logger.info(f"Tool called: get_profile(mobile_number={mobile_number})")
     start_time = time.time()
     try:
-        profile = _get_time_globe_service().get_profile(mobile_number)
+        # Get the business phone number from MessageCache
+        from .message_cache import MessageCache
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(mobile_number)
+        
+        if business_phone:
+            logger.info(f"Found business phone {business_phone} for customer {mobile_number}")
+        
+        # Get TimeGlobe service instance
+        service = _get_timeglobe_service()
+        
+        # Get profile from TimeGlobe API
+        profile = service.get_profile(mobile_number, business_phone)
         execution_time = time.time() - start_time
 
         if profile.get("code") == 0:
             logger.info(
                 f"get_profile() - profile retrieved successfully - took {execution_time:.2f}s"
             )
+            
+            # Ensure profile is saved to local database
+            try:
+                # The profile should already be saved by the service.get_profile call,
+                # but we'll make an explicit call to ensure it's saved
+                logger.info(f"Ensuring profile is saved to local database")
+                service.timeglobe_repo.create_customer(profile, mobile_number, business_phone)
+                logger.info(f"Successfully saved/updated profile in local database")
+                if business_phone:
+                    logger.info(f"Customer linked to business phone: {business_phone}")
+            except Exception as db_error:
+                logger.error(f"Error ensuring profile is in local database: {str(db_error)}")
+                # Continue even if DB save fails
+                
             return {"status": "success", "profile": profile}
         elif profile.get("code") == -3:
             logger.info(
@@ -265,7 +299,7 @@ def get_orders(mobile_number: str):
     logger.info("Tool called: get_orders()")
     start_time = time.time()
     try:
-        orders = _get_time_globe_service().get_orders(mobile_number=mobile_number)
+        orders = _get_timeglobe_service().get_orders(mobile_number=mobile_number)
         execution_time = time.time() - start_time
         logger.info(f"get_orders() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "orders": orders}
@@ -280,7 +314,7 @@ def get_old_orders(customer_code="demo"):
     logger.info(f"Tool called: get_old_orders(customer_code={customer_code})")
     start_time = time.time()
     try:
-        old_orders = _get_time_globe_service().get_old_orders(customer_code)
+        old_orders = _get_timeglobe_service().get_old_orders(customer_code)
         execution_time = time.time() - start_time
         logger.info(f"get_old_orders() completed successfully in {execution_time:.2f}s")
         return {"status": "success", "old_orders": old_orders}
@@ -353,7 +387,7 @@ def store_profile(
     )
     start_time = time.time()
     try:
-        response = _get_time_globe_service().store_profile(
+        response = _get_timeglobe_service().store_profile(
             mobile_number, email, gender, title, full_name, first_name, last_name, dplAccepted
         )
         execution_time = time.time() - start_time
@@ -585,6 +619,17 @@ def get_response_from_gpt(msg, user_id, _assistant_manager=None):
     logger.info(f"Tool called: get_response_from_gpt(user_id={user_id})")
     start_time = time.time()
     try:
+        # Get business phone number from cache
+        from .message_cache import MessageCache
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(user_id)
+        
+        if business_phone:
+            logger.info(f"Retrieved business phone {business_phone} for user {user_id}")
+            # Add business phone number to the message context
+            msg = f"{msg}\n\nBUSINESS_PHONE:{business_phone}"
+            logger.debug(f"Updated message with business phone: {msg}")
+        
         # Use the new ChatAgent instead of AssistantManager
         chat_agent = _get_chat_agent()
         response = chat_agent.run_conversation(user_id, msg)
@@ -617,26 +662,55 @@ def getEmployees(siteCd: str, week: int, items: List[str]):
 
 def getProfile(mobile_number:str=None):
     """Wrapper for get_profile that accepts mobile_number"""
-    # Directly call the time_globe_service method to avoid recursive calls
+    # Directly call the timeglobe_service method to avoid recursive calls
     try:
         # Make sure we have a valid mobile number
         if not mobile_number:
             mobile_number = ""
         logger.info(f"getProfile wrapper called with mobile_number={mobile_number}")
-        return _get_time_globe_service().get_profile(mobile_number)
+        
+        # Get the business phone number from MessageCache
+        from .message_cache import MessageCache
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(mobile_number)
+        
+        if business_phone:
+            logger.info(f"Found business phone {business_phone} for customer {mobile_number}")
+        
+        # Get the TimeGlobe service instance
+        service = _get_timeglobe_service()
+        
+        # Call the service to get the profile with business phone
+        response = service.get_profile(mobile_number, business_phone)
+        
+        # Ensure profile data is stored in local database if valid
+        if response and response.get("code") != -3:
+            logger.info(f"Valid profile found for {mobile_number}, ensuring it's saved to local DB")
+            try:
+                # Get the repository from the service to avoid creating a new one
+                repo = service.timeglobe_repo
+                repo.create_customer(response, mobile_number, business_phone)
+                logger.info(f"Successfully saved/updated profile in local database")
+                if business_phone:
+                    logger.info(f"Customer linked to business phone: {business_phone}")
+            except Exception as db_error:
+                logger.error(f"Error saving profile to local database: {str(db_error)}")
+                # Continue even if saving to DB fails - we still want to return the profile
+        
+        return response
     except Exception as e:
         logger.error(f"Error in getProfile wrapper: {str(e)}")
         return {"status": "error", "message": f"Error retrieving profile: {str(e)}"}
 
 def getOrders(mobile_number:str=None):
     """Wrapper for get_orders that accepts mobile_number"""
-    # Directly call the time_globe_service method to avoid recursive calls
+    # Directly call the timeglobe_service method to avoid recursive calls
     try:
         # Make sure we have a valid mobile number
         if not mobile_number:
             mobile_number = ""
         logger.info(f"getOrders wrapper called with mobile_number={mobile_number}")
-        return _get_time_globe_service().get_orders(mobile_number)
+        return _get_timeglobe_service().get_orders(mobile_number)
     except Exception as e:
         logger.error(f"Error in getOrders wrapper: {str(e)}")
         return {"status": "error", "message": f"Error retrieving orders: {str(e)}"}
@@ -659,7 +733,7 @@ def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict])
         siteCd=siteCd
     )
 
-def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positions: List[Dict], customerId: str = None):
+def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positions: List[Dict], customerId: str = None, business_phone_number: str = None):
     """Wrapper for book_appointment that handles multiple positions"""
     if not positions or len(positions) == 0:
         return {"status": "error", "message": "No positions specified"}
@@ -670,7 +744,8 @@ def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positio
         siteCd=siteCd,
         positions=positions,
         reminderSms=reminderSms,
-        reminderEmail=reminderEmail
+        reminderEmail=reminderEmail,
+        business_phone_number=business_phone_number
     )
 
 def cancelAppointment(siteCd: str, orderId: int, mobileNumber: str = ""):

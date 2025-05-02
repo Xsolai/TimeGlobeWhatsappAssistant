@@ -11,7 +11,6 @@ from ..models.all_models import (
     WABAStatus,
     BusinessSubscription,
     SubscriptionPlan,
-    WASenderModel,
     BookingDetail,
     BookModel,
     CustomerModel

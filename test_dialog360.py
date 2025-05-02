@@ -7,7 +7,7 @@ from app.core.env import load_env
 load_env()
 
 # Get API key from environment
-api_key = os.getenv("DIALOG360_API_KEY")
+api_key = "JGtbI8U82BUBL6SYldQNMd6SAK"
 phone_number = os.getenv("DIALOG360_PHONE_NUMBER")
 
 # Set up headers and endpoint
