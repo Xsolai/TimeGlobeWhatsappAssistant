@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from .routes import auth_route, onboarding_route, twilio_route, subscription_route, twilio_webhook_route
+from .routes import auth_route, subscription_route, webhook_routes
 from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
@@ -28,9 +28,7 @@ from .models.all_models import (
     BusinessSubscription,
     SubscriptionPlan,
     WASenderModel,
-    ThreadModel,
-    ActiveRunModel,
-    BookingDetail,
+    BookingDetail,  
     BookModel,
     CustomerModel
 )
@@ -58,10 +56,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_route.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(onboarding_route.router, prefix="/api/onboarding", tags=["Onboarding"])
-app.include_router(twilio_route.router, prefix="/api/whatsapp", tags=["WhatsApp"])
+app.include_router(webhook_routes.router, prefix="/api/whatsapp", tags=["WhatsApp"])
 app.include_router(subscription_route.router, prefix="/api/subscription", tags=["Subscription"])
-app.include_router(twilio_webhook_route.router, prefix="/api/twilio", tags=["Twilio Webhooks"])
 
 
 @app.post("/webhook")
@@ -138,7 +134,7 @@ def create_api_key(partner_id, channel_id):
         # Save to database
         try:
             from sqlalchemy.orm import Session
-            from .models.onboarding_model import Business, WABAStatus
+            from .models.business_model import Business, WABAStatus
             
             with Session(engine) as db:
                 # Find or create business record

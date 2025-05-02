@@ -14,8 +14,6 @@ class BusinessProfile(Base):
     website = Column(String, nullable=True)
     industry = Column(Enum(BusinessType), nullable=True)
     description = Column(String, nullable=True)
-    twilio_subaccount_sid = Column(String, nullable=False)
-    twilio_auth_token = Column(String, nullable=False)
 
     user = relationship("       ", back_populates="business_profile")
 

@@ -2,8 +2,6 @@ from datetime import timedelta
 from typing import Optional, Dict
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-
-from app.services.twilio_service import TwilioService
 from ..repositories.business_repository import BusinessRepository
 from ..utils.security_util import verify_password, create_access_token, decode_token
 from ..schemas.auth import (
@@ -13,7 +11,7 @@ from ..schemas.auth import (
     ResetPasswordRequest,
     Business,
 )
-from ..models.onboarding_model import Business
+from ..models.business_model import Business
 from ..core.config import settings
 from ..utils import email_util
 import secrets, string, time
@@ -173,7 +171,7 @@ class AuthService:
         body = f"Hello {business.business_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nBest regards,\nYour App Team"
 
         email_util.send_email(business.email, subject, body)
-        main_logger.info(f"Reset password link sent to {request.email}")
+        main_logger.info(f"Reset password link {reset_link} sent to {request.email}")
         return {"message": "Reset password link has been sent to your email."}
 
     def reset_password(self, data: ResetPasswordRequest):

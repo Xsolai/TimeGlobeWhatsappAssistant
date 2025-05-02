@@ -88,7 +88,7 @@ def reset_password(
     request: ResetPasswordRequest, auth_service: AuthService = Depends(get_auth_service)
 ):
     """Resets business password after OTP verification."""
-    main_logger.info(f"Resetting password for {request.email}")
+    main_logger.info(f"Resetting password with token")
     return auth_service.reset_password(request)
 
 

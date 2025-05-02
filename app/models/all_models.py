@@ -1,11 +1,9 @@
 from .base import Base
 
-from .onboarding_model import Business, WABAStatus
+from .business_model import Business, WABAStatus
 from .business_subscription import BusinessSubscription
 from .subscription_plan import SubscriptionPlan
 from .sender_model import WASenderModel
-from .thread import ThreadModel
-from .active_run import ActiveRunModel
 from .booking_detail import BookingDetail
 from .booked_appointment import BookModel
 from .customer_model import CustomerModel
@@ -19,8 +17,6 @@ __all__ = [
     'BusinessSubscription',
     'SubscriptionPlan',
     'WASenderModel',
-    'ThreadModel',
-    'ActiveRunModel',
     'BookingDetail',
     'BookModel',
     'CustomerModel',

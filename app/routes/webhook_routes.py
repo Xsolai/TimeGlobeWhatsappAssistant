@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status
-
-from app.agent import AssistantManager
 from app.chat_agent import ChatAgent
 from ..services.dialog360_service import Dialog360Service
 from ..schemas.dialog360_sender import (
@@ -10,7 +8,7 @@ from ..schemas.dialog360_sender import (
     UpdateSenderRequest,
 )
 from ..core.config import settings
-from ..models.onboarding_model import Business
+from ..models.business_model import Business
 from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
@@ -128,65 +126,6 @@ async def whatsapp_wbhook(
         logging.error(f"Error processing webhook: {str(e)}")
         return JSONResponse(content={"status": "success"}, status_code=200)
 
-
-@router.post(
-    "/register-whatsapp-sender",
-    status_code=status.HTTP_200_OK,
-    response_class=JSONResponse,
-)
-async def register_whatsapp(
-    sender_request: SenderRequest,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    current_business: Business = Depends(get_current_business),
-):
-    """Register Whatsapp"""
-    return dialog360_service.register_whatsapp(sender_request, current_business)
-
-
-@router.post(
-    "/verify-sender/{sender_id}",
-    status_code=status.HTTP_200_OK,
-    response_class=JSONResponse,
-)
-async def verification_sender(
-    sender_id: str,
-    verification_request: VerificationRequest,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    current_business: Business = Depends(get_current_business),
-):
-    """Verify WhatsApp Sender"""
-    return dialog360_service.verify_sender(verification_request)
-
-
-@router.get(
-    "/sender/{sender_id}", status_code=status.HTTP_200_OK, response_class=JSONResponse
-)
-async def get_whatsapp_sender(
-    sender_id: str,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    current_business: Business = Depends(get_current_business),
-):
-    return dialog360_service.get_whatsapp_sender(sender_id)
-
-
-@router.post(
-    "/update-sender", status_code=status.HTTP_200_OK, response_class=JSONResponse
-)
-async def update_whatsapp_sender(
-    update_sender: UpdateSenderRequest,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    current_business: Business = Depends(get_current_business),
-):
-    return dialog360_service.update_whatsapp_sender(update_sender)
-
-
-@router.delete("/sender", status_code=status.HTTP_200_OK, response_class=JSONResponse)
-async def delete_whatsapp_sender(
-    sender_id: SenderId,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    current_business: Business = Depends(get_current_business),
-):
-    return dialog360_service.delete_whatsapp_sender(sender_id)
 
 
 @router.delete("/clear-chat-history/{mobile_number}", status_code=status.HTTP_200_OK, response_class=JSONResponse)

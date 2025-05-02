@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from ..models.onboarding_model import Business
+from ..models.business_model import Business
 from ..schemas.auth import BusinessCreate
 from ..utils.security_util import get_password_hash
 
@@ -33,12 +33,3 @@ class BusinessRepository:
             {"password": hashed_password}
         )
         self.db.commit()
-
-    def update_twilio_credentials(self, business_id: str, sub_sid: str, sub_auth: str) -> None:
-        self.db.query(Business).filter(Business.id == business_id).update(
-            {
-                "twilio_subaccount_sid": sub_sid,
-                "twilio_auth_token": sub_auth
-            }
-        )
-        self.db.commit() 

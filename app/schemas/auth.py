@@ -27,8 +27,6 @@ class Business(BusinessBase):
     id: str
     is_active: bool
     created_at: datetime
-    twilio_subaccount_sid: Optional[str] = None
-    twilio_auth_token: Optional[str] = None
     whatsapp_number: Optional[str] = None
 
     class Config:

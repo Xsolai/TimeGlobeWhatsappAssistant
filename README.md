@@ -27,11 +27,6 @@ Configure environment variables:
 ``` 
 create .env file in project folder and add following 
 
-from_whatsapp_number Twilio sandbox number 
-account_sid Twilio account sid
-auth_token Twilio auth token
-TWILIO_API_URL
-TWILIO_MESSAGING_SERVICE_SID
 WABA_ID WhatsApp bussiness id
 TIME_GLOBE_LOGIN_USERNAME
 TIME_GLOBE_LOGIN_PASSWORD

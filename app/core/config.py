@@ -15,13 +15,6 @@ class Settings(BaseSettings):
     PARTNER_API_KEY: str = env.get("PARTNER_API_KEY", "")
     PARTNER_ID: str = env.get("PARTNER_ID", "")
 
-    # Twilio Settings - keeping for backwards compatibility
-    account_sid: str = env.get("TWILIO_ACCOUNT_SID", "")
-    auth_token: str = env.get("TWILIO_AUTH_TOKEN", "")
-    from_whatsapp_number: str = env.get("TWILIO_FROM_NUMBER", "")
-    TWILIO_API_URL: str = env.get("TWILIO_API_URL", "")
-    TWILIO_MESSAGING_SERVICE_SID: str = env.get("TWILIO_MESSAGING_SERVICE_SID", "")
-
     # Dialog360 Settings
     DIALOG360_API_KEY: str = env.get("DIALOG360_API_KEY", "")
     DIALOG360_API_URL: str = env.get("DIALOG360_API_URL", "https://waba.360dialog.io/v1")

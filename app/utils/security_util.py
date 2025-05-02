@@ -18,13 +18,13 @@ def create_access_token(subject: str, expire_time: timedelta = None):
         )
     # print(f"sub==>> {subject}")
     to_encode = {"exp": expire, "sub": subject}
-    encoded_token = jwt.encode(to_encode, algorithm="HS256", key=settings.SECRETE_KEY)
+    encoded_token = jwt.encode(to_encode, algorithm="HS256", key=settings.JWT_SECRET_KEY)
     return encoded_token
 
 
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, settings.SECRETE_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
         if user_id is None:
             raise HTTPException(

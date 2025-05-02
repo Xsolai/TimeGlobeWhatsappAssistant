@@ -12,8 +12,6 @@ from ..models.all_models import (
     BusinessSubscription,
     SubscriptionPlan,
     WASenderModel,
-    ThreadModel,
-    ActiveRunModel,
     BookingDetail,
     BookModel,
     CustomerModel

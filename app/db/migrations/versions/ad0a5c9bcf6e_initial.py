@@ -29,8 +29,6 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), default=sa.func.now()),
         
         # Twilio fields
-        sa.Column('twilio_subaccount_sid', sa.String(), nullable=True),
-        sa.Column('twilio_auth_token', sa.String(), nullable=True),
         sa.Column('whatsapp_number', sa.String(), nullable=True),
         sa.Column('waba_status', sa.String(), nullable=True),
         

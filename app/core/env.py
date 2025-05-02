@@ -38,7 +38,9 @@ def load_env():
         "TIME_GLOBE_API_KEY",
         "WABA_ID",
         "PARTNER_API_KEY",
-        "PARTNER_ID"
+        "PARTNER_ID",
+        "EMAIL_SENDER",
+        "EMAIL_PASSWORD"
     ]
     
     for var in critical_vars:

@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import Generator
 from ..db.session import SessionLocal
 from ..repositories.business_repository import BusinessRepository
-from ..models.onboarding_model import Business
+from ..models.business_model import Business
 
 
 def get_dialog360_service(db: Session = Depends(get_db)) -> Dialog360Service:
@@ -24,11 +24,11 @@ def get_auth_service(business_repository: BusinessRepository = Depends(get_busin
     return AuthService(business_repository)
 
 
-async def get_current_business(
+def get_current_business(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> Business:
-    auth_service = AuthService(db)
-    business = await auth_service.get_current_business(token)
+    auth_service = AuthService(BusinessRepository(db))
+    business = auth_service.get_current_business(token)
     return business
 
 

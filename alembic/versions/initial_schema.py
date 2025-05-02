@@ -27,8 +27,6 @@ def upgrade() -> None:
         sa.Column('phone_number', sa.String(), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('twilio_subaccount_sid', sa.String(), nullable=True),
-        sa.Column('twilio_auth_token', sa.String(), nullable=True),
         sa.Column('whatsapp_number', sa.String(), nullable=True),
         sa.Column('waba_status', sa.String(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
