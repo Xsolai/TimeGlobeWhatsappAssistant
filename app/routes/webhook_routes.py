@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Depends, HTTPException, status, BackgroundTasks
 from app.chat_agent import ChatAgent
 from ..services.dialog360_service import Dialog360Service
 from ..schemas.dialog360_sender import (
@@ -28,12 +28,13 @@ router = APIRouter()
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     dialog360_service: Dialog360Service = Depends(get_dialog360_service),
     db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via WhatsApp Business API.
-    Responds with the processed message from get_response_from_gpt.
+    Responds immediately and processes the message in the background.
     """
     # Parse incoming JSON payload
     data = await request.json()
@@ -125,8 +126,27 @@ async def whatsapp_wbhook(
         # Here we're using MessageCache to store this information 
         message_cache.set_business_phone(number, business_phone_number)
         
+        # Add the message processing to background tasks
+        background_tasks.add_task(
+            process_message, 
+            number=number, 
+            incoming_msg=incoming_msg, 
+            message_id=message_id,
+            dialog360_service=dialog360_service
+        )
+        
+        # Return success immediately
+        return JSONResponse(content={"status": "success"}, status_code=200)
+        
+    except Exception as e:
+        logging.error(f"Error processing webhook: {str(e)}")
+        return JSONResponse(content={"status": "success"}, status_code=200)
+
+
+async def process_message(number: str, incoming_msg: str, message_id: str, dialog360_service: Dialog360Service):
+    """Process a WhatsApp message in the background and send the response."""
+    try:
         # Process the message with your AI assistant
-        # Using the tools_wrapper_util function directly without instantiating AssistantManager
         logging.info(f"Generating response for message ID: {message_id} from user: {number}")
         response = get_response_from_gpt(incoming_msg, number)
         response = format_response(response)
@@ -137,12 +157,8 @@ async def whatsapp_wbhook(
         
         # Log successful processing
         logging.info(f"Successfully processed message ID: {message_id}")
-        return JSONResponse(content={"status": "success"}, status_code=200)
-        
     except Exception as e:
-        logging.error(f"Error processing webhook: {str(e)}")
-        return JSONResponse(content={"status": "success"}, status_code=200)
-
+        logging.error(f"Error in background processing of message {message_id}: {str(e)}")
 
 
 @router.delete("/clear-chat-history/{mobile_number}", status_code=status.HTTP_200_OK, response_class=JSONResponse)

@@ -6,6 +6,7 @@ from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
 from .models.base import Base
+from .models.business_model import Business, WABAStatus
 from .core.env import load_env
 import logging
 import requests
@@ -26,7 +27,6 @@ main_logger.info("Environment variables loaded")
 # Import all models to ensure they are registered with SQLAlchemy
 from .models.all_models import (
     Business, 
-    WABAStatus,
     BusinessSubscription,
     SubscriptionPlan,
     BookingDetail,  
@@ -74,7 +74,65 @@ async def receive_webhook(request: Request):
         channel_id = data.get("id")
         status = data.get("status")
 
-        if event_type == "channel_permission_granted" and status == "ready":
+        # Handle client_created event
+        if event_type == "client_created":
+            # Extract client information from the payload
+            client_info = data.get("client", {})
+            client_id = client_info.get("id")
+            client_name = client_info.get("name")
+            contact_info = client_info.get("contact_info", {})
+            client_email = contact_info.get("email")
+            
+            if client_email and client_name:
+                try:
+                    from sqlalchemy.orm import Session
+                    from .utils.security_util import get_password_hash
+                    import uuid
+                    import string
+                    import random
+                    
+                    # Generate a random temporary password
+                    chars = string.ascii_letters + string.digits
+                    temp_password = ''.join(random.choice(chars) for _ in range(12))
+                    
+                    with Session(engine) as db:
+                        # Check if a business with this email already exists
+                        existing_business = db.query(Business).filter(Business.email == client_email).first()
+                        
+                        if not existing_business:
+                            # Create a new business record
+                            new_business = Business(
+                                id=str(uuid.uuid4()),
+                                business_name=client_name,
+                                email=client_email,
+                                password=get_password_hash(temp_password),
+                                client_id=client_id,
+                                waba_status=WABAStatus.pending
+                            )
+                            
+                            db.add(new_business)
+                            db.commit()
+                            logging.info(f"✅ Created new business record for client {client_name} with email {client_email}")
+                            
+                            # Here you could also send a welcome email with the temporary password
+                            # and instructions to connect their WhatsApp account
+                        else:
+                            # Update existing business with client_id if not already set
+                            if not existing_business.client_id:
+                                existing_business.client_id = client_id
+                                db.commit()
+                                logging.info(f"✅ Updated existing business with client_id for {client_email}")
+                            else:
+                                logging.info(f"Business with email {client_email} already has client_id set")
+                                
+                except Exception as e:
+                    logging.error(f"❌ Failed to create/update business record: {str(e)}")
+            else:
+                logging.error(f"Missing required client information. Email: {client_email}, Name: {client_name}")
+            
+            return {"status": "success"}
+
+        elif event_type == "channel_permission_granted" and status == "ready":
             # Extract client information from the payload
             client_info = data.get("client", {})
             client_name = client_info.get("name")
@@ -143,7 +201,6 @@ async def receive_webhook(request: Request):
             if api_key_data:
                 try:
                     from sqlalchemy.orm import Session
-                    from .models.business_model import Business, WABAStatus
                     import bcrypt
                     
                     with Session(engine) as db:
