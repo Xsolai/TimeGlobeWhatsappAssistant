@@ -40,7 +40,7 @@ async def whatsapp_wbhook(
     
     try:
         # Only use this for debugging, otherwise it will fill up logs
-        print(f"Data =============================================>> {data}")
+        logging.info(f"Webhook received - Timestamp: {data.get('entry', [{}])[0].get('changes', [{}])[0].get('value', {}).get('messages', [{}])[0].get('timestamp', 'unknown')}")
         
         # Check object first - should be whatsapp_business_account
         if data.get('object') != 'whatsapp_business_account':
@@ -71,6 +71,9 @@ async def whatsapp_wbhook(
         message = messages[0]
         message_type = message.get('type')
         message_id = message.get('id', '')
+        timestamp = message.get('timestamp', '')
+        
+        logging.info(f"Processing webhook - ID: {message_id}, Type: {message_type}, Timestamp: {timestamp}")
         
         # Only process text messages
         if message_type != 'text':
@@ -83,7 +86,6 @@ async def whatsapp_wbhook(
             logging.error("No contact information in the webhook payload")
             return JSONResponse(content={"status": "success"}, status_code=200)
         
-        print("---------------------------------message", message)
         # Extract the key information we need
         wa_id = contacts[0].get('wa_id')
         sender_number = message.get('from')
@@ -108,29 +110,33 @@ async def whatsapp_wbhook(
         
         # Check if we've already processed this message ID
         if message_cache.is_processed(message_id):
-            logging.info(f"Skipping already processed message ID: {message_id}")
-            return JSONResponse(content={"status": "success"}, status_code=200)
-            
-        # Mark this message as processed
-        message_cache.mark_as_processed(message_id)
+            logging.warning(f"DUPLICATE MESSAGE DETECTED - Skipping already processed message ID: {message_id}")
+            # Return success to acknowledge receipt without processing
+            return JSONResponse(content={"status": "success", "duplicate": True}, status_code=200)
         
+        # Get profile information
         profile_name = contacts[0].get('profile', {}).get('name', '') if contacts else ''
-        logging.info(f"Processing message from {number} (contact: {profile_name}): {incoming_msg}")
+        logging.info(f"Message from {number} (contact: {profile_name}): '{incoming_msg}'")
+        
+        # Mark this message as processed BEFORE processing to prevent race conditions
+        message_cache.mark_as_processed(message_id)
         
         # Store the business phone number in the conversation context or user session
         # Here we're using MessageCache to store this information 
         message_cache.set_business_phone(number, business_phone_number)
-        logging.info(f"Stored business phone {business_phone_number} for user {number}")
         
         # Process the message with your AI assistant
         # Using the tools_wrapper_util function directly without instantiating AssistantManager
+        logging.info(f"Generating response for message ID: {message_id} from user: {number}")
         response = get_response_from_gpt(incoming_msg, number)
         response = format_response(response)
         
         # Send the response
-        logging.info(f"Sending response to {number}: {response}")
+        logging.info(f"Sending response to {number}: '{response[:50]}...' (truncated)")
         resp = dialog360_service.send_whatsapp(number, response)
         
+        # Log successful processing
+        logging.info(f"Successfully processed message ID: {message_id}")
         return JSONResponse(content={"status": "success"}, status_code=200)
         
     except Exception as e:
