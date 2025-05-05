@@ -2,6 +2,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
 
 from ..schemas.auth import (
     Token,
@@ -9,6 +11,10 @@ from ..schemas.auth import (
     Business,
     OTPVerificationRequest,
     ResetPasswordRequest,
+    TimeGlobeAuthKeyRequest,
+    TimeGlobeAuthKeyResponse,
+    BusinessInfoUpdate,
+    BusinessInfoDelete,
 )
 from ..services.auth_service import AuthService
 from ..core.dependencies import get_auth_service, get_current_business
@@ -96,4 +102,115 @@ def reset_password(
 def get_business_profile(current_business: Business = Depends(get_current_business)):
     """Fetches the logged-in business's profile."""
     main_logger.info(f"Fetching profile for {current_business.email}")
+    return current_business
+
+
+@router.post("/validate-timeglobe-key", response_model=TimeGlobeAuthKeyResponse)
+def validate_timeglobe_key(
+    request: TimeGlobeAuthKeyRequest,
+    current_business: Business = Depends(get_current_business),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Validates TimeGlobe API key and updates the business record if valid."""
+    main_logger.info(f"Validating TimeGlobe API key for {current_business.email}")
+    
+    # If no auth_key provided, check if business already has valid credentials
+    if not request.auth_key:
+        if current_business.customer_cd and current_business.timeglobe_auth_key:
+            return {
+                "valid": True,
+                "customer_cd": current_business.customer_cd,
+                "message": "TimeGlobe authentication key already validated"
+            }
+        return {
+            "valid": False,
+            "message": "No TimeGlobe authentication key provided"
+        }
+    
+    # Normal validation with auth_key
+    result = auth_service.validate_timeglobe_auth_key(request.auth_key, current_business.email)
+    return result
+
+
+@router.get("/business/timeglobe-key", response_model=dict)
+def get_timeglobe_auth_key(current_business: Business = Depends(get_current_business)):
+    """Get the TimeGlobe auth key and customer_cd for the logged-in business."""
+    return {
+        "timeglobe_auth_key": current_business.timeglobe_auth_key,
+        "customer_cd": current_business.customer_cd
+    }
+
+
+# Add a new schema that includes email for public validation
+class PublicTimeGlobeAuthKeyRequest(BaseModel):
+    auth_key: Optional[str] = None
+    email: EmailStr
+
+
+@router.post("/public/validate-timeglobe-key", response_model=TimeGlobeAuthKeyResponse)
+def validate_timeglobe_key_public(
+    request: PublicTimeGlobeAuthKeyRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Validates TimeGlobe API key without requiring authentication."""
+    main_logger.info(f"Validating TimeGlobe API key publicly for {request.email}")
+    
+    # If no auth_key provided, check if business already has valid credentials
+    if not request.auth_key:
+        # Check if business exists and has TimeGlobe credentials
+        business = auth_service.business_repository.get_by_email(request.email)
+        if business and business.customer_cd and business.timeglobe_auth_key:
+            return {
+                "valid": True,
+                "customer_cd": business.customer_cd,
+                "message": "TimeGlobe authentication key already validated"
+            }
+        return {
+            "valid": False,
+            "message": "No TimeGlobe authentication key provided"
+        }
+    
+    # Normal validation with auth_key
+    result = auth_service.validate_timeglobe_auth_key(request.auth_key, request.email)
+    return result
+
+
+@router.post("/update-business-info", response_model=dict)
+def update_business_info(
+    business_info_update: BusinessInfoUpdate,
+    current_business: Business = Depends(get_current_business),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Updates business information."""
+    main_logger.info(f"Updating business information for {current_business.email}")
+    try:
+        result = auth_service.update_business_info(current_business, business_info_update)
+        main_logger.info(f"Business information updated successfully for {current_business.email}")
+        return result
+    except Exception as e:
+        main_logger.error(f"Failed to update business information for {current_business.email}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/delete-business-info", response_model=dict)
+def delete_business_info(
+    fields: BusinessInfoDelete,
+    current_business: Business = Depends(get_current_business),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Deletes specific business information fields."""
+    main_logger.info(f"Deleting business information fields for {current_business.email}: {fields.fields}")
+    try:
+        result = auth_service.delete_business_info_fields(current_business, fields.fields)
+        main_logger.info(f"Business information fields deleted successfully for {current_business.email}")
+        return result
+    except Exception as e:
+        main_logger.error(f"Failed to delete business information fields: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/business/info", response_model=Business)
+def get_business_info(current_business: Business = Depends(get_current_business)):
+    """Gets the complete business information."""
+    main_logger.info(f"Fetching business information for {current_business.email}")
     return current_business

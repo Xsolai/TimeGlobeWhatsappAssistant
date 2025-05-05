@@ -21,6 +21,14 @@ class Business(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     
+    # Business information fields
+    tax_id = Column(String, nullable=True)  # Umsatzsteuer-ID
+    street_address = Column(String, nullable=True)  # Straße und Hausnummer
+    postal_code = Column(String, nullable=True)  # Postleitzahl
+    city = Column(String, nullable=True)  # Stadt
+    country = Column(String, nullable=True)  # Land
+    contact_person = Column(String, nullable=True)  # Ansprechpartner
+    
     # 360dialog WhatsApp Business API fields
     client_id = Column(String, nullable=True)
     channel_id = Column(String, nullable=True)

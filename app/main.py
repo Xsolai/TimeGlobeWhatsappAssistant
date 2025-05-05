@@ -386,17 +386,18 @@ async def handle_redirect(request: Request):
         except Exception as e:
             logging.error(f"❌ Error processing client data: {str(e)}")
 
-    # Show a success message to the user
-    html_content = f"""
+    # Automatically close the tab without returning any content
+    html_content = """
     <html>
         <head>
-            <title>Onboarding Completed</title>
+            <title>Closing...</title>
+            <script>
+                // Close the tab immediately
+                window.close();
+            </script>
         </head>
-        <body style="font-family:Arial;text-align:center;margin-top:50px;">
-            <h1>🎉 Onboarding Completed!</h1>
-            <p><strong>Client ID:</strong> {client_id}</p>
-            <p><strong>Channels:</strong> {channels}</p>
-            <p>Now you can close this page and start using WhatsApp API!</p>
+        <body>
+            <p>Closing...</p>
         </body>
     </html>
     """

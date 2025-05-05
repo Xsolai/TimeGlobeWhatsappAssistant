@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
@@ -31,6 +31,13 @@ class Business(BusinessBase):
     whatsapp_number: Optional[str] = None
     customer_cd: Optional[str] = None  # TimeGlobe customer code
     timeglobe_auth_key: Optional[str] = None
+    # Business information fields
+    tax_id: Optional[str] = None
+    street_address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    contact_person: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -39,6 +46,8 @@ class Business(BusinessBase):
 class OTPVerificationRequest(BaseModel):
     email: EmailStr
     otp: str
+    timeglobe_auth_key: Optional[str] = None
+    customer_cd: Optional[str] = None
 
 
 class ResetPasswordRequest(BaseModel):
@@ -49,3 +58,29 @@ class ResetPasswordRequest(BaseModel):
 class TokenPayload(BaseModel):
     sub: str
     exp: int
+
+
+class TimeGlobeAuthKeyRequest(BaseModel):
+    auth_key: Optional[str] = None
+
+
+class TimeGlobeAuthKeyResponse(BaseModel):
+    valid: bool
+    customer_cd: Optional[str] = None
+    message: Optional[str] = None
+
+
+class BusinessInfoUpdate(BaseModel):
+    business_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    street_address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class BusinessInfoDelete(BaseModel):
+    fields: List[str]
