@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from .routes import auth_route, subscription_route, webhook_routes, analytics_routes
+from fastapi.staticfiles import StaticFiles
+from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes
 from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
@@ -55,11 +56,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Set up static files serving
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Include routers
 app.include_router(auth_route.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(webhook_routes.router, prefix="/api/whatsapp", tags=["WhatsApp"])
 app.include_router(subscription_route.router, prefix="/api/subscription", tags=["Subscription"])
 app.include_router(analytics_routes.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(download_routes.router, prefix="/api/download", tags=["Downloads"])
 
 
 @app.post("/webhook")
