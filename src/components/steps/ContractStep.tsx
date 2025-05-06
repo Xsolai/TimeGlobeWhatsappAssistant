@@ -249,52 +249,58 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
       const nextRefNumber = currentRefNumber + 1;
       const nextReference = nextRefNumber.toString().padStart(5, '0');
       
-      // Speichere die neue Referenz im localStorage
-      localStorage.setItem('mandateReference', nextReference);
-      
-      // Aktualisiere den State
-      setMandateReference(nextReference);
-      
-      // Verwende eine direkte Download-Methode ohne PDF-Bearbeitung
-      // Dies löst das Problem auf AWS Amplify, wo die PDF-Bearbeitung fehlschlägt
-      const baseUrl = window.location.origin;
-      const sepaDocumentUrl = `${baseUrl}/documents/LS-Mandat.pdf`;
-      
-      console.log('Versuche direkten Download von:', sepaDocumentUrl);
-      
-      // Hole den PDF-Inhalt als Blob
-      const response = await fetch(sepaDocumentUrl, {
+      // Nutze die korrekte Backend-API-URL für den Download
+      const response = await fetch('https://timeglobe-server.ecomtask.de/api/download/pdf', {
         method: 'GET',
-        cache: 'no-store', // 'no-store' ist stärker als 'no-cache'
         headers: {
-          'Accept': 'application/pdf',
+          'Accept': 'application/json',
         },
-        mode: 'cors',
-        credentials: 'same-origin',
       });
       
       if (!response.ok) {
         throw new Error(`PDF konnte nicht geladen werden: ${response.status} ${response.statusText}`);
       }
       
-      // Überprüfe die Antwortgröße - sollte deutlich größer als 1KB sein
-      const contentLength = response.headers.get('content-length');
-      console.log(`Content-Length: ${contentLength} Bytes`);
+      // Parse die JSON-Antwort vom Server
+      const data = await response.json();
       
-      const blob = await response.blob();
-      console.log(`Blob Größe: ${blob.size} Bytes`);
-      
-      // Verifiziere, dass wir eine gültige PDF-Datei erhalten haben
-      if (blob.size < 5000) { // Ein minimales PDF sollte größer als 5KB sein
-        console.error(`PDF scheint korrupt zu sein. Größe: ${blob.size} Bytes`);
-        throw new Error('Die heruntergeladene Datei ist zu klein und möglicherweise beschädigt.');
+      if (!data.filename || !data.file_content) {
+        throw new Error('Die Serverantwort enthält nicht die erwarteten Daten');
       }
+      
+      // Extrahiere die Referenznummer aus dem Dateinamen (z.B. "SEPA-Lastschriftmandat_10035.pdf")
+      const filenameMatch = data.filename.match(/(\d+)\.pdf$/);
+      if (filenameMatch && filenameMatch[1]) {
+        const fileReferenceNumber = filenameMatch[1];
+        // Speichere die vom Server gelieferte Referenznummer im localStorage
+        localStorage.setItem('mandateReference', fileReferenceNumber);
+        // Aktualisiere den State mit der vom Server gelieferten Referenz
+        setMandateReference(fileReferenceNumber);
+      } else {
+        // Wenn keine Nummer im Dateinamen gefunden wurde, verwende die lokale Nummer
+        localStorage.setItem('mandateReference', nextReference);
+        setMandateReference(nextReference);
+      }
+      
+      // Decode den Base64-codierten Inhalt zu einem Blob
+      const binaryString = atob(data.file_content);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Erstelle einen Blob aus den Binärdaten mit dem korrekten Content-Type
+      const contentType = data.content_type || 'application/pdf';
+      const blob = new Blob([bytes], { type: contentType });
       
       // Erstelle eine URL für den Blob und trigger den Download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `SEPA-Lastschriftmandat_${nextReference}.pdf`);
+      
+      // Verwende den vom Server gelieferten Dateinamen
+      link.setAttribute('download', data.filename);
       
       // Verzögerung für bessere Browser-Kompatibilität
       setTimeout(() => {
@@ -308,62 +314,11 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
         }, 200);
       }, 100);
       
-      console.log(`SEPA-Lastschriftmandat_${nextReference}.pdf Download initiiert`);
+      console.log(`${data.filename} Download initiiert`);
+      setError(null); // Lösche etwaige Fehlermeldungen bei Erfolg
     } catch (error) {
       console.error('Fehler beim Herunterladen des PDFs:', error);
-      
-      // Alternativer Ansatz mit iframe für problematische Umgebungen
-      try {
-        console.log('Versuche alternative Download-Methode mit iframe...');
-        const baseUrl = window.location.origin;
-        const sepaDocumentUrl = `${baseUrl}/documents/LS-Mandat.pdf`;
-        
-        // Erstelle einen temporären iframe, der das PDF laden kann
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        // Schreibe eine HTML-Seite mit Download-Link in den iframe
-        iframe.contentWindow?.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>PDF Download</title>
-              <script>
-                function downloadPdf() {
-                  const link = document.createElement('a');
-                  link.href = '${sepaDocumentUrl}';
-                  link.download = 'SEPA-Lastschriftmandat_${mandateReference}.pdf';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }
-                window.onload = downloadPdf;
-              </script>
-            </head>
-            <body>
-              Wenn der Download nicht automatisch startet, <a href="${sepaDocumentUrl}" download="SEPA-Lastschriftmandat_${mandateReference}.pdf">klicken Sie hier</a>.
-            </body>
-          </html>
-        `);
-        iframe.contentWindow?.document.close();
-        
-        // Entferne den iframe nach kurzer Zeit
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 5000);
-        
-        console.log('Alternative Download-Methode initiiert');
-      } catch (iframeError) {
-        console.error('Auch die alternative Methode ist fehlgeschlagen:', iframeError);
-        
-        // Letzte Fallback-Option: Öffne PDF in neuem Tab
-        const baseUrl = window.location.origin;
-        const sepaDocumentUrl = `${baseUrl}/documents/LS-Mandat.pdf`;
-        window.open(sepaDocumentUrl, '_blank');
-        
-        alert('Der automatische Download konnte nicht durchgeführt werden. Das PDF wurde in einem neuen Tab geöffnet. Bitte speichern Sie es manuell ab.');
-      }
+      setError('Der Download ist fehlgeschlagen. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.');
     } finally {
       // Button-Status zurücksetzen
       setIsLoading(false);
