@@ -255,78 +255,122 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
       // Aktualisiere den State
       setMandateReference(nextReference);
       
-      // Lade das PDF-Dokument
-      const sepaDocumentUrl = './documents/LS-Mandat.pdf';
-      const pdfBytes = await fetch(sepaDocumentUrl).then(res => res.arrayBuffer());
+      // Lade das PDF-Dokument mit absolutem Pfad von der Basis-URL
+      const baseUrl = window.location.origin;
+      const sepaDocumentUrl = `${baseUrl}/documents/LS-Mandat.pdf`;
       
-      // Lade das PDF-Dokument mit pdf-lib
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      
-      // Statt nach Formularfeldern zu suchen, zeichnen wir direkt auf die Seite
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-      
-      // Hole die Seitengröße, um relative Positionen zu berechnen
-      const { width, height } = firstPage.getSize();
-      console.log(`PDF Größe: ${width} x ${height}`);
-      
-      // Mögliche Positionen für die Mandatsreferenz - wir versuchen mehrere Bereiche
-      // Format: [x, y, Größe] - x von links, y von unten
-      const possiblePositions = [
-        // Direkt im Feld "Mandatsreferenz (max. 35 Stellen)" - Präzise Position bei 79% der Höhe
-        { x: width * 0.51, y: height * 0.77, size: 12 },
-      ];
-      
-      // Zeichne die Mandatsreferenz an allen möglichen Positionen
-      // In einer Produktionsversion würden wir die genaue Position kennen und nur einmal zeichnen
-      possiblePositions.forEach(({ x, y, size }) => {
-        try {
-          firstPage.drawText(nextReference, {
-            x: x,
-            y: y,
-            size: size,
-            color: rgb(0, 0, 0), // Schwarze Farbe für den Text
-          });
-          
-          console.log(`Mandatsreferenz ${nextReference} an Position x=${x}, y=${y} gezeichnet`);
-        } catch (e) {
-          console.warn(`Konnte nicht an Position x=${x}, y=${y} zeichnen:`, e);
+      try {
+        // Verwende Fetch mit spezifischen Optionen für CORS und Cache
+        const response = await fetch(sepaDocumentUrl, {
+          method: 'GET',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/pdf',
+          },
+          mode: 'cors',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Fehler beim Laden des PDFs: ${response.status} ${response.statusText}`);
         }
-      });
-      
-      // Speichere das modifizierte PDF
-      const modifiedPdfBytes = await pdfDoc.save();
-      
-      // Erstelle einen Blob aus den PDF-Bytes
-      const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      
-      // Erstelle einen temporären Link
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `SEPA-Lastschriftmandat_${nextReference}.pdf`);
-      
-      // Lade das Dokument herunter
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Bereinige den URL-Objekt
-      URL.revokeObjectURL(url);
-      
-      console.log(`SEPA-Lastschriftmandat_${nextReference}.pdf heruntergeladen`);
+        
+        const pdfBytes = await response.arrayBuffer();
+        
+        // Lade das PDF-Dokument mit pdf-lib
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        
+        // Statt nach Formularfeldern zu suchen, zeichnen wir direkt auf die Seite
+        const pages = pdfDoc.getPages();
+        const firstPage = pages[0];
+        
+        // Hole die Seitengröße, um relative Positionen zu berechnen
+        const { width, height } = firstPage.getSize();
+        console.log(`PDF Größe: ${width} x ${height}`);
+        
+        // Mögliche Positionen für die Mandatsreferenz - wir versuchen mehrere Bereiche
+        // Format: [x, y, Größe] - x von links, y von unten
+        const possiblePositions = [
+          // Direkt im Feld "Mandatsreferenz (max. 35 Stellen)" - Präzise Position bei 79% der Höhe
+          { x: width * 0.51, y: height * 0.77, size: 12 },
+        ];
+        
+        // Zeichne die Mandatsreferenz an allen möglichen Positionen
+        // In einer Produktionsversion würden wir die genaue Position kennen und nur einmal zeichnen
+        possiblePositions.forEach(({ x, y, size }) => {
+          try {
+            firstPage.drawText(nextReference, {
+              x: x,
+              y: y,
+              size: size,
+              color: rgb(0, 0, 0), // Schwarze Farbe für den Text
+            });
+            
+            console.log(`Mandatsreferenz ${nextReference} an Position x=${x}, y=${y} gezeichnet`);
+          } catch (e) {
+            console.warn(`Konnte nicht an Position x=${x}, y=${y} zeichnen:`, e);
+          }
+        });
+        
+        // Speichere das modifizierte PDF
+        const modifiedPdfBytes = await pdfDoc.save();
+        
+        // Erstelle einen Blob aus den PDF-Bytes mit explizitem Typ
+        const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
+        
+        // Erstelle eine URL für den Blob
+        const url = URL.createObjectURL(blob);
+        
+        // Erstelle einen temporären Link
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `SEPA-Lastschriftmandat_${nextReference}.pdf`);
+        
+        // Lade das Dokument herunter
+        document.body.appendChild(link);
+        link.click();
+        
+        // Entferne den Link aus dem DOM und bereinige URL
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+        
+        console.log(`SEPA-Lastschriftmandat_${nextReference}.pdf heruntergeladen`);
+      } catch (pdfError) {
+        // Bei Problemen mit PDF-lib verwenden wir den Fallback
+        console.error('PDF-lib Fehler:', pdfError);
+        throw pdfError;
+      }
     } catch (error) {
       console.error('Fehler beim Bearbeiten des PDFs:', error);
       
       // Fallback: Einfacher Download ohne Bearbeitung
       console.warn('Fallback: Direkter Download ohne PDF-Bearbeitung');
-      const sepaDocumentUrl = './documents/LS-Mandat.pdf';
-      const link = document.createElement('a');
-      link.href = sepaDocumentUrl;
-      link.setAttribute('download', `SEPA-Lastschriftmandat_${mandateReference}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      
+      try {
+        const baseUrl = window.location.origin;
+        const sepaDocumentUrl = `${baseUrl}/documents/LS-Mandat.pdf`;
+        
+        // Direkter Download mit Fetch
+        const response = await fetch(sepaDocumentUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `SEPA-Lastschriftmandat_${mandateReference}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        
+        // Entferne den Link aus dem DOM und bereinige URL
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+      } catch (fallbackError) {
+        console.error('Auch der Fallback ist fehlgeschlagen:', fallbackError);
+        alert('Beim Herunterladen des Dokuments ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.');
+      }
     } finally {
       // Button-Status zurücksetzen
       setIsLoading(false);
