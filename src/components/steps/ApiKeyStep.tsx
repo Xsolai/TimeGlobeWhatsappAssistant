@@ -177,25 +177,6 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
               <Typography variant="body2" sx={{ mb: 4, color: '#333333' }}>
                 Der API-Schlüssel wird benötigt, um Ihren WhatsApp Chatbot mit Ihrem TimeGlobe-Konto zu verbinden.
               </Typography>
-
-              {/* Gate 1 Badge */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: '-50px',
-                  right: '20px',
-                  backgroundColor: '#000',
-                  color: '#fff',
-                  py: 1,
-                  px: 3,
-                  borderRadius: '4px',
-                  fontWeight: 'medium',
-                  fontSize: '0.9rem',
-                  zIndex: 1
-                }}
-              >
-                Gate 1
-              </Box>
             </Box>
             
             {error && (
