@@ -26,7 +26,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   
   // 360dialog onboarding URL configuration
   const PARTNER_ID = "MalHtRPA";
-  const REDIRECT_URL = "https://solasolution.ecomtask.de/app3/redirect";
+  const REDIRECT_URL = "https://timeglobe-server.ecomtask.de/redirect";
   const base_url = `https://hub.360dialog.com/dashboard/app/${PARTNER_ID}/permissions`;
   
   // Query parameters
