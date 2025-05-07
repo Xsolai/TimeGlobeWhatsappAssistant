@@ -18,6 +18,431 @@ import FileUpload from '@mui/icons-material/FileUpload';
 import CloudUpload from '@mui/icons-material/CloudUpload';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 
+// Inline contract service if import fails
+const API_URL = 'https://timeglobe-server.ecomtask.de';
+
+const inlineContractService = {
+  createContract: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/contract/create`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/contract/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating contract:', error);
+      throw error;
+    }
+  },
+
+  // Function to create an Auftragsverarbeitung contract
+  createDataProcessingContract: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available for data processing contract:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/auftragsverarbeitung/create`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/auftragsverarbeitung/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response for data processing contract:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating data processing contract:', error);
+      throw error;
+    }
+  },
+
+  // Function to get existing contract
+  getContract: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/contract`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      
+      const response = await fetch(`${API_URL}/api/contract`, {
+        method: 'GET',
+        headers
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No contract found - this is a valid case, not an error
+          console.log('No existing contract found');
+          return null;
+        }
+        
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Contract API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching contract:', error);
+      return null;
+    }
+  },
+
+  // Function to get existing Auftragsverarbeitung contract
+  getDataProcessingContract: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/auftragsverarbeitung`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      
+      const response = await fetch(`${API_URL}/api/auftragsverarbeitung`, {
+        method: 'GET',
+        headers
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No contract found - this is a valid case, not an error
+          console.log('No existing data processing contract found');
+          return null;
+        }
+        
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Data Processing Contract API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching data processing contract:', error);
+      return null;
+    }
+  },
+
+  // Get existing Lastschriftmandat
+  getLastschriftmandat: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/lastschriftmandat`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      
+      const response = await fetch(`${API_URL}/api/lastschriftmandat`, {
+        method: 'GET',
+        headers
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('No existing Lastschriftmandat found');
+          return null;
+        }
+        
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Lastschriftmandat API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching Lastschriftmandat:', error);
+      return null;
+    }
+  },
+  
+  // Upload Lastschriftmandat
+  uploadLastschriftmandat: async (data: {
+    pdf_file: string;
+    file_name: string;
+    description?: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/lastschriftmandat/upload`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', {
+        pdf_file: `[PDF file string of length ${data.pdf_file.length}]`,
+        file_name: data.file_name,
+        description: data.description
+      });
+      
+      const response = await fetch(`${API_URL}/api/lastschriftmandat/upload`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Lastschriftmandat upload API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error uploading Lastschriftmandat:', error);
+      throw error;
+    }
+  },
+  
+  // Download Lastschriftmandat
+  downloadLastschriftmandat: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/lastschriftmandat/download`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      
+      const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
+        method: 'GET',
+        headers
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Lastschriftmandat download API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error downloading Lastschriftmandat:', error);
+      throw error;
+    }
+  },
+  
+  // Update Lastschriftmandat
+  updateLastschriftmandat: async (data: {
+    pdf_file: string;
+    file_name: string;
+    description?: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      console.log(`Making API call to ${API_URL}/api/lastschriftmandat/update`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', {
+        pdf_file: `[PDF file string of length ${data.pdf_file.length}]`,
+        file_name: data.file_name,
+        description: data.description
+      });
+      
+      const response = await fetch(`${API_URL}/api/lastschriftmandat/update`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data)
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Lastschriftmandat update API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error updating Lastschriftmandat:', error);
+      throw error;
+    }
+  }
+};
+
 interface ContractStepProps {
   formData: OnboardingFormData;
   onFormChange: (data: Partial<OnboardingFormData>) => void;
@@ -63,6 +488,64 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     }
   ];
 
+  // Check for existing contract on component mount
+  useEffect(() => {
+    const fetchExistingContracts = async () => {
+      try {
+        // Fetch main contract
+        const contractData = await inlineContractService.getContract();
+        
+        // If we found an existing contract with a signature, use it
+        if (contractData && contractData.signature_image) {
+          console.log('Found existing contract with signature, loading it');
+          
+          // Only update the signature field, not the contract text
+          onFormChange({ signature: contractData.signature_image });
+          
+          // Set accepted terms to true since they already signed
+          onFormChange({ hasAcceptedTerms: true });
+          setHasScrolledToBottom(true);
+        } else {
+          console.log('No existing main contract found or no signature present');
+        }
+        
+        // Fetch data processing contract (Auftragsverarbeitung)
+        const dataProcessingContract = await inlineContractService.getDataProcessingContract();
+        
+        // If we found an existing data processing contract with a signature, use it
+        if (dataProcessingContract && dataProcessingContract.signature_image) {
+          console.log('Found existing data processing contract with signature, loading it');
+          
+          // Update the data processing signature field
+          onFormChange({ dataProcessingSignature: dataProcessingContract.signature_image });
+        } else {
+          console.log('No existing data processing contract found or no signature present');
+        }
+        
+        // Fetch SEPA-Lastschriftmandat
+        const lastschriftmandat = await inlineContractService.getLastschriftmandat();
+        
+        // If we found an existing SEPA-Lastschriftmandat, update the UI
+        if (lastschriftmandat && lastschriftmandat.file_name) {
+          console.log('Found existing Lastschriftmandat, loading it');
+          
+          // Create a dummy File object for the UI
+          setUploadedFileName(lastschriftmandat.file_name);
+          
+          // Store the direct debit signature (which could be the PDF file or ID reference)
+          onFormChange({ directDebitSignature: 'existing-file' });
+        } else {
+          console.log('No existing Lastschriftmandat found');
+        }
+      } catch (error) {
+        console.error('Error loading existing contracts:', error);
+        // Don't show error to user, just log it
+      }
+    };
+    
+    fetchExistingContracts();
+  }, []);
+
   // Lade die gespeicherte Mandatsreferenz beim Initialisieren
   useEffect(() => {
     const savedReference = localStorage.getItem('mandateReference');
@@ -81,6 +564,30 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
         canvas._canvas.width = containerRef.current.offsetWidth * ratio;
         canvas._canvas.height = 200 * ratio;
         canvas._canvas.getContext("2d").scale(ratio, ratio);
+        
+        // If there's an existing signature in formData, render it in the canvas
+        const signatureField = contractSteps[currentStep].signatureField;
+        const signatureValue = 
+          signatureField === 'signature' ? formData.signature :
+          signatureField === 'dataProcessingSignature' ? formData.dataProcessingSignature :
+          signatureField === 'directDebitSignature' ? formData.directDebitSignature :
+          null;
+          
+        if (signatureValue) {
+          // Small delay to ensure canvas is ready
+          setTimeout(() => {
+            if (signatureRef.current && signatureValue) {
+              const img = new Image();
+              img.onload = () => {
+                // Additional null check to make TypeScript happy
+                if (signatureRef.current && signatureValue) {
+                  signatureRef.current.fromDataURL(signatureValue);
+                }
+              };
+              img.src = signatureValue;
+            }
+          }, 200);
+        }
       }
     };
 
@@ -89,7 +596,37 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     setTimeout(resizeCanvas, 100);
 
     return () => window.removeEventListener("resize", resizeCanvas);
-  }, [currentStep]);
+  }, [currentStep, formData]);
+
+  // When changing steps, render the signature if available
+  useEffect(() => {
+    if (signatureRef.current) {
+      const signatureField = contractSteps[currentStep].signatureField;
+      let signatureValue: string | null = null;
+      
+      if (signatureField === 'signature') {
+        signatureValue = formData.signature;
+      } else if (signatureField === 'dataProcessingSignature') {
+        signatureValue = formData.dataProcessingSignature;
+      } else if (signatureField === 'directDebitSignature') {
+        signatureValue = formData.directDebitSignature;
+      }
+      
+      if (signatureValue) {
+        // Display existing signature from formData
+        const img = new Image();
+        img.onload = () => {
+          if (signatureRef.current && signatureValue) {
+            signatureRef.current.fromDataURL(signatureValue);
+          }
+        };
+        img.src = signatureValue;
+      } else {
+        // Clear the canvas if no signature exists
+        signatureRef.current.clear();
+      }
+    }
+  }, [currentStep, formData]);
 
   // Überwache den Scroll-Status des Vertragstextes
   const handleScroll = () => {
@@ -122,7 +659,92 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     }
   };
 
-  const saveSignature = () => {
+  // Helper function to get the complete contract text
+  const getFullContractText = () => {
+    // Get the complete contract text based on the current step
+    if (currentStep === 0) {
+      return `Vertrag über die Bereitstellung des Add-ons "AI-Assistant" für den TimeGlobe-Kalender
+
+zwischen
+
+EcomTask UG
+Rauenthaler Str. 12
+65197 Wiesbaden
+Deutschland
+(im Folgenden "EcomTask")
+
+und
+
+${formData.companyName || '[Unternehmensname]'}
+${formData.street || '[Straße]'}
+${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
+${formData.country || '[Land]'}
+(im Folgenden "Kunde")
+
+(EcomTask und Kunde einzeln jeweils auch "Partei" und gemeinsam "Parteien")
+
+1. Vertragsgegenstand
+Gegenstand des Vertrags ist die entgeltliche und zeitlich auf die Dauer des Vertrags begrenzte Gewährung der Nutzung des Add-ons "AI-Assistent" für den TimeGlobe-Kalender (nachfolgend "Software") im Unternehmen des Kunden über das Internet.
+
+2. Leistungen von EcomTask
+EcomTask gewährt dem Kunden (bzw. dessen Kunden) die Nutzung der jeweils aktuellen Version der Software mittels Zugriff durch WhatsApp.
+
+3. Nutzungsumfang und -rechte
+Der Kunde erhält an der jeweils aktuellen Version der Software einfache, d. h. nicht unterlizenzierbare und nicht übertragbare, zeitlich auf die Dauer des Vertrags beschränkte Rechte zur Nutzung.
+
+4. Vergütung
+Die monatliche Vergütung beträgt EUR ____.
+
+5. Vertragslaufzeit
+Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.`;
+    } else if (currentStep === 1) {
+      return `Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO
+
+zwischen
+
+${formData.companyName || '[Unternehmensname]'}
+${formData.street || '[Straße]'}
+${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
+${formData.country || '[Land]'}
+(im Folgenden "Verantwortlicher")
+
+und
+
+EcomTask UG
+Rauenthaler Str. 12
+65197 Wiesbaden
+Deutschland
+(im Folgenden "Auftragsverarbeiter")
+
+1. Gegenstand und Dauer der Verarbeitung
+Der Auftragsverarbeiter verarbeitet personenbezogene Daten im Auftrag des Verantwortlichen im Zusammenhang mit der Bereitstellung des WhatsApp-Chatbots für die Terminplanung. Die Verarbeitung beginnt mit Aktivierung des Dienstes und endet mit Beendigung des Hauptvertrags.
+
+2. Art und Zweck der Verarbeitung
+Die Verarbeitung umfasst die Daten von Kunden, die über den WhatsApp-Chatbot Termine buchen. Zweck ist die Terminvergabe und -verwaltung.
+
+3. Kategorien betroffener Personen
+Betroffen sind Kunden des Verantwortlichen, die den WhatsApp-Chatbot zur Terminvereinbarung nutzen.
+
+4. Arten der personenbezogenen Daten
+Verarbeitet werden Kontaktdaten (Name, Telefonnummer), Termindetails und Kommunikationsverlauf.
+
+5. Pflichten des Auftragsverarbeiters
+Der Auftragsverarbeiter verarbeitet personenbezogene Daten ausschließlich im Rahmen der vertraglichen Vereinbarungen und nach Weisung des Verantwortlichen. Er gewährleistet angemessene technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO.`;
+    } else if (currentStep === 2) {
+      return `SEPA-Lastschriftmandat für ${formData.companyName || '[Unternehmensname]'}
+Mandatsreferenz: ${mandateReference}
+
+Ich ermächtige EcomTask UG, Zahlungen von meinem Konto mittels Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von EcomTask UG auf mein Konto gezogenen Lastschriften einzulösen.
+
+Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen.`;
+    }
+    
+    // Fallback text if no specific text is available
+    return `Vertrag zwischen EcomTask UG und ${formData.companyName || '[Unternehmensname]'}`;
+  };
+
+  // Update save signature function
+  const saveSignature = async () => {
     if (signatureRef.current) {
       if (signatureRef.current.isEmpty()) {
         setError('Bitte unterzeichnen Sie das Dokument');
@@ -134,6 +756,50 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
       // Speichere die Signatur im entsprechenden Feld basierend auf dem aktuellen Schritt
       const signatureField = contractSteps[currentStep].signatureField;
       onFormChange({ [signatureField]: signatureData });
+      
+      console.log(`Signature saved for step ${currentStep}, field: ${signatureField}`);
+      
+      // If this is the main contract signature, immediately send it to the API
+      if (currentStep === 0 && signatureField === "signature") {
+        try {
+          console.log("Sending main contract to API immediately after signature save");
+          
+          // Get full contract text
+          const fullContractText = getFullContractText();
+          
+          // Send to API
+          await inlineContractService.createContract({
+            contract_text: fullContractText,
+            signature_image: signatureData
+          });
+          
+          console.log("Contract successfully sent to API from save signature function");
+        } catch (error) {
+          console.error("Error sending contract from save signature function:", error);
+          // Don't show error to user here, just log it
+        }
+      }
+      // If this is the data processing contract signature, immediately send it to the API
+      else if (currentStep === 1 && signatureField === "dataProcessingSignature") {
+        try {
+          console.log("Sending data processing contract to API immediately after signature save");
+          
+          // Get full contract text
+          const fullContractText = getFullContractText();
+          
+          // Send to API
+          await inlineContractService.createDataProcessingContract({
+            contract_text: fullContractText,
+            signature_image: signatureData
+          });
+          
+          console.log("Data processing contract successfully sent to API from save signature function");
+        } catch (error) {
+          console.error("Error sending data processing contract from save signature function:", error);
+          // Don't show error to user here, just log it
+        }
+      }
+      
       setError(null);
     }
   };
@@ -150,7 +816,7 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     // Validiere den aktuellen Schritt
     if (currentStep === 0 && !formData.signature) {
       setError('Bitte unterzeichnen Sie den Hauptvertrag');
@@ -158,7 +824,17 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     } else if (currentStep === 1 && !formData.dataProcessingSignature) {
       setError('Bitte unterzeichnen Sie die Auftragsverarbeitung');
       return;
+    } else if (currentStep === 2 && !formData.directDebitSignature && !uploadedFileName) {
+      setError('Bitte laden Sie ein unterschriebenes SEPA-Lastschriftmandat hoch');
+      return;
     }
+    
+    console.log('handleNextStep called, currentStep:', currentStep);
+    console.log('Signature status:', {
+      mainSignature: !!formData.signature,
+      dataProcessingSignature: !!formData.dataProcessingSignature,
+      directDebitSignature: !!formData.directDebitSignature
+    });
     
     if (currentStep < 2) {
       // Gehe zum nächsten Unterschrittsschritt
@@ -166,7 +842,8 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
       setHasScrolledToBottom(false);
       setError(null);
     } else {
-      // Alle drei Unterschriften sind abgeschlossen, gehe zum nächsten Hauptschritt
+      // If we're on the last step, just proceed to the next main step without API calls
+      console.log('Moving to next main step without API calls');
       onNext();
     }
   };
@@ -186,8 +863,10 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Submit button clicked in ContractStep, currentStep:', currentStep);
+    
     // Überprüfe, ob alle erforderlichen Unterschriften vorhanden sind
-    if (!formData.hasAcceptedTerms) {
+    if (currentStep === 0 && !formData.hasAcceptedTerms) {
       setError('Bitte akzeptieren Sie die Vertragsbedingungen');
       return;
     }
@@ -198,13 +877,23 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     } else if (currentStep === 1 && !formData.dataProcessingSignature) {
       setError('Bitte unterzeichnen Sie die Auftragsverarbeitung');
       return;
-    } else if (currentStep === 2 && !formData.directDebitSignature) {
-      setError('Bitte unterzeichnen Sie das Lastschriftmandat');
+    } else if (currentStep === 2 && !formData.directDebitSignature && !uploadedFileName) {
+      setError('Bitte laden Sie ein unterschriebenes SEPA-Lastschriftmandat hoch');
       return;
     }
     
+    console.log('All validations passed, proceeding to next step');
+    
     // Navigiere je nach aktuellem Schritt weiter
     handleNextStep();
+  };
+
+  const triggerFileInput = (isUpdate = false) => {
+    // Store the update status in a data attribute
+    if (fileInputRef.current) {
+      fileInputRef.current.dataset.isUpdate = isUpdate ? 'true' : 'false';
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,11 +918,45 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
       
       // Speichere die Datei als Base64-String
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
-        // Speichere den Base64-String im formData
-        onFormChange({ directDebitSignature: result });
-        setError(null);
+        
+        // Check if this is an update or a new upload
+        const isUpdate = fileInputRef.current?.dataset.isUpdate === 'true';
+        
+        try {
+          setError(null); // Clear previous errors
+          
+          // Prepare request data
+          const requestData = {
+            pdf_file: result,
+            file_name: file.name,
+            description: `SEPA-Lastschriftmandat für ${formData.companyName || 'Kunde'}`
+          };
+          
+          let response;
+          
+          if (isUpdate) {
+            // Use update endpoint for existing files
+            console.log('Updating existing Lastschriftmandat');
+            response = await inlineContractService.updateLastschriftmandat(requestData);
+          } else {
+            // Use upload endpoint for new files
+            console.log('Uploading new Lastschriftmandat');
+            response = await inlineContractService.uploadLastschriftmandat(requestData);
+          }
+          
+          console.log('Successfully processed Lastschriftmandat:', response);
+          
+          // Set a marker in formData to indicate a file has been uploaded
+          onFormChange({ directDebitSignature: 'file-uploaded' });
+          
+          // Update UI to show success
+          setError(null);
+        } catch (error) {
+          console.error(`Error ${isUpdate ? 'updating' : 'uploading'} Lastschriftmandat:`, error);
+          setError(`Fehler beim ${isUpdate ? 'Aktualisieren' : 'Hochladen'} des Lastschriftmandats. Bitte versuchen Sie es erneut.`);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -244,6 +967,114 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     setIsLoading(true);
     
     try {
+      // First try to download from API
+      try {
+        // Make direct fetch call to the download endpoint
+        const token = localStorage.getItem('token');
+        
+        const headers: Record<string, string> = {
+          'Accept': '*/*'  // Accept any content type
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
+          method: 'GET',
+          headers
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        console.log('Response headers:', response.headers);
+        
+        // Check if response is JSON or binary (PDF)
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          // Process JSON response
+          const result = await response.json();
+          
+          // Handle base64 PDF from API response
+          if (result && (result.pdf_file || typeof result === 'string')) {
+            const base64Data = result.pdf_file || result;
+            // Remove the data URL prefix if present
+            const base64Content = base64Data.includes('base64,') 
+              ? base64Data.split('base64,')[1] 
+              : base64Data;
+              
+            const binaryString = atob(base64Content);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Create a blob with the PDF data
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            
+            // Trigger the download
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', result.file_name || `SEPA-Lastschriftmandat_${mandateReference}.pdf`);
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup
+            setTimeout(() => {
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }, 200);
+            
+            console.log('Downloaded Lastschriftmandat from API (JSON)');
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          // Direct binary response (PDF file)
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          
+          // Get filename from Content-Disposition header or use default
+          let filename = `SEPA-Lastschriftmandat_${mandateReference}.pdf`;
+          const disposition = response.headers.get('content-disposition');
+          if (disposition && disposition.includes('filename=')) {
+            const filenameMatch = disposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+              filename = filenameMatch[1];
+            }
+          }
+          
+          // Trigger the download
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', filename);
+          document.body.appendChild(link);
+          link.click();
+          
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 200);
+          
+          console.log('Downloaded Lastschriftmandat from API (Binary)');
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+      } catch (apiError) {
+        console.error('Could not download from API, falling back to legacy method:', apiError);
+        // Continue to legacy method if API download fails
+      }
+      
+      // Legacy method - use the older API endpoint
       // Erhöhe die Mandatsreferenz um 1
       const currentRefNumber = parseInt(mandateReference, 10);
       const nextRefNumber = currentRefNumber + 1;
@@ -325,20 +1156,23 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
     }
   };
 
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   // Bestimme, ob der aktuelle Schritt eine gültige Signatur hat
   const hasCurrentSignature = () => {
     switch (currentStep) {
       case 0: return !!formData.signature;
       case 1: return !!formData.dataProcessingSignature;
-      case 2: return !!formData.directDebitSignature || !!uploadedFile;
+      case 2: return !!formData.directDebitSignature || !!uploadedFileName;
       default: return false;
     }
+  };
+
+  // Update Weiter button click handler to remove API call
+  const handleWeiterClick = async () => {
+    console.log("Weiter button clicked directly");
+    
+    // Just continue with normal form submission without API call
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleSubmit(fakeEvent);
   };
 
   return (
@@ -407,7 +1241,7 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
                 backgroundColor: (
                   (index === 0 && !!formData.signature) || 
                   (index === 1 && !!formData.dataProcessingSignature) || 
-                  (index === 2 && !!formData.directDebitSignature)
+                  (index === 2 && (!!formData.directDebitSignature || !!uploadedFileName))
                 ) ? '#4CAF50' : 'transparent'
               }}
             />
@@ -583,135 +1417,36 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
             </Typography>
           </Paper>
         )}
-
-        {currentStep === 2 && (
-          <Box>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 3 
-            }}>
-              <Typography variant="subtitle1" sx={{ color: '#333333', fontWeight: 'medium' }}>
-                SEPA-Lastschriftmandat
-              </Typography>
-              <Button
-                variant="contained"
-                size="medium"
-                startIcon={<Download />}
-                onClick={handleDownloadSepaMandat}
-                disabled={isLoading}
-                sx={{
-                  borderRadius: 2,
-                  backgroundColor: '#1967D2',
-                  px: 3,
-                  py: 1,
-                  '&:hover': {
-                    backgroundColor: '#1756B0',
-                  }
-                }}
-              >
-                {isLoading ? 'Wird bearbeitet...' : 'Mandat herunterladen'}
-              </Button>
-            </Box>
-            
-            <Box 
-              sx={{ 
-                backgroundColor: 'rgba(25, 103, 210, 0.05)', 
-                p: 2, 
-                borderRadius: 2, 
-                mb: 3,
-                display: 'flex',
-                alignItems: 'flex-start'
-              }}
-            >
-              <InfoOutlined sx={{ color: '#1967D2', mr: 1, mt: 0.5 }} />
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: '#333333', mb: 0.5 }}>
-                  Aktuelle Mandatsreferenznummer: {mandateReference}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#666666' }}>
-                  Diese Nummer wird beim Download automatisch hochgezählt und im heruntergeladenen Dokument angezeigt.
-                  Bitte verwenden Sie diese Nummer als Referenz.
-                </Typography>
-              </Box>
-            </Box>
-            
-            <Typography variant="body2" sx={{ mb: 4, color: '#666666' }}>
-              Bitte laden Sie das SEPA-Lastschriftmandat herunter, füllen Sie es aus, unterschreiben Sie es und laden Sie es anschließend wieder hoch.
-            </Typography>
-            
-            <Box sx={{ mb: 4 }}>
-              <Typography 
-                variant="subtitle2" 
-                sx={{ 
-                  mb: 2, 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  color: '#333333' 
-                }}
-              >
-                <FileUpload sx={{ mr: 1, fontSize: 20, color: '#1967D2' }} />
-                Unterschriebenes SEPA-Mandat hochladen
-              </Typography>
-              
-              <Box 
-                sx={{ 
-                  border: '2px dashed #1967D2',
-                  borderRadius: 2,
-                  backgroundColor: 'rgba(25, 103, 210, 0.05)',
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  mb: 2,
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 103, 210, 0.08)',
-                  }
-                }}
-                onClick={triggerFileInput}
-              >
-                <input
-                  type="file"
-                  accept=".pdf"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
-                
-                {uploadedFile ? (
-                  <>
-                    <Check sx={{ fontSize: 40, color: '#4CAF50', mb: 1 }} />
-                    <Typography variant="body2" sx={{ color: '#333333', fontWeight: 'medium' }}>
-                      {uploadedFileName}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666666', mt: 0.5 }}>
-                      Datei erfolgreich hochgeladen. Klicken, um zu ändern.
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    <CloudUpload sx={{ fontSize: 40, color: '#1967D2', mb: 1 }} />
-                    <Typography variant="body2" sx={{ color: '#333333' }}>
-                      Datei hierher ziehen oder klicken
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666666', mt: 0.5 }}>
-                      Unterstützte Dateiformate: PDF (max. 5 MB)
-                    </Typography>
-                  </>
-                )}
-              </Box>
-            </Box>
-            
-            <Typography variant="body2" sx={{ color: '#666666', mb: 2 }}>
-              <strong>Alternative:</strong> Sie können auch die digitale Unterschrift unten verwenden, um das Dokument direkt zu unterzeichnen.
-            </Typography>
-          </Box>
-        )}
         
+        {currentStep === 2 && (
+          <Paper 
+            ref={contractTextRef}
+            variant="outlined" 
+            sx={{ 
+              p: 3, 
+              mb: 3, 
+              maxHeight: '300px', 
+              overflow: 'auto',
+              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+              borderRadius: 2,
+              borderColor: 'rgba(0, 0, 0, 0.1)'
+            }}
+            onScroll={handleScroll}
+          >
+            <Typography variant="body2" sx={{ color: '#333333' }}>
+              <strong>SEPA-Lastschriftmandat für {formData.companyName || '[Unternehmensname]'}</strong>
+              <br />
+              Mandatsreferenz: {mandateReference}
+              <br /><br />
+              
+              Ich ermächtige EcomTask UG, Zahlungen von meinem Konto mittels Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von EcomTask UG auf mein Konto gezogenen Lastschriften einzulösen.
+              <br /><br />
+              
+              Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen.
+            </Typography>
+          </Paper>
+        )}
+
         {currentStep === 0 && (
           <FormControlLabel
             control={
@@ -751,93 +1486,283 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
           />
         )}
         
-        <Typography variant="subtitle1" gutterBottom sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          mt: 4,
-          color: '#333333',
-        }}>
-          <Edit sx={{ mr: 1, fontSize: 20, opacity: 0.9, color: '#1967D2' }} />
-          Ihre Unterschrift:
-        </Typography>
+        {/* Only show signature area for Hauptvertrag (0) and Auftragsverarbeitung (1) */}
+        {(currentStep === 0 || currentStep === 1) && (
+          <>
+            <Typography variant="subtitle1" gutterBottom sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              mt: 4,
+              color: '#333333',
+            }}>
+              <Edit sx={{ mr: 1, fontSize: 20, opacity: 0.9, color: '#1967D2' }} />
+              Ihre Unterschrift:
+            </Typography>
+            
+            <Box 
+              ref={containerRef}
+              sx={{ 
+                border: '1px solid rgba(0, 0, 0, 0.2)', 
+                borderRadius: 2, 
+                mb: 2,
+                backgroundColor: '#FFFFFF',
+                position: 'relative',
+                overflow: 'hidden',
+                height: '200px',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '5px',
+                  backgroundColor: '#1967D2',
+                  opacity: 0.5
+                }
+              }}
+            >
+              <SignatureCanvas 
+                ref={signatureRef}
+                canvasProps={{ 
+                  className: 'signature-canvas',
+                  style: { 
+                    width: '100%', 
+                    height: '100%', 
+                    cursor: 'crosshair'
+                  }
+                }}
+                backgroundColor="rgba(0, 0, 0, 0)"
+                penColor="#000000"
+                velocityFilterWeight={0}
+                dotSize={0.5}
+                minWidth={0.5}
+                maxWidth={1.5}
+                throttle={0}
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', mb: 1 }}>
+              <Button 
+                onClick={clearSignature} 
+                variant="outlined"
+                startIcon={<Delete />}
+                sx={{ 
+                  mr: 2,
+                  borderRadius: 2,
+                  borderColor: 'rgba(0, 0, 0, 0.2)',
+                  color: '#666666',
+                  '&:hover': {
+                    borderColor: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)'
+                  }
+                }}
+              >
+                Löschen
+              </Button>
+              <Button 
+                onClick={saveSignature} 
+                variant="contained"
+                startIcon={<Check />}
+                sx={{ 
+                  borderRadius: 2,
+                  backgroundColor: '#1967D2', 
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#1756B0',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }
+                }}
+              >
+                Speichern und senden
+              </Button>
+            </Box>
+          </>
+        )}
         
-        <Box 
-          ref={containerRef}
-          sx={{ 
-            border: '1px solid rgba(0, 0, 0, 0.2)', 
-            borderRadius: 2, 
-            mb: 2,
-            backgroundColor: '#FFFFFF',
-            position: 'relative',
-            overflow: 'hidden',
-            height: '200px',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              width: '100%',
-              height: '5px',
-              backgroundColor: '#1967D2',
-              opacity: 0.5
-            }
-          }}
-        >
-          <SignatureCanvas 
-            ref={signatureRef}
-            canvasProps={{ 
-              className: 'signature-canvas',
-              style: { 
+        {/* Show Lastschriftmandat upload and download buttons only for tab 2 */}
+        {currentStep === 2 && (
+          <Box sx={{ mt: 3 }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept="application/pdf"
+              onChange={handleFileUpload}
+            />
+            
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              alignItems: 'flex-start'
+            }}>
+              <Box sx={{ 
                 width: '100%', 
-                height: '100%', 
-                cursor: 'crosshair'
-              }
-            }}
-            backgroundColor="rgba(0, 0, 0, 0)"
-            penColor="#000000"
-            velocityFilterWeight={0}
-            dotSize={0.5}
-            minWidth={0.5}
-            maxWidth={1.5}
-            throttle={0}
-          />
-        </Box>
-        
-        <Box sx={{ display: 'flex', mb: 1 }}>
-          <Button 
-            onClick={clearSignature} 
-            variant="outlined"
-            startIcon={<Delete />}
-            sx={{ 
-              mr: 2,
-              borderRadius: 2,
-              borderColor: 'rgba(0, 0, 0, 0.2)',
-              color: '#666666',
-              '&:hover': {
-                borderColor: '#f44336',
-                backgroundColor: 'rgba(244, 67, 54, 0.08)'
-              }
-            }}
-          >
-            Löschen
-          </Button>
-          <Button 
-            onClick={saveSignature} 
-            variant="outlined"
-            startIcon={<Check />}
-            sx={{ 
-              borderRadius: 2,
-              borderColor: 'rgba(0, 0, 0, 0.2)',
-              color: '#666666',
-              '&:hover': {
-                borderColor: '#1967D2',
-                backgroundColor: 'rgba(25, 103, 210, 0.08)'
-              }
-            }}
-          >
-            Speichern
-          </Button>
-        </Box>
+                display: 'flex', 
+                gap: 2, 
+                alignItems: 'center' 
+              }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={handleDownloadSepaMandat}
+                  disabled={isLoading}
+                  sx={{ 
+                    borderRadius: 2,
+                    backgroundColor: '#1967D2',
+                    color: 'white',
+                    px: 3,
+                    py: 1.2,
+                    '&:hover': {
+                      backgroundColor: '#1756B0',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                    }
+                  }}
+                >
+                  {isLoading ? 'Wird geladen...' : 'SEPA-Lastschriftmandat herunterladen'}
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<Upload />}
+                  onClick={() => triggerFileInput(true)}
+                  sx={{ 
+                    borderRadius: 2,
+                    borderColor: '#1967D2',
+                    color: '#1967D2',
+                    px: 3,
+                    py: 1.2,
+                    '&:hover': {
+                      borderColor: '#1967D2',
+                      backgroundColor: 'rgba(25, 103, 210, 0.05)'
+                    }
+                  }}
+                >
+                  Unterschriebenes Mandat hochladen
+                </Button>
+              </Box>
+              
+              {uploadedFileName && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  backgroundColor: 'rgba(25, 103, 210, 0.1)',
+                  borderRadius: 2,
+                  p: 1.5,
+                  width: '100%',
+                  my: 1
+                }}>
+                  <Description sx={{ color: '#1967D2', mr: 1 }} />
+                  <Typography variant="body2" sx={{ color: '#333333', flexGrow: 1 }}>
+                    {uploadedFileName}
+                  </Typography>
+                  <Button
+                    size="small"
+                    sx={{ ml: 1, color: '#1967D2', minWidth: 0 }}
+                    onClick={async () => {
+                      try {
+                        // Make direct fetch call to the download endpoint
+                        const token = localStorage.getItem('token');
+                        
+                        const headers: Record<string, string> = {
+                          'Accept': '*/*'  // Accept any content type
+                        };
+                        
+                        if (token) {
+                          headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        
+                        const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
+                          method: 'GET',
+                          headers
+                        });
+                        
+                        if (!response.ok) {
+                          throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        
+                        console.log('Response headers:', response.headers);
+                        
+                        // Check if response is JSON or binary (PDF)
+                        const contentType = response.headers.get('content-type');
+                        
+                        if (contentType && contentType.includes('application/json')) {
+                          // Process JSON response
+                          const result = await response.json();
+                          
+                          // Handle base64 PDF from API response
+                          if (result && (result.pdf_file || typeof result === 'string')) {
+                            const base64Data = result.pdf_file || result;
+                            // Remove the data URL prefix if present
+                            const base64Content = base64Data.includes('base64,') 
+                              ? base64Data.split('base64,')[1] 
+                              : base64Data;
+                              
+                            const binaryString = atob(base64Content);
+                            const len = binaryString.length;
+                            const bytes = new Uint8Array(len);
+                            for (let i = 0; i < len; i++) {
+                              bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            
+                            // Create a blob with the PDF data
+                            const blob = new Blob([bytes], { type: 'application/pdf' });
+                            const url = URL.createObjectURL(blob);
+                            
+                            // Open PDF in new tab instead of downloading
+                            window.open(url, '_blank');
+                            
+                            // Cleanup URL after a delay
+                            setTimeout(() => {
+                              URL.revokeObjectURL(url);
+                            }, 1000);
+                            
+                            console.log('Viewed Lastschriftmandat from API (JSON)');
+                            setError(null);
+                          } else {
+                            throw new Error('Invalid response format');
+                          }
+                        } else {
+                          // Direct binary response (PDF file)
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          
+                          // Open PDF in new tab
+                          window.open(url, '_blank');
+                          
+                          // Cleanup URL after a delay
+                          setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                          }, 1000);
+                          
+                          console.log('Viewed Lastschriftmandat from API (Binary)');
+                          setError(null);
+                        }
+                      } catch (error) {
+                        console.error('Error viewing file:', error);
+                        setError('Fehler beim Herunterladen der Datei.');
+                      }
+                    }}
+                  >
+                    Anzeigen
+                  </Button>
+                  <Button
+                    size="small"
+                    sx={{ ml: 1, color: '#1967D2', minWidth: 0 }}
+                    onClick={() => triggerFileInput(true)}
+                  >
+                    Aktualisieren
+                  </Button>
+                </Box>
+              )}
+              
+              <Typography variant="body2" sx={{ color: '#666666', display: 'flex', alignItems: 'center' }}>
+                <InfoOutlined sx={{ fontSize: '1rem', mr: 0.5, color: '#999999' }} />
+                Bitte unterschreiben Sie das Dokument und laden Sie es wieder hoch
+              </Typography>
+            </Box>
+          </Box>
+        )}
       </Paper>
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
@@ -860,13 +1785,13 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
           {currentStep === 0 ? 'Zurück' : 'Vorherige'}
         </Button>
         <Button
-          type="submit"
+          onClick={handleWeiterClick}
           variant="contained"
           color="primary"
           disabled={
             (currentStep === 0 && (!formData.hasAcceptedTerms || !formData.signature)) || 
             (currentStep === 1 && !formData.dataProcessingSignature) ||
-            (currentStep === 2 && !formData.directDebitSignature)
+            (currentStep === 2 && !formData.directDebitSignature && !uploadedFileName)
           }
           endIcon={<ArrowForward />}
           sx={{ 

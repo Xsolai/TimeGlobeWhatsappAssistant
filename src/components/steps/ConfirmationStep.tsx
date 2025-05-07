@@ -12,6 +12,69 @@ import Phone from '@mui/icons-material/Phone';
 import CheckCircle from '@mui/icons-material/CheckCircle';
 import WhatsApp from '@mui/icons-material/WhatsApp';
 
+// Inline contract service if import fails
+const API_URL = 'https://timeglobe-server.ecomtask.de';
+
+const inlineContractService = {
+  createContract: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/contract/create`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/contract/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating contract:', error);
+      throw error;
+    }
+  }
+};
+
 interface ConfirmationStepProps {
   formData: OnboardingFormData;
   onBack: () => void;
@@ -59,6 +122,75 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
     // Add event listener for messages
     window.addEventListener('message', handleMessage);
     
+    // Expose test function to global window object for manual testing
+    (window as any).testContractAPI = async () => {
+      try {
+        console.log('Testing contract API manually...');
+        
+        // Create sample contract text
+        const sampleContractText = `Vertrag über die Bereitstellung des Add-ons "AI-Assistant" für den TimeGlobe-Kalender
+
+zwischen
+
+EcomTask UG
+Rauenthaler Str. 12
+65197 Wiesbaden
+Deutschland
+(im Folgenden "EcomTask")
+
+und
+
+TestXSOL
+Teststraße 123
+12345 Teststadt
+Deutschland
+(im Folgenden "Kunde")
+
+(EcomTask und Kunde einzeln jeweils auch "Partei" und gemeinsam "Parteien")
+
+1. Vertragsgegenstand
+Gegenstand des Vertrags ist die entgeltliche und zeitlich auf die Dauer des Vertrags begrenzte Gewährung der Nutzung des Add-ons "AI-Assistent" für den TimeGlobe-Kalender (nachfolgend "Software") im Unternehmen des Kunden über das Internet.
+
+2. Leistungen von EcomTask
+EcomTask gewährt dem Kunden (bzw. dessen Kunden) die Nutzung der jeweils aktuellen Version der Software mittels Zugriff durch WhatsApp.
+
+3. Nutzungsumfang und -rechte
+Der Kunde erhält an der jeweils aktuellen Version der Software einfache, d. h. nicht unterlizenzierbare und nicht übertragbare, zeitlich auf die Dauer des Vertrags beschränkte Rechte zur Nutzung.
+
+4. Vergütung
+Die monatliche Vergütung beträgt EUR ____.
+
+5. Vertragslaufzeit
+Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.`;
+
+        const testData = {
+          contract_text: sampleContractText,
+          signature_image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA" // Sample base64 data
+        };
+        
+        console.log('Full contract text being sent in test:', sampleContractText);
+        
+        const response = await fetch(`${API_URL}/api/contract/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+        
+        console.log('Test API Response:', response.status, response.statusText);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+        } else {
+          const result = await response.json();
+          console.log('Success response:', result);
+        }
+      } catch (error) {
+        console.error('Test API error:', error);
+      }
+    };
+    
+    console.log('Test function available. Call window.testContractAPI() in console to test API directly');
+    
     // Clean up the event listener when component unmounts
     return () => {
       window.removeEventListener('message', handleMessage);
@@ -66,61 +198,142 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
       if (popupCheckIntervalRef.current) {
         clearInterval(popupCheckIntervalRef.current);
       }
+      // Remove test function
+      delete (window as any).testContractAPI;
     };
   }, []);
 
+  // Helper function to get the complete contract text
+  const getFullContractText = () => {
+    return `Vertrag über die Bereitstellung des Add-ons "AI-Assistant" für den TimeGlobe-Kalender
+
+zwischen
+
+EcomTask UG
+Rauenthaler Str. 12
+65197 Wiesbaden
+Deutschland
+(im Folgenden "EcomTask")
+
+und
+
+${formData.companyName || '[Unternehmensname]'}
+${formData.street || '[Straße]'}
+${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
+${formData.country || '[Land]'}
+(im Folgenden "Kunde")
+
+(EcomTask und Kunde einzeln jeweils auch "Partei" und gemeinsam "Parteien")
+
+1. Vertragsgegenstand
+Gegenstand des Vertrags ist die entgeltliche und zeitlich auf die Dauer des Vertrags begrenzte Gewährung der Nutzung des Add-ons "AI-Assistent" für den TimeGlobe-Kalender (nachfolgend "Software") im Unternehmen des Kunden über das Internet.
+
+2. Leistungen von EcomTask
+EcomTask gewährt dem Kunden (bzw. dessen Kunden) die Nutzung der jeweils aktuellen Version der Software mittels Zugriff durch WhatsApp.
+
+3. Nutzungsumfang und -rechte
+Der Kunde erhält an der jeweils aktuellen Version der Software einfache, d. h. nicht unterlizenzierbare und nicht übertragbare, zeitlich auf die Dauer des Vertrags beschränkte Rechte zur Nutzung.
+
+4. Vergütung
+Die monatliche Vergütung beträgt EUR ____.
+
+5. Vertragslaufzeit
+Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.`;
+  };
+
   // Handle popup window for WhatsApp connection
-  const handleWhatsAppConnect = () => {
+  const handleWhatsAppConnect = async () => {
+    console.log('WhatsApp connect button clicked');
+    console.log('Form data:', {
+      ...formData,
+      signature: formData.signature ? `[Signature data length: ${formData.signature.length}]` : null
+    });
+    
     setConnectionStatus('connecting');
     
-    // Open the 360dialog onboarding URL in a new tab or popup window
-    const popupWindow = window.open(onboarding_url, 'WhatsAppConnection', 
-      'width=1000,height=800,left=100,top=100');
-    
-    // Check if popup was blocked
-    if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
-      alert('Popup wurde blockiert. Bitte erlauben Sie Popups für diese Website.');
-      setConnectionStatus('idle');
-      return;
-    }
-
-    // Store the popup reference
-    popupWindowRef.current = popupWindow;
-    
-    // Set up an interval to check if the popup window was closed
-    popupCheckIntervalRef.current = setInterval(() => {
-      if (popupWindow.closed) {
-        // If popup closed, consider it a successful connection
-        clearInterval(popupCheckIntervalRef.current!);
-        setConnectionStatus('success');
-        setOpenSuccessDialog(true);
+    try {
+      // First submit the contract with signature
+      if (formData.signature) {
+        // Get full contract text
+        const fullContractText = getFullContractText();
+        
+        console.log('Sending contract to backend API:', {
+          contract_text_length: fullContractText.length,
+          signature_length: formData.signature.length
+        });
+        
+        // Check token before making the API call
+        const token = localStorage.getItem('token');
+        console.log('Auth token available:', !!token);
+        
+        // Submit the contract to the backend
+        try {
+          await inlineContractService.createContract({
+            contract_text: fullContractText,
+            signature_image: formData.signature
+          });
+          
+          console.log('Contract successfully sent to backend');
+        } catch (contractError) {
+          console.error('Error sending contract:', contractError);
+          // Continue with WhatsApp connection even if contract submission fails
+        }
+      } else {
+        console.log('No signature found, skipping contract submission');
       }
-    }, 1000);
-    
-    // Alternative method: Check for redirect in the current tab
-    // This assumes the redirect happens in the same tab
-    // and you can detect it by checking URL parameters
-    const checkRedirectInterval = setInterval(() => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const status = urlParams.get('whatsapp_status');
       
-      if (status === 'success') {
-        clearInterval(checkRedirectInterval);
-        setConnectionStatus('success');
-        setOpenSuccessDialog(true);
-      } else if (status === 'error') {
-        clearInterval(checkRedirectInterval);
-        setConnectionStatus('error');
+      // Open the 360dialog onboarding URL in a new tab or popup window
+      const popupWindow = window.open(onboarding_url, 'WhatsAppConnection', 
+        'width=1000,height=800,left=100,top=100');
+      
+      // Check if popup was blocked
+      if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
+        alert('Popup wurde blockiert. Bitte erlauben Sie Popups für diese Website.');
+        setConnectionStatus('idle');
+        return;
       }
-    }, 1000);
-    
-    // Clear interval after 5 minutes (300000 ms) to prevent memory leaks
-    setTimeout(() => {
-      clearInterval(checkRedirectInterval);
-      if (popupCheckIntervalRef.current) {
-        clearInterval(popupCheckIntervalRef.current);
-      }
-    }, 300000);
+
+      // Store the popup reference
+      popupWindowRef.current = popupWindow;
+      
+      // Set up an interval to check if the popup window was closed
+      popupCheckIntervalRef.current = setInterval(() => {
+        if (popupWindow.closed) {
+          // If popup closed, consider it a successful connection
+          clearInterval(popupCheckIntervalRef.current!);
+          setConnectionStatus('success');
+          setOpenSuccessDialog(true);
+        }
+      }, 1000);
+      
+      // Alternative method: Check for redirect in the current tab
+      // This assumes the redirect happens in the same tab
+      // and you can detect it by checking URL parameters
+      const checkRedirectInterval = setInterval(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const status = urlParams.get('whatsapp_status');
+        
+        if (status === 'success') {
+          clearInterval(checkRedirectInterval);
+          setConnectionStatus('success');
+          setOpenSuccessDialog(true);
+        } else if (status === 'error') {
+          clearInterval(checkRedirectInterval);
+          setConnectionStatus('error');
+        }
+      }, 1000);
+      
+      // Clear interval after 5 minutes (300000 ms) to prevent memory leaks
+      setTimeout(() => {
+        clearInterval(checkRedirectInterval);
+        if (popupCheckIntervalRef.current) {
+          clearInterval(popupCheckIntervalRef.current);
+        }
+      }, 300000);
+    } catch (error) {
+      console.error('Error connecting WhatsApp:', error);
+      setConnectionStatus('error');
+    }
   };
   
   // Handle closing the success dialog
