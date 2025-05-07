@@ -7,6 +7,9 @@ from .booking_detail import BookingDetail
 from .booked_appointment import BookModel
 from .customer_model import CustomerModel
 from .conversation_model import ConversationHistory
+from .main_contract import MainContract
+from .auftragsverarbeitung_contract import AuftragsverarbeitungContract
+from .lastschriftmandat import Lastschriftmandat
 
 
 # This file imports all models to ensure they are registered with SQLAlchemy
@@ -19,5 +22,8 @@ __all__ = [
     'BookingDetail',
     'BookModel',
     'CustomerModel',
-    'ConversationHistory'
+    'ConversationHistory',
+    'MainContract',
+    'AuftragsverarbeitungContract',
+    'Lastschriftmandat'
 ] 

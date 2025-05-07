@@ -45,3 +45,6 @@ class Business(Base):
 
     subscriptions = relationship("BusinessSubscription", back_populates="business")
     customers = relationship("CustomerModel", back_populates="business")
+    main_contract = relationship("MainContract", back_populates="business", uselist=False)
+    auftragsverarbeitung_contract = relationship("AuftragsverarbeitungContract", back_populates="business", uselist=False)
+    lastschriftmandat = relationship("Lastschriftmandat", back_populates="business", uselist=False)

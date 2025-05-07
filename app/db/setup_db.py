@@ -13,7 +13,11 @@ from ..models.all_models import (
     SubscriptionPlan,
     BookingDetail,
     BookModel,
-    CustomerModel
+    CustomerModel,
+    ConversationHistory,
+    MainContract,
+    AuftragsverarbeitungContract,
+    Lastschriftmandat
 )
 import logging
 
