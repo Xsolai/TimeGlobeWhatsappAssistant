@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "WhatsApp Termin AI",
+  "name": "WhatsApp Termin AI - Terminplanung über WhatsApp",
   "icons": [
     {
       "src": "favicon.ico",

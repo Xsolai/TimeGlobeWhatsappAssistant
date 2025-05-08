@@ -1,6 +1,6 @@
-# TimeGlobe WhatsApp Chatbot Self-Onboarding Frontend
+# WhatsApp Termin AI Self-Onboarding Frontend
 
-Dieses Projekt ist eine Frontend-Anwendung für das Self-Onboarding von Kunden für den TimeGlobe WhatsApp Chatbot.
+Dieses Projekt ist eine Frontend-Anwendung für das Self-Onboarding von Kunden für WhatsApp Termin AI.
 
 ## Features
 
@@ -25,7 +25,7 @@ git clone <repository-url>
 
 2. In das Projektverzeichnis wechseln:
 ```
-cd selfonboarding-timeglobe
+cd whatsapp-termin-ai
 ```
 
 3. Abhängigkeiten installieren:
@@ -40,7 +40,7 @@ npm start
 
 Die Anwendung wird dann unter [http://localhost:3000](http://localhost:3000) geöffnet.
 
-> **Wichtig:** Stellen Sie sicher, dass Sie die Befehle im Verzeichnis `selfonboarding-timeglobe` ausführen und nicht im übergeordneten Verzeichnis `Frontend_TimeGlobe`.
+> **Wichtig:** Stellen Sie sicher, dass Sie die Befehle im Verzeichnis `whatsapp-termin-ai` ausführen.
 
 ## Projektstruktur
 
@@ -100,6 +100,6 @@ const theme = createTheme({
 });
 ```
 
-## Entwickelt für TimeGlobe
+## Entwickelt für WhatsApp Termin AI
 
-Diese Anwendung wurde für TimeGlobe entwickelt, um den Onboarding-Prozess für WhatsApp Chatbot-Kunden zu vereinfachen.
+Diese Anwendung wurde für die WhatsApp Termin AI-Plattform entwickelt, um den Onboarding-Prozess für Kunden zu vereinfachen.
