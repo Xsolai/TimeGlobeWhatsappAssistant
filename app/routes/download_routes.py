@@ -14,19 +14,8 @@ COUNTER_FILE = Path("app/static/downloads/counter.json")
 def get_next_counter():
     """Get the next counter value and increment it for future use"""
     try:
-        if COUNTER_FILE.exists():
-            with open(COUNTER_FILE, "r") as f:
-                data = json.load(f)
-                counter = data.get("counter", 00000)
-        else:
-            # Initialize with starting value if file doesn't exist
-            counter = 00000
-            
-        # Increment counter for next use
-        with open(COUNTER_FILE, "w") as f:
-            json.dump({"counter": counter + 1}, f)
-            
-        return counter
+        import time
+        return int(time.time())
     except Exception as e:
         # In case of any error, default to a timestamp-based value
         import time
