@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_name: str = "TimeGlobeWhatsappAssistant"
     ENVIRONMENT: str = env.get("ENVIRONMENT", "development")
     DATABASE_URL: str = env.get(
-        "DATABASE_URL", "sqlite:///./timeglobewhatsappassistant.db"
+        "DATABASE_URL", "sqlite:///./timeglobe.db"
     )
 
     # Partner API Settings
