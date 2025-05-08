@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -71,11 +71,26 @@ app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmand
 
 
 @app.post("/webhook")
-async def receive_webhook(request: Request):
+async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         payload = await request.json()
         logging.info(f"Received webhook: {payload}")
 
+        # Add processing to background tasks and return immediately
+        background_tasks.add_task(process_webhook_payload, payload)
+        
+        # Return success immediately to prevent retries
+        return {"status": "success"}
+    
+    except Exception as e:
+        logging.error(f"Error processing webhook: {e}")
+        # Still return success to prevent retries
+        return {"status": "success"}
+
+
+async def process_webhook_payload(payload: dict):
+    """Process the webhook payload in the background."""
+    try:
         event_type = payload.get("event")
         data = payload.get("data", {})
         client_id = data.get("client_id")
@@ -137,8 +152,6 @@ async def receive_webhook(request: Request):
                     logging.error(f"❌ Failed to create/update business record: {str(e)}")
             else:
                 logging.error(f"Missing required client information. Email: {client_email}, Name: {client_name}")
-            
-            return {"status": "success"}
 
         elif event_type == "channel_permission_granted" and status == "ready":
             # Extract client information from the payload
@@ -241,15 +254,9 @@ async def receive_webhook(request: Request):
                     
                 except Exception as e:
                     logging.error(f"❌ Failed to save business information to database: {str(e)}")
-        
-        return {"status": "success"}
-    
     except Exception as e:
-        logging.error(f"Error processing webhook: {e}")
-        raise HTTPException(status_code=400, detail="Invalid webhook payload")
-    
+        logging.error(f"Error processing webhook payload in background: {str(e)}")
 
-    
 def create_api_key(partner_id, channel_id):
     url = f"https://hub.360dialog.io/api/v2/partners/{partner_id}/channels/{channel_id}/api_keys"
     headers = {
