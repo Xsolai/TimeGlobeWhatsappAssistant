@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Avatar, Menu, MenuItem, Typography, IconButton, Divider } from '@mui/material';
 import { AccountCircle, ExitToApp, Business, Dashboard } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { OnboardingFormData } from '../types';
 
-const UserMenu: React.FC = () => {
+interface UserMenuProps {
+  formData?: Partial<OnboardingFormData>;
+}
+
+const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -30,6 +36,16 @@ const UserMenu: React.FC = () => {
 
   // Generate initials from user's business name or email
   const getInitials = () => {
+    // First check formData if in onboarding
+    if (formData?.companyName) {
+      return formData.companyName
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+        .substring(0, 2);
+    }
+    
+    // Then check currentUser from auth context
     if (currentUser?.business_name) {
       // Get first letter of each word in business name
       return currentUser.business_name
@@ -43,6 +59,12 @@ const UserMenu: React.FC = () => {
 
   // Get display name for the menu
   const getDisplayName = () => {
+    // First check formData if in onboarding
+    if (formData?.companyName) {
+      return formData.companyName;
+    }
+    
+    // Then check currentUser from auth context
     return currentUser?.business_name || 'Your Business';
   };
 
@@ -93,7 +115,7 @@ const UserMenu: React.FC = () => {
             {getDisplayName()}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {currentUser?.email}
+            {formData?.email || currentUser?.email}
           </Typography>
         </Box>
         <Divider />

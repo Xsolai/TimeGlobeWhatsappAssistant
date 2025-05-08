@@ -49,7 +49,7 @@ const formatCurrency = (amount: number) => {
 };
 
 const DashboardPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   
@@ -169,7 +169,10 @@ const DashboardPage: React.FC = () => {
           <Box sx={{ transform: 'scale(1.2)' }}>
             <Logo />
           </Box>
-          <UserMenu />
+          <UserMenu formData={currentUser ? { 
+            companyName: currentUser.business_name || '',
+            email: currentUser.email || ''
+          } : undefined} />
         </Box>
 
         <Typography 

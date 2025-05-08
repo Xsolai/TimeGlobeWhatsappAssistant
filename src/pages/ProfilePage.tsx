@@ -33,7 +33,7 @@ interface BusinessDetails {
 }
 
 const ProfilePage: React.FC = () => {
-  const { isAuthenticated, refreshUserData } = useAuth();
+  const { isAuthenticated, refreshUserData, currentUser } = useAuth();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
@@ -173,7 +173,15 @@ const ProfilePage: React.FC = () => {
           <Box sx={{ transform: 'scale(1.2)' }}>
             <Logo />
           </Box>
-          <UserMenu />
+          <UserMenu formData={
+            businessDetails ? {
+              companyName: businessDetails.business_name,
+              email: businessDetails.email
+            } : currentUser ? {
+              companyName: currentUser.business_name || '',
+              email: currentUser.email
+            } : undefined
+          } />
         </Box>
         
         <Paper 

@@ -19,7 +19,7 @@ import CloudUpload from '@mui/icons-material/CloudUpload';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 
 // Inline contract service if import fails
-const API_URL = 'https://timeglobe-server.ecomtask.de';
+const API_URL = 'http://localhost:8000';
 
 const inlineContractService = {
   createContract: async (contractData: {
@@ -135,6 +135,124 @@ const inlineContractService = {
       return result;
     } catch (error) {
       console.error('Error creating data processing contract:', error);
+      throw error;
+    }
+  },
+
+  // Function to update the main contract
+  updateMainContract: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available for main contract update:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/contract/update`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/contract/update`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response for main contract update:', result);
+      return result;
+    } catch (error) {
+      console.error('Error updating main contract:', error);
+      throw error;
+    }
+  },
+
+  // Function to update Auftragsverarbeitung contract
+  updateAuftragsverarbeitung: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available for Auftragsverarbeitung update:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/auftragsverarbeitung/update`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/auftragsverarbeitung/update`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response for Auftragsverarbeitung update:', result);
+      return result;
+    } catch (error) {
+      console.error('Error updating Auftragsverarbeitung contract:', error);
       throw error;
     }
   },
@@ -759,21 +877,32 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
       
       console.log(`Signature saved for step ${currentStep}, field: ${signatureField}`);
       
+      // Get full contract text
+      const fullContractText = getFullContractText();
+      
       // If this is the main contract signature, immediately send it to the API
       if (currentStep === 0 && signatureField === "signature") {
         try {
           console.log("Sending main contract to API immediately after signature save");
           
-          // Get full contract text
-          const fullContractText = getFullContractText();
+          // Check if there's an existing contract to determine whether to use create or update endpoint
+          const existingContract = await inlineContractService.getContract();
           
-          // Send to API
-          await inlineContractService.createContract({
-            contract_text: fullContractText,
-            signature_image: signatureData
-          });
-          
-          console.log("Contract successfully sent to API from save signature function");
+          if (existingContract && existingContract.id) {
+            console.log("Existing contract found, using update endpoint");
+            await inlineContractService.updateMainContract({
+              contract_text: fullContractText,
+              signature_image: signatureData
+            });
+            console.log("Contract successfully updated via API from save signature function");
+          } else {
+            console.log("No existing contract found, using create endpoint");
+            await inlineContractService.createContract({
+              contract_text: fullContractText,
+              signature_image: signatureData
+            });
+            console.log("Contract successfully created via API from save signature function");
+          }
         } catch (error) {
           console.error("Error sending contract from save signature function:", error);
           // Don't show error to user here, just log it
@@ -784,16 +913,24 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
         try {
           console.log("Sending data processing contract to API immediately after signature save");
           
-          // Get full contract text
-          const fullContractText = getFullContractText();
+          // Check if there's an existing data processing contract
+          const existingContract = await inlineContractService.getDataProcessingContract();
           
-          // Send to API
-          await inlineContractService.createDataProcessingContract({
-            contract_text: fullContractText,
-            signature_image: signatureData
-          });
-          
-          console.log("Data processing contract successfully sent to API from save signature function");
+          if (existingContract && existingContract.id) {
+            console.log("Existing data processing contract found, using update endpoint");
+            await inlineContractService.updateAuftragsverarbeitung({
+              contract_text: fullContractText,
+              signature_image: signatureData
+            });
+            console.log("Data processing contract successfully updated via API");
+          } else {
+            console.log("No existing data processing contract found, using create endpoint");
+            await inlineContractService.createDataProcessingContract({
+              contract_text: fullContractText,
+              signature_image: signatureData
+            });
+            console.log("Data processing contract successfully created via API");
+          }
         } catch (error) {
           console.error("Error sending data processing contract from save signature function:", error);
           // Don't show error to user here, just log it
@@ -1081,7 +1218,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
       const nextReference = nextRefNumber.toString().padStart(5, '0');
       
       // Nutze die korrekte Backend-API-URL für den Download
-      const response = await fetch('https://timeglobe-server.ecomtask.de/api/download/pdf', {
+      const response = await fetch('http://localhost:8000/api/download/pdf', {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

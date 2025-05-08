@@ -13,7 +13,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import WhatsApp from '@mui/icons-material/WhatsApp';
 
 // Inline contract service if import fails
-const API_URL = 'https://timeglobe-server.ecomtask.de';
+const API_URL = 'http://localhost:8000';
 
 const inlineContractService = {
   createContract: async (contractData: {
@@ -72,6 +72,65 @@ const inlineContractService = {
       console.error('Error creating contract:', error);
       throw error;
     }
+  },
+  
+  // Update main contract
+  updateMainContract: async (contractData: {
+    contract_text: string;
+    signature_image: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token available for main contract update:', !!token);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Only add Authorization header if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No authentication token found, proceeding without auth header');
+      }
+      
+      const requestBody = {
+        contract_text: contractData.contract_text,
+        signature_image: contractData.signature_image
+      };
+      
+      console.log(`Making API call to ${API_URL}/api/contract/update`);
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
+      });
+      console.log('Request body preview:', { 
+        contract_text: requestBody.contract_text,
+        signature_image: `[Base64 string of length ${requestBody.signature_image.length}]` 
+      });
+      
+      const response = await fetch(`${API_URL}/api/contract/update`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API response for main contract update:', result);
+      return result;
+    } catch (error) {
+      console.error('Error updating main contract:', error);
+      throw error;
+    }
   }
 };
 
@@ -89,7 +148,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   
   // 360dialog onboarding URL configuration
   const PARTNER_ID = "MalHtRPA";
-  const REDIRECT_URL = "https://timeglobe-server.ecomtask.de/redirect";
+  const REDIRECT_URL = "http://localhost:8000/redirect";
   const base_url = `https://hub.360dialog.com/dashboard/app/${PARTNER_ID}/permissions`;
   
   // Query parameters

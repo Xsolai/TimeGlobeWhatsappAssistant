@@ -44,6 +44,12 @@ const TimeGlobeStepIconRoot = styled('div')<{
   borderRadius: '50%',
   justifyContent: 'center',
   alignItems: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.1)',
+    boxShadow: '0 4px 10px 0 rgba(25, 103, 210, 0.3)',
+  },
   ...(ownerState.active && {
     backgroundImage: 'linear-gradient(135deg, #1967D2 0%, #1967D2 100%)',
     boxShadow: '0 4px 10px 0 rgba(25, 103, 210, 0.25)',
@@ -54,7 +60,7 @@ const TimeGlobeStepIconRoot = styled('div')<{
 }));
 
 function TimeGlobeStepIcon(props: any) {
-  const { active, completed, className, icon } = props;
+  const { active, completed, className, icon, onClick } = props;
 
   const icons: { [index: string]: React.ReactElement } = {
     1: <span>1</span>,
@@ -64,7 +70,11 @@ function TimeGlobeStepIcon(props: any) {
   };
 
   return (
-    <TimeGlobeStepIconRoot ownerState={{ completed, active }} className={className}>
+    <TimeGlobeStepIconRoot 
+      ownerState={{ completed, active }} 
+      className={className}
+      onClick={onClick}
+    >
       {icons[String(icon)]}
     </TimeGlobeStepIconRoot>
   );
@@ -132,6 +142,33 @@ const OnboardingForm: React.FC = () => {
         return 3;
       default:
         return 0;
+    }
+  };
+
+  // Hilfsfunktion, um vom numerischen Index zum OnboardingStep zu konvertieren
+  const getStepFromIndex = (index: number): OnboardingStep => {
+    switch(index) {
+      case 0:
+        return OnboardingStep.API_KEY;
+      case 1:
+        return OnboardingStep.COMPANY_INFO;
+      case 2:
+        return OnboardingStep.CONTRACT;
+      case 3:
+        return OnboardingStep.CONFIRMATION;
+      default:
+        return OnboardingStep.API_KEY;
+    }
+  };
+
+  // Handler für Klicks auf die Schritte
+  const handleStepClick = (stepIndex: number) => {
+    const currentStepIndex = getStepIndex(activeStep);
+    
+    // Erlaube nur Navigation zu früheren Schritten oder zum nächsten Schritt
+    // (verhindert Überspringen von Schritten nach vorne)
+    if (stepIndex <= currentStepIndex || stepIndex === currentStepIndex + 1) {
+      setActiveStep(getStepFromIndex(stepIndex));
     }
   };
 
@@ -210,7 +247,7 @@ const OnboardingForm: React.FC = () => {
           <Box sx={{ transform: 'scale(1.2)' }}>
             <Logo />
           </Box>
-          <UserMenu />
+          <UserMenu formData={formData} />
         </Box>
         
         <Paper 
@@ -244,10 +281,29 @@ const OnboardingForm: React.FC = () => {
                 alternativeLabel 
                 connector={<TimeGlobeConnector />}
               >
-                {steps.map((label) => (
+                {steps.map((label, index) => (
                   <Step key={label}>
-                    <StepLabel StepIconComponent={TimeGlobeStepIcon}>
-                      <Typography sx={{ color: '#333333' }}>{label}</Typography>
+                    <StepLabel 
+                      StepIconComponent={(iconProps) => 
+                        <TimeGlobeStepIcon 
+                          {...iconProps} 
+                          onClick={() => handleStepClick(index)} 
+                        />
+                      }
+                    >
+                      <Typography 
+                        sx={{ 
+                          color: '#333333',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            color: '#1967D2',
+                            fontWeight: 'medium'
+                          }
+                        }}
+                        onClick={() => handleStepClick(index)}
+                      >
+                        {label}
+                      </Typography>
                     </StepLabel>
                   </Step>
                 ))}

@@ -4,7 +4,7 @@ import webbrowser
 import urllib.parse
 # 360dialog Partner Info
 PARTNER_ID = "MalHtRPA"  # <-- your actual Partner ID
-REDIRECT_URL = "https://timeglobe-server.ecomtask.de/redirect"  # <-- your redirect URL
+REDIRECT_URL = "http://localhost:8000/redirect"  # <-- your redirect URL
 
 
 # Building the onboarding URL manually (like ConnectButton does)
