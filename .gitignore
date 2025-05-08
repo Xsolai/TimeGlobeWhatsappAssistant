@@ -7,3 +7,7 @@ app.log
 /app.log
 *.log
 ./app.log
+timeglobewhatsappassistant.db
+/timeglobewhatsappassistant.db
+./timeglobewhatsappassistant.db
+*.db
