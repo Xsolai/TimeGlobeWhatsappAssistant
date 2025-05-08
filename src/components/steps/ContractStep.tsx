@@ -374,13 +374,13 @@ const inlineContractService = {
         console.warn('No authentication token found, proceeding without auth header');
       }
       
-      console.log(`Making API call to ${API_URL}/api/lastschriftmandat`);
+      console.log(`Making API call to ${API_URL}/api/lastschriftmandat/`);
       console.log('Request headers:', { 
         ...headers, 
         Authorization: headers.Authorization ? 'Bearer [REDACTED]' : undefined 
       });
       
-      const response = await fetch(`${API_URL}/api/lastschriftmandat`, {
+      const response = await fetch(`${API_URL}/api/lastschriftmandat/`, {
         method: 'GET',
         headers
       });
@@ -583,6 +583,8 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
   
   // Verwende formData.currentSignatureStep für die Navigation zwischen den Unterschriftsschritten
   const currentStep = formData.currentSignatureStep || 0;
+  // State to track if Lastschriftmandat already exists
+  const [mandateExists, setMandateExists] = useState<boolean>(false);
 
   // Definiere die Titel und Beschreibungen für die verschiedenen Vertragsschritte
   const contractSteps = [
@@ -647,6 +649,9 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
         if (lastschriftmandat && lastschriftmandat.file_name) {
           console.log('Found existing Lastschriftmandat, loading it');
           
+          // Mark that mandate exists for future upload operations
+          setMandateExists(true);
+          
           // Create a dummy File object for the UI
           setUploadedFileName(lastschriftmandat.file_name);
           
@@ -654,6 +659,8 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
           onFormChange({ directDebitSignature: 'existing-file' });
         } else {
           console.log('No existing Lastschriftmandat found');
+          // Make sure mandate doesn't exist
+          setMandateExists(false);
         }
       } catch (error) {
         console.error('Error loading existing contracts:', error);
@@ -1025,10 +1032,9 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
     handleNextStep();
   };
 
-  const triggerFileInput = (isUpdate = false) => {
-    // Store the update status in a data attribute
+  const triggerFileInput = () => {
+    // Simply trigger the file input click
     if (fileInputRef.current) {
-      fileInputRef.current.dataset.isUpdate = isUpdate ? 'true' : 'false';
       fileInputRef.current.click();
     }
   };
@@ -1058,8 +1064,8 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
       reader.onload = async (e) => {
         const result = e.target?.result as string;
         
-        // Check if this is an update or a new upload
-        const isUpdate = fileInputRef.current?.dataset.isUpdate === 'true';
+        // Check if this is an update based on if a mandate already exists
+        const isUpdate = mandateExists;
         
         try {
           setError(null); // Clear previous errors
@@ -1087,6 +1093,9 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
           
           // Set a marker in formData to indicate a file has been uploaded
           onFormChange({ directDebitSignature: 'file-uploaded' });
+          
+          // After a successful upload/update, set mandateExists to true for future operations
+          setMandateExists(true);
           
           // Update UI to show success
           setError(null);
@@ -1646,7 +1655,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
                 <Button
                   variant="outlined"
                   startIcon={<Upload />}
-                  onClick={() => triggerFileInput(true)}
+                  onClick={triggerFileInput}
                   sx={{ 
                     borderRadius: 2,
                     borderColor: '#1967D2',
@@ -1659,7 +1668,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
                     }
                   }}
                 >
-                  Unterschriebenes Mandat hochladen
+                  {mandateExists ? 'Mandat aktualisieren' : 'Unterschriebenes Mandat hochladen'}
                 </Button>
               </Box>
               
@@ -1682,48 +1691,82 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
                     sx={{ ml: 1, color: '#1967D2', minWidth: 0 }}
                     onClick={async () => {
                       try {
-                        // Use the /api/download/pdf endpoint directly
-                        const response = await fetch(`${API_URL}/api/download/pdf`, {
+                        // Use the /api/lastschriftmandat/download endpoint as requested
+                        const token = localStorage.getItem('token');
+                        
+                        const headers: Record<string, string> = {
+                          'Accept': '*/*'  // Accept any content type
+                        };
+                        
+                        if (token) {
+                          headers['Authorization'] = `Bearer ${token}`;
+                        }
+                        
+                        console.log(`Making API call to ${API_URL}/api/lastschriftmandat/download`);
+                        
+                        const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
                           method: 'GET',
-                          headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token') || ''}` 
-                          }
+                          headers
                         });
                         
                         if (!response.ok) {
-                          throw new Error(`PDF konnte nicht geladen werden: ${response.status} ${response.statusText}`);
+                          throw new Error(`HTTP error! Status: ${response.status}`);
                         }
                         
-                        // Parse die JSON-Antwort vom Server
-                        const data = await response.json();
+                        // Check content type to determine how to handle the response
+                        const contentType = response.headers.get('content-type');
+                        console.log('Response content type:', contentType);
                         
-                        if (!data.filename || !data.file_content) {
-                          throw new Error('Die Serverantwort enthält nicht die erwarteten Daten');
+                        // Handle different response formats
+                        if (contentType && contentType.includes('application/json')) {
+                          // Handle JSON response (if API returns JSON with PDF in base64)
+                          const result = await response.json();
+                          
+                          if (result.pdf_file) {
+                            // Handle base64 PDF from API response
+                            const base64Data = result.pdf_file;
+                            // Remove the data URL prefix if present
+                            const base64Content = base64Data.includes('base64,') 
+                              ? base64Data.split('base64,')[1] 
+                              : base64Data;
+                            
+                            // Convert base64 to binary
+                            const binaryString = atob(base64Content);
+                            const len = binaryString.length;
+                            const bytes = new Uint8Array(len);
+                            for (let i = 0; i < len; i++) {
+                              bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            
+                            // Create a blob with the PDF data
+                            const blob = new Blob([bytes], { type: 'application/pdf' });
+                            const url = URL.createObjectURL(blob);
+                            
+                            // Open PDF in new tab
+                            window.open(url, '_blank');
+                            
+                            // Cleanup URL after a delay
+                            setTimeout(() => {
+                              URL.revokeObjectURL(url);
+                            }, 1000);
+                          } else {
+                            throw new Error('Response does not contain PDF data');
+                          }
+                        } else {
+                          // Handle direct binary response (PDF file)
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          
+                          // Open PDF in new tab
+                          window.open(url, '_blank');
+                          
+                          // Cleanup URL after a delay
+                          setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                          }, 1000);
                         }
                         
-                        // Decode den Base64-codierten Inhalt zu einem Blob
-                        const binaryString = atob(data.file_content);
-                        const len = binaryString.length;
-                        const bytes = new Uint8Array(len);
-                        for (let i = 0; i < len; i++) {
-                          bytes[i] = binaryString.charCodeAt(i);
-                        }
-                        
-                        // Erstelle einen Blob aus den Binärdaten mit dem korrekten Content-Type
-                        const contentType = data.content_type || 'application/pdf';
-                        const blob = new Blob([bytes], { type: contentType });
-                        
-                        // Create URL and open in new tab
-                        const url = URL.createObjectURL(blob);
-                        window.open(url, '_blank');
-                        
-                        // Cleanup URL after a delay
-                        setTimeout(() => {
-                          URL.revokeObjectURL(url);
-                        }, 1000);
-                        
-                        console.log(`${data.filename} Anzeige initiiert`);
+                        console.log('Viewed Lastschriftmandat from API');
                         setError(null);
                       } catch (error) {
                         console.error('Error viewing file:', error);
@@ -1736,7 +1779,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
                   <Button
                     size="small"
                     sx={{ ml: 1, color: '#1967D2', minWidth: 0 }}
-                    onClick={() => triggerFileInput(true)}
+                    onClick={triggerFileInput}
                   >
                     Aktualisieren
                   </Button>

@@ -214,12 +214,6 @@ const LoginPage: React.FC = () => {
           </Box>
         </Paper>
         
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Link component={RouterLink} to="/onboarding" variant="body2" sx={{ color: '#666' }}>
-            Continue to Onboarding
-          </Link>
-        </Box>
-
         <Snackbar
           open={showSuccessMessage}
           autoHideDuration={6000}

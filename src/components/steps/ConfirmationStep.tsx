@@ -11,6 +11,8 @@ import Email from '@mui/icons-material/Email';
 import Phone from '@mui/icons-material/Phone';
 import CheckCircle from '@mui/icons-material/CheckCircle';
 import WhatsApp from '@mui/icons-material/WhatsApp';
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
+import whatsappService from '../../services/whatsappService';
 
 // Inline contract service if import fails
 const API_URL = 'https://timeglobe-server.ecomtask.de';
@@ -143,6 +145,8 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   const theme = useTheme();
   const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'success' | 'error'>('idle');
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState<string | undefined>(undefined);
   const popupWindowRef = useRef<Window | null>(null);
   const popupCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -160,6 +164,31 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   // Final onboarding URL
   const onboarding_url = `${base_url}?${query_params.toString()}`;
   
+  // Fetch WhatsApp status on component mount
+  useEffect(() => {
+    const fetchWhatsAppStatus = async () => {
+      try {
+        const statusResponse = await whatsappService.getStatus();
+        console.log('WhatsApp status response:', statusResponse);
+        
+        if (statusResponse.status === 'connected') {
+          setWhatsappConnected(true);
+          setConnectionStatus('success');
+          if (statusResponse.whatsapp_number) {
+            setWhatsappNumber(statusResponse.whatsapp_number);
+          }
+        } else {
+          setWhatsappConnected(false);
+        }
+      } catch (error) {
+        console.error('Error fetching WhatsApp status:', error);
+        setWhatsappConnected(false);
+      }
+    };
+    
+    fetchWhatsAppStatus();
+  }, []);
+
   // Set up a listener for messages from the redirect page
   useEffect(() => {
     // Function to handle messages from the popup window
@@ -361,7 +390,6 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
           // If popup closed, consider it a successful connection
           clearInterval(popupCheckIntervalRef.current!);
           setConnectionStatus('success');
-          setOpenSuccessDialog(true);
         }
       }, 1000);
       
@@ -375,7 +403,6 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
         if (status === 'success') {
           clearInterval(checkRedirectInterval);
           setConnectionStatus('success');
-          setOpenSuccessDialog(true);
         } else if (status === 'error') {
           clearInterval(checkRedirectInterval);
           setConnectionStatus('error');
@@ -402,53 +429,6 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
 
   return (
     <Box sx={{ mt: 3, pb: 8 }}>
-      {/* Success Dialog */}
-      <Dialog 
-        open={openSuccessDialog} 
-        onClose={handleCloseSuccessDialog}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            minWidth: '400px',
-            maxWidth: '600px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          backgroundColor: '#25D366', 
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1 
-        }}>
-          <WhatsApp fontSize="large" />
-          <Typography variant="h6">WhatsApp erfolgreich verknüpft!</Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3, pb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Ihr WhatsApp Business-Konto wurde erfolgreich mit TimeGlobe verknüpft.
-            Sie können nun Ihre WhatsApp-Kommunikation über TimeGlobe verwalten.
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            variant="contained" 
-            onClick={handleCloseSuccessDialog}
-            sx={{ 
-              backgroundColor: '#25D366',
-              '&:hover': {
-                backgroundColor: '#128C7E'
-              }
-            }}
-          >
-            Zum Dashboard
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Paper
         elevation={0}
         sx={{
@@ -718,35 +698,35 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
           sx={{ 
             p: 3, 
             borderRadius: 2, 
-            backgroundColor: 'rgba(25, 103, 210, 0.05)',
-            border: '1px solid rgba(25, 103, 210, 0.2)',
-            mb: 2
+            backgroundColor: whatsappConnected ? 'rgba(76, 175, 80, 0.05)' : 'rgba(25, 103, 210, 0.05)',
+            border: whatsappConnected ? '1px solid rgba(76, 175, 80, 0.2)' : '1px solid rgba(25, 103, 210, 0.2)',
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
           }}
         >
-          <Typography color="#1967D2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
-            Der nächste Schritt ist die Verknüpfung Ihres WhatsApp Business-Kontos. 
-            Klicken Sie auf "WhatsApp verknüpfen", um den Prozess zu starten.
-          </Typography>
+          {whatsappConnected ? (
+            <>
+              <CheckCircleOutline sx={{ color: '#4CAF50', fontSize: 30 }} />
+              <Box>
+                <Typography color="#4CAF50" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
+                  WhatsApp ist bereits mit Ihrem Konto verknüpft.
+                </Typography>
+                {whatsappNumber && (
+                  <Typography color="text.secondary" sx={{ fontSize: '0.85rem', mt: 0.5 }}>
+                    Verknüpfte Nummer: {whatsappNumber}
+                  </Typography>
+                )}
+              </Box>
+            </>
+          ) : (
+            <Typography color="#1967D2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
+              Der nächste Schritt ist die Verknüpfung Ihres WhatsApp Business-Kontos. 
+              Klicken Sie auf "WhatsApp verknüpfen", um den Prozess zu starten.
+            </Typography>
+          )}
         </Box>
-
-        {connectionStatus === 'success' && (
-          <Alert 
-            severity="success" 
-            sx={{ 
-              mb: 3, 
-              mt: 2,
-              borderRadius: 2,
-              backgroundColor: 'rgba(76, 175, 80, 0.1)', 
-              border: '1px solid rgba(76, 175, 80, 0.2)',
-              color: '#4caf50',
-              '& .MuiAlert-icon': {
-                color: '#4caf50'
-              }
-            }}
-          >
-            WhatsApp wurde erfolgreich mit Ihrem TimeGlobe-Konto verknüpft!
-          </Alert>
-        )}
 
         {connectionStatus === 'error' && (
           <Alert 
@@ -791,22 +771,32 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
           onClick={handleWhatsAppConnect}
           variant="contained"
           color="primary"
-          disabled={connectionStatus === 'connecting'}
+          disabled={connectionStatus === 'connecting' || whatsappConnected}
           endIcon={connectionStatus === 'connecting' ? null : <WhatsApp />}
           sx={{ 
             px: 4, 
             py: 1.5,
             borderRadius: 3,
             boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-            backgroundColor: connectionStatus === 'success' ? '#4CAF50' : '#25D366', // WhatsApp green
+            backgroundColor: whatsappConnected || connectionStatus === 'success' ? '#4CAF50' : '#25D366', // WhatsApp green
             '&:hover': {
               boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
-              backgroundColor: connectionStatus === 'success' ? '#388E3C' : '#128C7E', // Darker WhatsApp green
+              backgroundColor: whatsappConnected || connectionStatus === 'success' ? '#388E3C' : '#128C7E', // Darker WhatsApp green
+            },
+            '&.Mui-disabled': {
+              backgroundColor: whatsappConnected ? '#4CAF50' : 'rgba(0, 0, 0, 0.12)',
+              color: whatsappConnected ? 'white' : 'rgba(0, 0, 0, 0.26)',
+              opacity: whatsappConnected ? 1 : 0.7
             }
           }}
         >
           {connectionStatus === 'connecting' ? 'Verbindung wird hergestellt...' : 
-           connectionStatus === 'success' ? 'Erfolgreich verknüpft' : 'WhatsApp verknüpfen'}
+           whatsappConnected || connectionStatus === 'success' ? (
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               <CheckCircleOutline fontSize="small" />
+               Erfolgreich verknüpft
+             </Box>
+           ) : 'WhatsApp verknüpfen'}
         </Button>
       </Box>
     </Box>
