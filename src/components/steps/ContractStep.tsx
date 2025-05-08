@@ -1104,124 +1104,12 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
     setIsLoading(true);
     
     try {
-      // First try to download from API
-      try {
-        // Make direct fetch call to the download endpoint
-        const token = localStorage.getItem('token');
-        
-        const headers: Record<string, string> = {
-          'Accept': '*/*'  // Accept any content type
-        };
-        
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
-          method: 'GET',
-          headers
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        console.log('Response headers:', response.headers);
-        
-        // Check if response is JSON or binary (PDF)
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType && contentType.includes('application/json')) {
-          // Process JSON response
-          const result = await response.json();
-          
-          // Handle base64 PDF from API response
-          if (result && (result.pdf_file || typeof result === 'string')) {
-            const base64Data = result.pdf_file || result;
-            // Remove the data URL prefix if present
-            const base64Content = base64Data.includes('base64,') 
-              ? base64Data.split('base64,')[1] 
-              : base64Data;
-              
-            const binaryString = atob(base64Content);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            
-            // Create a blob with the PDF data
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            
-            // Trigger the download
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', result.file_name || `SEPA-Lastschriftmandat_${mandateReference}.pdf`);
-            
-            document.body.appendChild(link);
-            link.click();
-            
-            // Cleanup
-            setTimeout(() => {
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-            }, 200);
-            
-            console.log('Downloaded Lastschriftmandat from API (JSON)');
-            setError(null);
-            setIsLoading(false);
-            return;
-          }
-        } else {
-          // Direct binary response (PDF file)
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          
-          // Get filename from Content-Disposition header or use default
-          let filename = `SEPA-Lastschriftmandat_${mandateReference}.pdf`;
-          const disposition = response.headers.get('content-disposition');
-          if (disposition && disposition.includes('filename=')) {
-            const filenameMatch = disposition.match(/filename="(.+)"/);
-            if (filenameMatch && filenameMatch[1]) {
-              filename = filenameMatch[1];
-            }
-          }
-          
-          // Trigger the download
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', filename);
-          document.body.appendChild(link);
-          link.click();
-          
-          // Cleanup
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 200);
-          
-          console.log('Downloaded Lastschriftmandat from API (Binary)');
-          setError(null);
-          setIsLoading(false);
-          return;
-        }
-      } catch (apiError) {
-        console.error('Could not download from API, falling back to legacy method:', apiError);
-        // Continue to legacy method if API download fails
-      }
-      
-      // Legacy method - use the older API endpoint
-      // Erhöhe die Mandatsreferenz um 1
-      const currentRefNumber = parseInt(mandateReference, 10);
-      const nextRefNumber = currentRefNumber + 1;
-      const nextReference = nextRefNumber.toString().padStart(5, '0');
-      
-      // Nutze die korrekte Backend-API-URL für den Download
-      const response = await fetch('https://timeglobe-server.ecomtask.de/api/download/pdf', {
+      // Use the /api/download/pdf endpoint directly as requested
+      const response = await fetch(`${API_URL}/api/download/pdf`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
       });
       
@@ -1244,10 +1132,6 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
         localStorage.setItem('mandateReference', fileReferenceNumber);
         // Aktualisiere den State mit der vom Server gelieferten Referenz
         setMandateReference(fileReferenceNumber);
-      } else {
-        // Wenn keine Nummer im Dateinamen gefunden wurde, verwende die lokale Nummer
-        localStorage.setItem('mandateReference', nextReference);
-        setMandateReference(nextReference);
       }
       
       // Decode den Base64-codierten Inhalt zu einem Blob
@@ -1798,86 +1682,52 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
                     sx={{ ml: 1, color: '#1967D2', minWidth: 0 }}
                     onClick={async () => {
                       try {
-                        // Make direct fetch call to the download endpoint
-                        const token = localStorage.getItem('token');
-                        
-                        const headers: Record<string, string> = {
-                          'Accept': '*/*'  // Accept any content type
-                        };
-                        
-                        if (token) {
-                          headers['Authorization'] = `Bearer ${token}`;
-                        }
-                        
-                        const response = await fetch(`${API_URL}/api/lastschriftmandat/download`, {
+                        // Use the /api/download/pdf endpoint directly
+                        const response = await fetch(`${API_URL}/api/download/pdf`, {
                           method: 'GET',
-                          headers
+                          headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token') || ''}` 
+                          }
                         });
                         
                         if (!response.ok) {
-                          throw new Error(`HTTP error! Status: ${response.status}`);
+                          throw new Error(`PDF konnte nicht geladen werden: ${response.status} ${response.statusText}`);
                         }
                         
-                        console.log('Response headers:', response.headers);
+                        // Parse die JSON-Antwort vom Server
+                        const data = await response.json();
                         
-                        // Check if response is JSON or binary (PDF)
-                        const contentType = response.headers.get('content-type');
-                        
-                        if (contentType && contentType.includes('application/json')) {
-                          // Process JSON response
-                          const result = await response.json();
-                          
-                          // Handle base64 PDF from API response
-                          if (result && (result.pdf_file || typeof result === 'string')) {
-                            const base64Data = result.pdf_file || result;
-                            // Remove the data URL prefix if present
-                            const base64Content = base64Data.includes('base64,') 
-                              ? base64Data.split('base64,')[1] 
-                              : base64Data;
-                              
-                            const binaryString = atob(base64Content);
-                            const len = binaryString.length;
-                            const bytes = new Uint8Array(len);
-                            for (let i = 0; i < len; i++) {
-                              bytes[i] = binaryString.charCodeAt(i);
-                            }
-                            
-                            // Create a blob with the PDF data
-                            const blob = new Blob([bytes], { type: 'application/pdf' });
-                            const url = URL.createObjectURL(blob);
-                            
-                            // Open PDF in new tab instead of downloading
-                            window.open(url, '_blank');
-                            
-                            // Cleanup URL after a delay
-                            setTimeout(() => {
-                              URL.revokeObjectURL(url);
-                            }, 1000);
-                            
-                            console.log('Viewed Lastschriftmandat from API (JSON)');
-                            setError(null);
-                          } else {
-                            throw new Error('Invalid response format');
-                          }
-                        } else {
-                          // Direct binary response (PDF file)
-                          const blob = await response.blob();
-                          const url = URL.createObjectURL(blob);
-                          
-                          // Open PDF in new tab
-                          window.open(url, '_blank');
-                          
-                          // Cleanup URL after a delay
-                          setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                          }, 1000);
-                          
-                          console.log('Viewed Lastschriftmandat from API (Binary)');
-                          setError(null);
+                        if (!data.filename || !data.file_content) {
+                          throw new Error('Die Serverantwort enthält nicht die erwarteten Daten');
                         }
+                        
+                        // Decode den Base64-codierten Inhalt zu einem Blob
+                        const binaryString = atob(data.file_content);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                          bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        
+                        // Erstelle einen Blob aus den Binärdaten mit dem korrekten Content-Type
+                        const contentType = data.content_type || 'application/pdf';
+                        const blob = new Blob([bytes], { type: contentType });
+                        
+                        // Create URL and open in new tab
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                        
+                        // Cleanup URL after a delay
+                        setTimeout(() => {
+                          URL.revokeObjectURL(url);
+                        }, 1000);
+                        
+                        console.log(`${data.filename} Anzeige initiiert`);
+                        setError(null);
                       } catch (error) {
                         console.error('Error viewing file:', error);
-                        setError('Fehler beim Herunterladen der Datei.');
+                        setError('Fehler beim Anzeigen der Datei.');
                       }
                     }}
                   >
