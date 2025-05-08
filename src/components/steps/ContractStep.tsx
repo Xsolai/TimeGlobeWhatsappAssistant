@@ -19,7 +19,7 @@ import CloudUpload from '@mui/icons-material/CloudUpload';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 
 // Inline contract service if import fails
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://timeglobe-server.ecomtask.de';
 
 const inlineContractService = {
   createContract: async (contractData: {
@@ -1218,7 +1218,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
       const nextReference = nextRefNumber.toString().padStart(5, '0');
       
       // Nutze die korrekte Backend-API-URL für den Download
-      const response = await fetch('http://localhost:8000/api/download/pdf', {
+      const response = await fetch('https://timeglobe-server.ecomtask.de/api/download/pdf', {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

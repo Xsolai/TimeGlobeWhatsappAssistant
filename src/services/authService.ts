@@ -1,6 +1,6 @@
 // Using native fetch API instead of axios
 
-const API_URL = 'http://localhost:8000/api/auth';
+const API_URL = 'https://timeglobe-server.ecomtask.de/api/auth';
 
 // Helper function to handle fetch calls
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {

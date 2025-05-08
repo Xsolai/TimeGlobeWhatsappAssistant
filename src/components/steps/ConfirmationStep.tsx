@@ -13,7 +13,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import WhatsApp from '@mui/icons-material/WhatsApp';
 
 // Inline contract service if import fails
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://timeglobe-server.ecomtask.de';
 
 const inlineContractService = {
   createContract: async (contractData: {
@@ -148,7 +148,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   
   // 360dialog onboarding URL configuration
   const PARTNER_ID = "MalHtRPA";
-  const REDIRECT_URL = "http://localhost:8000/redirect";
+  const REDIRECT_URL = "https://timeglobe-server.ecomtask.de/redirect";
   const base_url = `https://hub.360dialog.com/dashboard/app/${PARTNER_ID}/permissions`;
   
   // Query parameters

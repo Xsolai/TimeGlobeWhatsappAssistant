@@ -1,6 +1,6 @@
 // Analytics Service for fetching dashboard data
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://timeglobe-server.ecomtask.de/api';
 
 // Analytics Dashboard Data Interface
 export interface DashboardData {

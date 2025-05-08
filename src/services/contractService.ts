@@ -1,6 +1,6 @@
 // Contract service for handling contract operations
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://timeglobe-server.ecomtask.de/api';
 
 const contractService = {
   // Create a contract with signature
