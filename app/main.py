@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes, contract_routes, auftragsverarbeitung_routes, lastschriftmandat_routes
+from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes, contract_routes, auftragsverarbeitung_routes, lastschriftmandat_routes, whatsapp_status_routes
 from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
@@ -69,6 +69,7 @@ app.include_router(download_routes.router, prefix="/api/download", tags=["Downlo
 app.include_router(contract_routes.router, prefix="/api/contract", tags=["Contract"])
 app.include_router(auftragsverarbeitung_routes.router, prefix="/api/auftragsverarbeitung", tags=["Auftragsverarbeitung"])
 app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmandat", tags=["Lastschriftmandat"])
+app.include_router(whatsapp_status_routes.router, prefix="/api/whatsapp-status", tags=["WhatsApp Status"])
 
 
 @app.post("/webhook")
