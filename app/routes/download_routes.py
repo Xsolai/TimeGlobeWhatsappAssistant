@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import json
 import base64
+from ..utils.pdf_util import add_mandatsreferenz_to_pdf
 
 router = APIRouter()
 
@@ -35,6 +36,7 @@ def get_next_counter():
 async def download_sample_pdf():
     """
     Endpoint to download a PDF file with an incrementing number in the filename.
+    The mandate reference number is also added to the PDF form.
     
     Returns:
         JSONResponse: Contains the filename and base64-encoded file content
@@ -49,19 +51,32 @@ async def download_sample_pdf():
     # Get the next counter value
     counter = get_next_counter()
     
-    # Create the filename with the counter
-    filename = f"SEPA-Lastschriftmandat_{counter}.pdf"
+    # Format counter with leading zeros for display (5 digits)
+    formatted_counter = f"{counter:05d}"
     
-    # Open and read the file content, then encode as base64
+    # Create the formatted mandate reference string
+    # Format it to be clearly visible and properly formatted for the form
+    mandate_reference = formatted_counter
+    
+    # Create the filename with the counter
+    filename = f"SEPA-Lastschriftmandat_{formatted_counter}.pdf"
+    
+    # Open and read the file content
     with open(pdf_path, 'rb') as file:
         content = file.read()
-        encoded_content = base64.b64encode(content).decode('utf-8')
+        
+    # Add the mandate reference number to the PDF
+    modified_content = add_mandatsreferenz_to_pdf(content, mandate_reference)
+    
+    # Encode as base64
+    encoded_content = base64.b64encode(modified_content).decode('utf-8')
     
     # Create a JSON response with filename and content
     json_content = {
         "filename": filename,
         "file_content": encoded_content,
-        "content_type": "application/pdf"
+        "content_type": "application/pdf",
+        "mandate_reference": mandate_reference
     }
     
     # Create a manual Response object with explicit JSON content type

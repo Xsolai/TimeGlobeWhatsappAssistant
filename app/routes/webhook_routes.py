@@ -12,6 +12,7 @@ from ..models.business_model import Business
 from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
+import time
 from ..db.session import get_db
 from ..repositories.conversation_repository import ConversationRepository
 from ..core.dependencies import (
@@ -36,9 +37,16 @@ async def whatsapp_wbhook(
     Webhook to receive WhatsApp messages via WhatsApp Business API.
     Responds immediately and processes the message in the background.
     """
+    start_time = time.time()
+    
     try:
         # Parse incoming JSON payload
         data = await request.json()
+        
+        # Log webhook receipt time
+        receipt_time = time.time()
+        time_to_parse = (receipt_time - start_time) * 1000
+        logging.info(f"⏱️ Webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
         
         # Immediate 200 response for WhatsApp to prevent duplicate webhook deliveries
         # All processing happens in background tasks
@@ -48,16 +56,26 @@ async def whatsapp_wbhook(
             dialog360_service=dialog360_service
         )
         
+        # Calculate response time
+        response_time = time.time()
+        time_gap = (response_time - start_time) * 1000  # Convert to milliseconds
+        logging.info(f"⏱️ Webhook response time: {time_gap:.2f}ms - Responded at {response_time:.3f}")
+        
         # Return success immediately before any processing
         return JSONResponse(content={"status": "success"}, status_code=200)
     except Exception as e:
-        logging.error(f"Error in webhook handler: {str(e)}")
+        # Calculate error response time
+        error_time = time.time()
+        time_gap = (error_time - start_time) * 1000  # Convert to milliseconds
+        logging.error(f"Error in webhook handler: {str(e)} - Response time: {time_gap:.2f}ms")
         # Still return 200 to prevent WhatsApp from retrying
         return JSONResponse(content={"status": "success"}, status_code=200)
 
 
 async def process_webhook_data(data: dict, dialog360_service: Dialog360Service):
     """Process the webhook data in the background."""
+    start_process_time = time.time()
+    
     try:
         # Only use this for debugging, otherwise it will fill up logs
         logging.info(f"Processing webhook - Timestamp: {data.get('entry', [{}])[0].get('changes', [{}])[0].get('value', {}).get('messages', [{}])[0].get('timestamp', 'unknown')}")
@@ -144,29 +162,59 @@ async def process_webhook_data(data: dict, dialog360_service: Dialog360Service):
         # Here we're using MessageCache to store this information 
         message_cache.set_business_phone(number, business_phone_number)
         
+        # Log preparation time before message processing
+        prep_time = time.time()
+        prep_duration = (prep_time - start_process_time) * 1000  # milliseconds
+        logging.info(f"⏱️ Webhook data preparation took {prep_duration:.2f}ms for message ID: {message_id}")
+        
         # Process the message and send a response
         await process_message(number, incoming_msg, message_id, dialog360_service)
         
+        # Total processing time
+        end_time = time.time()
+        total_duration = (end_time - start_process_time) * 1000  # milliseconds
+        logging.info(f"⏱️ Total webhook background processing time: {total_duration:.2f}ms for message ID: {message_id}")
+        
     except Exception as e:
-        logging.error(f"Error processing webhook data: {str(e)}")
+        # Log error with timing information
+        error_time = time.time()
+        total_duration = (error_time - start_process_time) * 1000  # milliseconds
+        logging.error(f"Error processing webhook data after {total_duration:.2f}ms: {str(e)}")
 
 
 async def process_message(number: str, incoming_msg: str, message_id: str, dialog360_service: Dialog360Service):
     """Process a WhatsApp message in the background and send the response."""
+    start_process_time = time.time()
     try:
         # Process the message with your AI assistant
         logging.info(f"Generating response for message ID: {message_id} from user: {number}")
+        gpt_start_time = time.time()
         response = get_response_from_gpt(incoming_msg, number)
+        gpt_end_time = time.time()
+        gpt_duration = (gpt_end_time - gpt_start_time) * 1000  # milliseconds
+        logging.info(f"⏱️ GPT response generation took {gpt_duration:.2f}ms for message ID: {message_id}")
+        
         response = format_response(response)
         
         # Send the response
+        send_start_time = time.time()
         logging.info(f"Sending response to {number}: '{response[:50]}...' (truncated)")
         resp = dialog360_service.send_whatsapp(number, response)
+        send_end_time = time.time()
+        send_duration = (send_end_time - send_start_time) * 1000  # milliseconds
+        
+        # Total processing time
+        total_duration = (send_end_time - start_process_time) * 1000  # milliseconds
+        logging.info(f"⏱️ WhatsApp API send took {send_duration:.2f}ms for message ID: {message_id}")
+        logging.info(f"⏱️ Total message processing time: {total_duration:.2f}ms for message ID: {message_id}")
         
         # Log successful processing
         logging.info(f"Successfully processed message ID: {message_id}")
     except Exception as e:
-        logging.error(f"Error in background processing of message {message_id}: {str(e)}")
+        # Log error with timing information
+        error_time = time.time()
+        total_duration = (error_time - start_process_time) * 1000  # milliseconds
+        logging.error(f"Error in background processing of message {message_id} after {total_duration:.2f}ms: {str(e)}")
 
 
 @router.delete("/clear-chat-history/{mobile_number}", status_code=status.HTTP_200_OK, response_class=JSONResponse)

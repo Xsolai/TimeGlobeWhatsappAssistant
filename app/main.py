@@ -13,6 +13,7 @@ import logging
 import requests
 import json
 import urllib.parse
+import time
 
 # Configure logging first
 logging.basicConfig(
@@ -72,30 +73,50 @@ app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmand
 
 @app.post("/webhook")
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
+    start_time = time.time()
+    
     try:
         payload = await request.json()
+        
+        # Log webhook receipt time
+        receipt_time = time.time()
+        time_to_parse = (receipt_time - start_time) * 1000
+        logging.info(f"⏱️ System webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
         logging.info(f"Received webhook: {payload}")
 
-        # Add processing to background tasks and return immediately
+        # Process the webhook data in the background
         background_tasks.add_task(process_webhook_payload, payload)
+        
+        # Calculate response time
+        response_time = time.time()
+        time_gap = (response_time - start_time) * 1000  # Convert to milliseconds
+        logging.info(f"⏱️ System webhook response time: {time_gap:.2f}ms - Responded at {response_time:.3f}")
         
         # Return success immediately to prevent retries
         return {"status": "success"}
     
     except Exception as e:
-        logging.error(f"Error processing webhook: {e}")
+        # Calculate error response time
+        error_time = time.time()
+        time_gap = (error_time - start_time) * 1000  # Convert to milliseconds
+        logging.error(f"Error processing webhook: {e} - Response time: {time_gap:.2f}ms")
         # Still return success to prevent retries
         return {"status": "success"}
 
 
 async def process_webhook_payload(payload: dict):
     """Process the webhook payload in the background."""
+    start_process_time = time.time()
+    
     try:
         event_type = payload.get("event")
         data = payload.get("data", {})
         client_id = data.get("client_id")
         channel_id = data.get("id")
         status = data.get("status")
+
+        # Log basic event info with timing
+        logging.info(f"Processing system webhook event: {event_type} (started at {start_process_time:.3f})")
 
         # Handle client_created event
         if event_type == "client_created":
@@ -254,8 +275,17 @@ async def process_webhook_payload(payload: dict):
                     
                 except Exception as e:
                     logging.error(f"❌ Failed to save business information to database: {str(e)}")
+
+        # Log the completion time for the event processing
+        end_time = time.time()
+        total_duration = (end_time - start_process_time) * 1000  # milliseconds
+        logging.info(f"⏱️ System webhook event '{event_type}' processing completed in {total_duration:.2f}ms")
+        
     except Exception as e:
-        logging.error(f"Error processing webhook payload in background: {str(e)}")
+        # Log error with timing information
+        error_time = time.time()
+        total_duration = (error_time - start_process_time) * 1000  # milliseconds
+        logging.error(f"Error processing webhook payload in background after {total_duration:.2f}ms: {str(e)}")
 
 def create_api_key(partner_id, channel_id):
     url = f"https://hub.360dialog.io/api/v2/partners/{partner_id}/channels/{channel_id}/api_keys"
