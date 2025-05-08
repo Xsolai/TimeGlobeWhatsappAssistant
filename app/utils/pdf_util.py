@@ -28,7 +28,7 @@ def add_mandatsreferenz_to_pdf(pdf_bytes, mandatsreferenz):
         # The box appears to be in the top-right portion of the form
         # Use percentages of page dimensions for better adaptability
         x = 400  # X-coordinate (from left) - adjusted based on form layout
-        y = 240  # Y-coordinate (from top) - the location of the Mandatsreferenz field
+        y = 180  # Y-coordinate (from top) - the location of the Mandatsreferenz field
         width = 330  # Width of the text field
         height = 30  # Height of the text field
         
