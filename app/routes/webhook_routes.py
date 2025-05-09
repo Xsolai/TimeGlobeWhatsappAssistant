@@ -22,18 +22,17 @@ from ..core.dependencies import (
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.utils.message_cache import MessageCache
+from app.utils.message_queue import MessageQueue
 
 router = APIRouter()
-
 
 @router.post("/incoming-whatsapp")
 async def whatsapp_wbhook(
     request: Request,
-    background_tasks: BackgroundTasks,
 ):
     """
     Webhook to receive WhatsApp messages via WhatsApp Business API.
-    Responds immediately and processes the message in the background.
+    Responds immediately and adds the message to a processing queue.
     """
     start_time = time.time()
     
@@ -46,12 +45,9 @@ async def whatsapp_wbhook(
         time_to_parse = (receipt_time - start_time) * 1000
         logging.info(f"⏱️ Webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
         
-        # Immediate 200 response for WhatsApp to prevent duplicate webhook deliveries
-        # All processing happens in background tasks - including dependency resolution
-        background_tasks.add_task(
-            process_webhook_data_with_dependencies,
-            data=data
-        )
+        # Add message to the processing queue
+        message_queue = MessageQueue.get_instance()
+        message_queue.enqueue_message(data)
         
         # Calculate response time
         response_time = time.time()
@@ -70,7 +66,7 @@ async def whatsapp_wbhook(
 
 
 async def process_webhook_data_with_dependencies(data: dict):
-    """Get dependencies and process the webhook data in the background."""
+    """This function is kept for backward compatibility but no longer used."""
     # Create database session and dialog360 service inside the background task
     db = SessionLocal()
     try:

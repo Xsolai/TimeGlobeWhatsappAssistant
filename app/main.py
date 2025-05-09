@@ -71,6 +71,35 @@ app.include_router(auftragsverarbeitung_routes.router, prefix="/api/auftragsvera
 app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmandat", tags=["Lastschriftmandat"])
 app.include_router(whatsapp_status_routes.router, prefix="/api/whatsapp-status", tags=["WhatsApp Status"])
 
+# Application startup and shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources when the application starts."""
+    logging.info("Starting application...")
+    
+    # Initialize the message queue for WhatsApp message processing
+    # We import here to avoid circular imports
+    from .utils.message_queue import MessageQueue
+    from .routes.webhook_routes import process_webhook_data
+    
+    message_queue = MessageQueue.get_instance()
+    
+    # Start worker threads for processing messages
+    message_queue.start_workers(process_webhook_data)
+    logging.info("Message queue workers started")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources when the application shuts down."""
+    logging.info("Shutting down application...")
+    
+    # Stop message queue workers
+    from .utils.message_queue import MessageQueue
+    
+    message_queue = MessageQueue.get_instance()
+    message_queue.stop_workers()
+    logging.info("Message queue workers stopped")
 
 @app.post("/webhook")
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
