@@ -7,3 +7,4 @@ app.log
 /app.log
 *.log
 ./app.log
+*.db

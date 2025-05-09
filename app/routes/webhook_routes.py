@@ -13,7 +13,7 @@ from ..utils.tools_wrapper_util import get_response_from_gpt
 from ..utils.tools_wrapper_util import format_response
 import logging
 import time
-from ..db.session import get_db
+from ..db.session import get_db, SessionLocal
 from ..repositories.conversation_repository import ConversationRepository
 from ..core.dependencies import (
     get_dialog360_service,
@@ -30,8 +30,6 @@ router = APIRouter()
 async def whatsapp_wbhook(
     request: Request,
     background_tasks: BackgroundTasks,
-    dialog360_service: Dialog360Service = Depends(get_dialog360_service),
-    db: Session = Depends(get_db),
 ):
     """
     Webhook to receive WhatsApp messages via WhatsApp Business API.
@@ -49,11 +47,10 @@ async def whatsapp_wbhook(
         logging.info(f"⏱️ Webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
         
         # Immediate 200 response for WhatsApp to prevent duplicate webhook deliveries
-        # All processing happens in background tasks
+        # All processing happens in background tasks - including dependency resolution
         background_tasks.add_task(
-            process_webhook_data,
-            data=data,
-            dialog360_service=dialog360_service
+            process_webhook_data_with_dependencies,
+            data=data
         )
         
         # Calculate response time
@@ -70,6 +67,21 @@ async def whatsapp_wbhook(
         logging.error(f"Error in webhook handler: {str(e)} - Response time: {time_gap:.2f}ms")
         # Still return 200 to prevent WhatsApp from retrying
         return JSONResponse(content={"status": "success"}, status_code=200)
+
+
+async def process_webhook_data_with_dependencies(data: dict):
+    """Get dependencies and process the webhook data in the background."""
+    # Create database session and dialog360 service inside the background task
+    db = SessionLocal()
+    try:
+        dialog360_service = Dialog360Service(db)
+        # Process the webhook data with created dependencies
+        await process_webhook_data(data, dialog360_service)
+    except Exception as e:
+        logging.error(f"Error in process_webhook_data_with_dependencies: {str(e)}")
+    finally:
+        # Make sure to close the DB session
+        db.close()
 
 
 async def process_webhook_data(data: dict, dialog360_service: Dialog360Service):
