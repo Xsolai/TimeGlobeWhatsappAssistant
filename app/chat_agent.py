@@ -210,9 +210,6 @@ class ChatAgent:
             # Add user message to history
             conversation_history.append({"role": "user", "content": question_with_time})
             
-            # Clean the last tool messages before sending to OpenAI
-            conversation_history = clean_last_tool_messages(conversation_history, window=5)
-            
             # Initial completion call with error handling
             try:
                 response = self.client.chat.completions.create(
@@ -223,8 +220,28 @@ class ChatAgent:
                     temperature=0.25,
                 )
             except Exception as api_error:
-                logger.error(f"OpenAI API error: {str(api_error)}")
-                return f"Sorry, I couldn't process your request: {str(api_error)}"
+                error_str = str(api_error)
+                logger.error(f"OpenAI API error: {error_str}")
+                if "messages with role 'tool' must be a response to a preceeding message with 'tool_calls'" in error_str:
+                    logger.warning("Detected tool_call mismatch error, clearing chat history and retrying once.")
+                    # Clear chat history for this user
+                    self._save_conversation_history(user_id, [{"role": "system", "content": System_prompt}])
+                    # Retry once with only the system and user message
+                    conversation_history = [{"role": "system", "content": System_prompt},
+                                           {"role": "user", "content": question_with_time}]
+                    try:
+                        response = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=conversation_history,
+                            tools=self.available_functions,
+                            tool_choice="auto",
+                            temperature=0.25,
+                        )
+                    except Exception as api_error2:
+                        logger.error(f"OpenAI API error after clearing history: {str(api_error2)}")
+                        return f"Sorry, I couldn't process your request: {str(api_error2)}"
+                else:
+                    return f"Sorry, I couldn't process your request: {error_str}"
                 
             # Process the response with safety checks
             if not response or not response.choices or len(response.choices) == 0:
@@ -294,8 +311,26 @@ class ChatAgent:
                         temperature=0.2,
                     )
                 except Exception as api_error:
-                    logger.error(f"OpenAI API error after tool calls: {str(api_error)}")
-                    return f"Sorry, I couldn't process your request after executing functions: {str(api_error)}"
+                    error_str = str(api_error)
+                    logger.error(f"OpenAI API error after tool calls: {error_str}")
+                    if "must be followed by tool messages responding to each 'tool_call_id'" in error_str:
+                        logger.warning("Detected tool_call mismatch error after tool calls, clearing chat history and retrying once.")
+                        self._save_conversation_history(user_id, [{"role": "system", "content": System_prompt}])
+                        conversation_history = [{"role": "system", "content": System_prompt},
+                                               {"role": "user", "content": question_with_time}]
+                        try:
+                            response = self.client.chat.completions.create(
+                                model=self.model,
+                                messages=conversation_history,
+                                tools=self.available_functions,
+                                tool_choice="auto",
+                                temperature=0.2,
+                            )
+                        except Exception as api_error2:
+                            logger.error(f"OpenAI API error after clearing history: {str(api_error2)}")
+                            return f"Sorry, I couldn't process your request: {str(api_error2)}"
+                    else:
+                        return f"Sorry, I couldn't process your request after executing functions: {error_str}"
                 
                 # Safety check for the response
                 if not response or not response.choices or len(response.choices) == 0:
