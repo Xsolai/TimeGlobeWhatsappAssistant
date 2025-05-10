@@ -12,6 +12,7 @@ from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
 from .core.config import settings
+from app.utils.message_queue import clean_last_tool_messages
 
 # Set up logging
 logging.basicConfig(
@@ -209,6 +210,9 @@ class ChatAgent:
             # Add user message to history
             conversation_history.append({"role": "user", "content": question_with_time})
             
+            # Clean the last tool messages before sending to OpenAI
+            conversation_history = clean_last_tool_messages(conversation_history, window=5)
+            
             # Initial completion call with error handling
             try:
                 response = self.client.chat.completions.create(
@@ -276,6 +280,9 @@ class ChatAgent:
                 
                 # Add tool results to conversation history
                 conversation_history.extend(tool_results)
+                
+                # Clean the last tool messages before sending to OpenAI
+                conversation_history = clean_last_tool_messages(conversation_history, window=5)
                 
                 # Get a new response from the model
                 try:
