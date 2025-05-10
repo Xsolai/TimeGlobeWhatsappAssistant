@@ -146,4 +146,11 @@ class MessageQueue:
         
         # Close the event loop when thread is stopping
         loop.close()
-        logger.info(f"Worker {worker_id} stopped") 
+        logger.info(f"Worker {worker_id} stopped")
+
+def clean_last_tool_message(history):
+    # Only check the last two messages
+    if len(history) >= 1 and history[-1]['role'] == 'tool':
+        if len(history) == 1 or history[-2]['role'] != 'tool_calls':
+            history.pop()
+    return history 
