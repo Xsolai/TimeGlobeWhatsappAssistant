@@ -298,9 +298,6 @@ class ChatAgent:
                 # Add tool results to conversation history
                 conversation_history.extend(tool_results)
                 
-                # Clean the last tool messages before sending to OpenAI
-                conversation_history = clean_last_tool_messages(conversation_history, window=5)
-                
                 # Get a new response from the model
                 try:
                     response = self.client.chat.completions.create(
