@@ -148,9 +148,18 @@ class MessageQueue:
         loop.close()
         logger.info(f"Worker {worker_id} stopped")
 
-def clean_last_tool_message(history):
-    # Only check the last two messages
-    if len(history) >= 1 and history[-1]['role'] == 'tool':
-        if len(history) == 1 or history[-2]['role'] != 'tool_calls':
-            history.pop()
+def clean_last_tool_messages(history, window=5):
+    """
+    Check the last `window` messages and remove any 'tool' message
+    that is not immediately after a 'tool_calls' message.
+    """
+    start = max(0, len(history) - window)
+    i = start
+    while i < len(history):
+        if history[i]['role'] == 'tool':
+            if i == 0 or history[i-1]['role'] != 'tool_calls':
+                history.pop(i)
+                # After popping, don't increment i, as the next item shifts into this index
+                continue
+        i += 1
     return history 
