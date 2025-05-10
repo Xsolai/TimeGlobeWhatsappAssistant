@@ -12,7 +12,7 @@ from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
 from .core.config import settings
-from app.utils.message_queue import clean_last_tool_messages
+
 
 # Set up logging
 logging.basicConfig(
