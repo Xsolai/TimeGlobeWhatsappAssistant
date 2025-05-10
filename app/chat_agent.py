@@ -222,7 +222,7 @@ class ChatAgent:
             except Exception as api_error:
                 error_str = str(api_error)
                 logger.error(f"OpenAI API error: {error_str}")
-                if "messages with role 'tool' must be a response to a preceeding message with 'tool_calls'" in error_str:
+                if "messages with role 'tool' must be a response to a preceeding message with 'tool_calls'" in error_str or "must be followed by tool messages responding to each 'tool_call_id'"  in error_str:
                     logger.warning("Detected tool_call mismatch error, clearing chat history and retrying once.")
                     # Clear chat history for this user
                     self._save_conversation_history(user_id, [{"role": "system", "content": System_prompt}])
