@@ -103,7 +103,10 @@ def AppointmentSuggestion(week, employeeid, itemno, siteCd: str):
     start_time = time.time()
     try:
         suggestions = _get_timeglobe_service().AppointmentSuggestion(
-            week,employeeid, itemno, siteCd
+            week=week,
+            employee_id=employeeid, 
+            item_no=itemno, 
+            siteCd=siteCd
         )
         execution_time = time.time() - start_time
         logger.info(
@@ -717,21 +720,23 @@ def getOrders(mobile_number:str=None):
 
 def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict]):
     """Wrapper for AppointmentSuggestion to match the new schema"""
-    # Convert from the new format to the old format
+    # Check if positions are provided
     if not positions or len(positions) == 0:
         return {"status": "error", "message": "No positions specified"}
     
-    # Take the first position
-    position = positions[0]
-    
-    # Call the original function with the extracted parameters
-    # Note: The original function expects employeeid, itemno in that specific format
-    return AppointmentSuggestion(
-        week=week,
-        employeeid=position.get("employeeId", 0),  # Use 0 or some default if not specified
-        itemno=position.get("itemNo"),
-        siteCd=siteCd
-    )
+    # Process all positions
+    try:
+        service = _get_timeglobe_service()
+        # Call the service method directly with all positions
+        suggestions = service.AppointmentSuggestion(
+            week=week,
+            siteCd=siteCd,
+            positions=positions
+        )
+        return {"status": "success", "suggestions": suggestions}
+    except Exception as e:
+        logger.error(f"Error in AppointmentSuggestion_wrapper: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positions: List[Dict], customerId: str = None, business_phone_number: str = None):
     """Wrapper for book_appointment that handles multiple positions"""

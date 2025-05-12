@@ -362,14 +362,33 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
-    def AppointmentSuggestion(self, week: int, employee_id: int, item_no: int, siteCd: str, mobile_number: str = None):
-        """Retrieve available appointment slots for selected services."""
-        main_logger.debug(f"Fetching suggestions for employee: {employee_id}")
-
-        if int(employee_id) == 0:
-            positions = [{"itemNo": item_no}]
+    def AppointmentSuggestion(self, week: int, siteCd: str, positions: list = None, employee_id: int = None, item_no: int = None, mobile_number: str = None):
+        """
+        Retrieve available appointment slots for selected services.
+        
+        Args:
+            week: Week number
+            siteCd: Site code
+            positions: List of position dictionaries with itemNo and optional employeeId
+            employee_id: (Legacy) Employee ID for a single position
+            item_no: (Legacy) Item number for a single position
+            mobile_number: Customer mobile number
+        """
+        main_logger.debug(f"Fetching appointment suggestions")
+        
+        # Handle both new (positions list) and legacy (single item/employee) formats
+        if positions:
+            main_logger.info(f"Using multiple positions: {positions}")
+        elif item_no is not None:
+            # Support legacy format with single position
+            main_logger.info(f"Using legacy format with single position - employee: {employee_id}, item: {item_no}")
+            if employee_id is not None and int(employee_id) != 0:
+                positions = [{"itemNo": item_no, "employeeId": employee_id}]
+            else:
+                positions = [{"itemNo": item_no}]
         else:
-            positions = [{"itemNo": item_no, "employeeId": employee_id}]
+            main_logger.error("No positions or item_no provided")
+            return {"code": -1, "message": "No positions or item_no provided"}
 
         customer_cd = self.get_customer_cd(mobile_number)
         payload = {
@@ -425,9 +444,7 @@ class TimeGlobeService:
         else:
             main_logger.warning("No suggestions found in response or invalid response format")
         
-        main_logger.info(
-            f"Successfully fetched suggestions for employee: {employee_id}"
-        )
+        main_logger.info("Successfully fetched appointment suggestions")
         return response
 
     def get_profile(self, mobile_number: str, business_phone: str = None):
