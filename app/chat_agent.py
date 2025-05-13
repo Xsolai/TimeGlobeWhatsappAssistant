@@ -426,7 +426,7 @@ class ChatAgent:
         except Exception as e:
             logger.error(f"Error saving conversation history: {str(e)}")
     
-    def _trim_conversation_history(self, history: List[Dict], max_tokens: int = 4000) -> List[Dict]:
+    def _trim_conversation_history(self, history: List[Dict], max_tokens: int = 1047576) -> List[Dict]:
         """
         Trim conversation history to prevent token limits.
         Keep the system message, and most recent messages within token limit.
