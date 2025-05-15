@@ -426,10 +426,10 @@ class ChatAgent:
         except Exception as e:
             logger.error(f"Error saving conversation history: {str(e)}")
     
-    def _trim_conversation_history(self, history: List[Dict], max_tokens: int = 1047576) -> List[Dict]:
+    def _trim_conversation_history(self, history: List[Dict], max_messages: int = 30) -> List[Dict]:
         """
-        Trim conversation history to prevent token limits.
-        Keep the system message, and most recent messages within token limit.
+        Trim conversation history to keep only the most recent messages.
+        Always keeps the system message and the most recent 'max_messages' messages.
         """
         if not history:
             return []
@@ -440,30 +440,12 @@ class ChatAgent:
             system_message = history[0]
             history = history[1:]
         
-        # Simple token estimation (rough approximation)
-        def estimate_tokens(message: Dict) -> int:
-            content = message.get("content", "")
-            # Handle None content
-            if content is None:
-                content = ""
-            # Rough estimate: 1 token per 4 characters + 3 for message metadata
-            return len(content) // 4 + 3
-        
-        # Keep most recent messages within token limit
-        total_tokens = 0
-        trimmed_history = []
-        
-        # Process messages in reverse (newest first)
-        for message in reversed(history):
-            message_tokens = estimate_tokens(message)
-            if total_tokens + message_tokens <= max_tokens:
-                trimmed_history.insert(0, message)
-                total_tokens += message_tokens
-            else:
-                break
+        # Keep only the most recent messages
+        if len(history) > max_messages:
+            history = history[-max_messages:]
         
         # Add back the system message
         if system_message:
-            trimmed_history.insert(0, system_message)
+            history.insert(0, system_message)
         
-        return trimmed_history 
+        return history 
