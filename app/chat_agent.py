@@ -447,5 +447,7 @@ class ChatAgent:
         # Add back the system message
         if system_message:
             history.insert(0, system_message)
+
+        logger.info(f"Length of trimmed conversation history: {len(history)}")
         
         return history 
