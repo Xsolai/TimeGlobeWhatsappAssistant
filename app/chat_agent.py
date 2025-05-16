@@ -441,8 +441,8 @@ class ChatAgent:
             history = history[1:]
         
         # Keep only the most recent messages
-        if len(history) > max_messages:
-            history = history[-max_messages:]
+        if len(history) >= max_messages:
+            history = history[1::]
         
         # Add back the system message
         if system_message:
