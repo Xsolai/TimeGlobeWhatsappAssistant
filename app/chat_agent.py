@@ -429,7 +429,8 @@ class ChatAgent:
     def _trim_conversation_history(self, history: List[Dict], max_messages: int = 30) -> List[Dict]:
         """
         Trim conversation history to keep only the most recent messages.
-        Always keeps the system message and the most recent 'max_messages' messages.
+        Always keeps the system message and trims before the first user message
+        after the first 2 messages in history.
         """
         if not history:
             return []
@@ -441,8 +442,29 @@ class ChatAgent:
             history = history[1:]
         
         # Keep only the most recent messages
-        if len(history) >= max_messages:
-            history = history[1::]
+        logger.info(f"Length of history: {len(history)}")
+        
+        # If history is already shorter than max_messages, no need to trim
+        if len(history) < max_messages:
+            # Add back the system message
+            if system_message:
+                history.insert(0, system_message)
+            return history
+            
+        # Find the first user message after the first 2 messages
+        start_idx = 2  # Start search from the 3rd message
+        trim_idx = 0   # Default to beginning of list
+        
+        if len(history) > start_idx:
+            for i in range(start_idx, len(history)):
+                if history[i].get("role") == "user":
+                    trim_idx = i
+                    break
+        
+        # Trim history before the found user message
+        if trim_idx > 0:
+            logger.info(f"Trimming history before user message at index {trim_idx}")
+            history = history[trim_idx:]
         
         # Add back the system message
         if system_message:
