@@ -152,19 +152,20 @@ const DashboardPage: React.FC = () => {
           // Wenn die Datumsbereiche nicht geladen werden können, fahren wir trotzdem fort
         }
 
-        // Hole die Dashboard-Daten
-        const data = await analyticsService.getDashboard();
-        setDashboardData(data);
+        // Hole die monatlichen Dashboard-Daten basierend auf dem ausgewählten Monat
+        const monthlyData = await analyticsService.getMonthlyAnalytics(selectedMonth);
+        setDashboardData(monthlyData);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Fehler beim Laden der Daten');
+        setError('Fehler beim Laden der monatlichen Daten');
       } finally {
         setLoading(false);
       }
     };
 
+    // Initial data fetch on component mount
     fetchData();
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, selectedMonth]); // Abhängigkeit von selectedMonth hinzufügen
 
   // Hilfsfunktion zur Überprüfung, ob ein Datum verfügbar ist
   const isDateAvailable = (date: Date) => {
@@ -303,20 +304,8 @@ const DashboardPage: React.FC = () => {
             setSelectedMonth(newDate);
             const monthlyData = await analyticsService.getMonthlyAnalytics(newDate);
             console.log('Empfangene Monatsdaten:', monthlyData);
-            if (monthlyData && monthlyData.summary) {
-              setDashboardData(prevData => ({
-                ...prevData!,
-                summary: {
-                  ...prevData!.summary,
-                  monthly_appointments: monthlyData.summary.monthly_appointments,
-                  monthly_growth_rate: monthlyData.summary.monthly_growth_rate,
-                  monthly_services_booked: monthlyData.summary.monthly_services_booked
-                },
-                appointment_time_series: monthlyData.appointment_time_series || []
-              }));
-            } else {
-              throw new Error('Ungültige Daten vom Server empfangen');
-            }
+            // Since getMonthlyAnalytics now returns DashboardData, set it directly
+            setDashboardData(monthlyData);
             break;
         }
       } catch (error) {

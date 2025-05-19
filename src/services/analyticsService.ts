@@ -5,15 +5,15 @@ const API_URL = 'https://timeglobe-server.ecomtask.de/api';
 // Analytics Dashboard Data Interface
 export interface DashboardData {
   summary: {
-    today_appointments: number;
-    todays_services: number;
-    costs_today: number;
-    costs_last_30_days: number;
+    today_appointments?: number;
+    todays_services?: number;
+    costs_today?: number;
+    costs_last_30_days?: number;
     monthly_appointments: number;
     monthly_services_booked: number;
     monthly_growth_rate: number;
   };
-  recent_appointments: Array<{
+  recent_appointments?: Array<{
     booking_id: number;
     service_name: string;
     appointment_date: string;
@@ -136,14 +136,12 @@ const analyticsService = {
   },
 
   // Get analytics for a specific month (adjusting to new summary fields)
-  getMonthlyAnalytics: async (date: Date): Promise<{ summary: { monthly_appointments: number; monthly_growth_rate: number; monthly_services_booked: number }; appointment_time_series: Array<{ date: string; count: number }> }> => {
+  getMonthlyAnalytics: async (date: Date): Promise<DashboardData> => {
     try {
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1; // JavaScript months are 0-based
-      // Assuming a specific endpoint for monthly analytics might still exist or is needed for the date picker
-      // If not, this function might need to be refactored or removed.
-      const response = await fetchWithAuth(`${API_URL}/analytics/monthly/${year}/${month}`);
-      // Assuming the response for this specific endpoint has a similar structure or at least the summary and time_series fields
+      const year = date.getFullYear(); // Get full year
+      const month = date.getMonth() + 1; // JavaScript months are 0-based, add 1
+      const formattedMonth = month < 10 ? `0${month}` : `${month}`; // Format month with leading zero if needed
+      const response = await fetchWithAuth(`${API_URL}/analytics/dashboard?month=${year}-${formattedMonth}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching monthly analytics:', error);
