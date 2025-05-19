@@ -377,9 +377,9 @@ class AnalyticsRepository:
                               / previous_thirty_day_appointments) * 100
                 
             return {
-                "today_appointments": today_appointments,
+                "today_appointments": appointments_today_count,
                 "yesterday_appointments": yesterday_appointments,
-                "thirty_day_appointments": thirty_day_appointments,
+                "thirty_day_appointments": appointments_last_30_days_count,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "customer_stats": customer_stats,
                 "todays_services_count": today_appointments,
