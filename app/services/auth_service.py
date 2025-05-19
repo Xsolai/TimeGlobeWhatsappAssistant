@@ -193,24 +193,23 @@ class AuthService:
             main_logger.warning(f"No business found with email: {request.email}")
             raise HTTPException(status_code=404, detail="No business found with this email.")
         
-        # Generate OTP
-        otp = self.generate_otp()
-        expiry = time.time() + 300  # OTP valid for 5 minutes
+        # Generate a unique reset token
+        reset_token = str(uuid4())
+        # Store the reset token associated with the business ID
+        reset_tokens[reset_token] = business.id
         
-        # Store OTP
-        otp_storage[request.email] = {
-            "otp": otp,
-            "expiry": expiry,
-            "type": "password_reset"
-        }
+        # Construct the reset password URL
+        reset_link = f"{settings.FRONTEND_RESET_PASSWORD_URL}/{business.id}/{reset_token}"
         
-        # Send OTP via email
-        body = f"Dear Business Owner,\n\nYour OTP for password reset is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
-        email_util.send_email(request.email, "Password Reset OTP", body)
+        # Send email with the reset link
+        subject = "Reset Your Password"
+        body = f"Dear {business.business_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nThis link is valid for a limited time.\n\nBest regards,\nYour App Team"
         
-        main_logger.info(f"Password reset OTP sent to {request.email}")
+        email_util.send_email(business.email, subject, body)
+        
+        main_logger.info(f"Password reset link sent to {request.email}")
         return {
-            "message": "OTP has been sent to your email. Please use it to reset your password."
+            "message": "Reset password link has been sent to your email."
         }
 
     def reset_password(self, data: ResetPasswordRequest):
