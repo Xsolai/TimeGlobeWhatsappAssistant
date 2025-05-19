@@ -1,6 +1,7 @@
 from .base import Base
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 
 class BookModel(Base):
@@ -13,3 +14,4 @@ class BookModel(Base):
 
     booking_details = relationship("BookingDetail", back_populates="book")
     customer = relationship("CustomerModel", back_populates="appointments")
+    created_at = Column(DateTime, default=datetime.now)

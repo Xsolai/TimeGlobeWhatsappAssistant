@@ -14,3 +14,4 @@ class BookingDetail(Base):
     item_nm = Column(String, nullable=True)
     book_id = Column(Integer, ForeignKey("BookedAppointment.id"), nullable=False)
     book = relationship("BookModel", back_populates="booking_details")
+    created_at = Column(DateTime, default=datetime.now)

@@ -136,6 +136,7 @@ def validate_timeglobe_key(
 @router.get("/business/timeglobe-key", response_model=dict)
 def get_timeglobe_auth_key(current_business: Business = Depends(get_current_business)):
     """Get the TimeGlobe auth key and customer_cd for the logged-in business."""
+    main_logger.info(f"Fetching TimeGlobe key for {current_business.email}")
     return {
         "timeglobe_auth_key": current_business.timeglobe_auth_key,
         "customer_cd": current_business.customer_cd
@@ -143,37 +144,24 @@ def get_timeglobe_auth_key(current_business: Business = Depends(get_current_busi
 
 
 # Add a new schema that includes email for public validation
-class PublicTimeGlobeAuthKeyRequest(BaseModel):
-    auth_key: Optional[str] = None
-    email: EmailStr
+# class PublicTimeGlobeAuthKeyRequest(BaseModel):
+#     auth_key: Optional[str] = None
+#     email: EmailStr
 
-
-@router.post("/public/validate-timeglobe-key", response_model=TimeGlobeAuthKeyResponse)
-def validate_timeglobe_key_public(
-    request: PublicTimeGlobeAuthKeyRequest,
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    """Validates TimeGlobe API key without requiring authentication."""
-    main_logger.info(f"Validating TimeGlobe API key publicly for {request.email}")
+# @router.post("/public/validate-timeglobe-key", response_model=TimeGlobeAuthKeyResponse)
+# def validate_timeglobe_key_public(
+#     request: PublicTimeGlobeAuthKeyRequest,
+#     auth_service: AuthService = Depends(get_auth_service),
+# ):
+#     """Validates TimeGlobe API key without requiring authentication."""
+#     main_logger.info(f"Validating TimeGlobe API key publicly for {request.email}")
     
-    # If no auth_key provided, check if business already has valid credentials
-    if not request.auth_key:
-        # Check if business exists and has TimeGlobe credentials
-        business = auth_service.business_repository.get_by_email(request.email)
-        if business and business.customer_cd and business.timeglobe_auth_key:
-            return {
-                "valid": True,
-                "customer_cd": business.customer_cd,
-                "message": "TimeGlobe authentication key already validated"
-            }
-        return {
-            "valid": False,
-            "message": "No TimeGlobe authentication key provided"
-        }
-    
-    # Normal validation with auth_key
-    result = auth_service.validate_timeglobe_auth_key(request.auth_key, request.email)
-    return result
+#     # If no auth_key provided, check if business already has valid credentials
+#     if not request.auth_key:
+#         # Check if business exists and has TimeGlobe credentials
+#         business = auth_service.business_repository.get_by_email(request.email)
+#         if business and business.customer_cd and business.timeglobe_auth_key:
+#             return {
 
 
 @router.post("/update-business-info", response_model=dict)
