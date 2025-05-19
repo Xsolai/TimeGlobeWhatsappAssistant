@@ -49,19 +49,46 @@ class RevenueEstimates(BaseModel):
 # Summary metrics
 class DashboardSummary(BaseModel):
     today_appointments: int
-    yesterday_appointments: int
-    thirty_day_appointments: int
-    thirty_day_growth_rate: float
-    customer_stats: CustomerStats
     todays_services: int
+    costs_today: float
+    costs_last_30_days: float
+    monthly_appointments: int
+    monthly_services_booked: int
+    monthly_growth_rate: float
     
+# Customer list item
+class CustomerListItem(BaseModel):
+    id: int
+    name: str
+    mobile_number: str
+    email: Optional[str] = None
+    booking_count: int
+    latest_booking: Optional[str] = None
+    created_at: str
+    
+# Customer list data
+class CustomerListData(BaseModel):
+    total: int
+    customers: List[CustomerListItem]
+    
+# Customer list response
+class CustomerListResponse(BaseResponse):
+    data: Optional[CustomerListData] = None
+
+# Schema for a single recent appointment
+class RecentAppointment(BaseModel):
+    booking_id: int
+    service_name: str
+    appointment_date: str
+    appointment_time: str
+    customer_name: str
+    customer_phone: str
+
 # Complete dashboard response
 class DashboardData(BaseModel):
     summary: DashboardSummary
-    appointment_trend: List[DailyAppointment]
-    top_services: List[ServicePopularity]
-    busy_times: BusyTimes
-    revenue: RevenueEstimates
+    recent_appointments: List[RecentAppointment]
+    appointment_time_series: List[DailyAppointment]
     
 # Dashboard response
 class DashboardResponse(BaseResponse):
@@ -94,23 +121,4 @@ class ServiceAnalyticsData(BaseModel):
     
 # Service analytics response
 class ServiceAnalyticsResponse(BaseResponse):
-    data: Optional[ServiceAnalyticsData] = None
-
-# Customer list item
-class CustomerListItem(BaseModel):
-    id: int
-    name: str
-    mobile_number: str
-    email: Optional[str] = None
-    booking_count: int
-    latest_booking: Optional[str] = None
-    created_at: str
-    
-# Customer list data
-class CustomerListData(BaseModel):
-    total: int
-    customers: List[CustomerListItem]
-    
-# Customer list response
-class CustomerListResponse(BaseResponse):
-    data: Optional[CustomerListData] = None 
+    data: Optional[ServiceAnalyticsData] = None 

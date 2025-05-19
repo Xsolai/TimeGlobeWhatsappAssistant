@@ -23,37 +23,33 @@ class AnalyticsService:
             # Get summary data (quick stats)
             summary = self.analytics_repo.get_dashboard_summary(business_phone)
             
-            # Get appointment trend data (last 30 days)
-            appointment_trend = self.analytics_repo.get_appointments_by_timeframe(business_phone, 30)
-            
-            # Get top services
-            top_services = self.analytics_repo.get_service_popularity(business_phone, 5)
-            
-            # Get busy times
-            busy_times = self.analytics_repo.get_busiest_times(business_phone)
-            
-            # Get revenue estimates (if available)
+            # Get revenue estimates (needed for monthly services booked)
             revenue = self.analytics_repo.get_revenue_estimates(business_phone)
             
-            # Combine all data into a single dashboard response
-            dashboard = {
+            # Get recent appointments
+            recent_appointments = self.analytics_repo.get_recent_appointments(business_phone, limit=10)
+
+            # Get appointment time series data for the last 30 days
+            appointment_time_series = self.analytics_repo.get_appointments_by_timeframe(business_phone, days=30)
+
+            # Construct the dashboard response with only the required fields
+            dashboard_data = {
                 "summary": {
                     "today_appointments": summary["today_appointments"],
-                    "yesterday_appointments": summary["yesterday_appointments"],
-                    "thirty_day_appointments": summary["thirty_day_appointments"],
-                    "thirty_day_growth_rate": summary["thirty_day_growth_rate"],
-                    "customer_stats": summary["customer_stats"],
-                    "todays_services": summary["todays_services_count"]
+                    "todays_services": summary["todays_services_count"],
+                    "costs_today": summary["costs_today_calculated"],
+                    "costs_last_30_days": summary["costs_last_30_days_calculated"],
+                    "monthly_appointments": summary["thirty_day_appointments"],
+                    "monthly_services_booked": revenue["services_booked"],
+                    "monthly_growth_rate": summary["thirty_day_growth_rate"]
                 },
-                "appointment_trend": appointment_trend,
-                "top_services": top_services,
-                "busy_times": busy_times,
-                "revenue": revenue
+                "recent_appointments": recent_appointments,
+                "appointment_time_series": appointment_time_series
             }
             
             return {
                 "status": "success",
-                "data": dashboard
+                "data": dashboard_data
             }
             
         except Exception as e:

@@ -341,6 +341,32 @@ class AnalyticsRepository:
                 .scalar() or 0
             )
             
+            # Calculate appointments count from BookModel for today
+            appointments_today_count = (
+                self.db.query(func.count(BookModel.id))
+                .filter(
+                    BookModel.business_phone_number == business_phone,
+                    func.date(BookModel.created_at) == today.date()
+                )
+                .scalar() or 0
+            )
+            
+            # Calculate appointments count from BookModel for the last 30 days
+            appointments_last_30_days_count = (
+                self.db.query(func.count(BookModel.id))
+                .filter(
+                    BookModel.business_phone_number == business_phone,
+                    BookModel.created_at >= thirty_days_ago,
+                    BookModel.created_at <= today
+                )
+                .scalar() or 0
+            )
+            
+            # Calculate costs
+            cost_per_appointment = 0.99
+            costs_today = round(appointments_today_count * cost_per_appointment, 2)
+            costs_last_30_days = round(appointments_last_30_days_count * cost_per_appointment, 2)
+
             # Customer statistics
             customer_stats = self.get_customer_statistics(business_phone)
             
@@ -350,24 +376,15 @@ class AnalyticsRepository:
                 growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
                               / previous_thirty_day_appointments) * 100
                 
-            # Get today's services count from BookingDetail
-            todays_services = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
-                .filter(
-                    BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == today.date()
-                )
-                .scalar() or 0
-            )
-            
             return {
                 "today_appointments": today_appointments,
                 "yesterday_appointments": yesterday_appointments,
                 "thirty_day_appointments": thirty_day_appointments,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "customer_stats": customer_stats,
-                "todays_services_count": todays_services
+                "todays_services_count": today_appointments,
+                "costs_today_calculated": costs_today,
+                "costs_last_30_days_calculated": costs_last_30_days
             }
             
         except Exception as e:
@@ -383,7 +400,9 @@ class AnalyticsRepository:
                     "returning_customers": 0,
                     "retention_rate": 0
                 },
-                "todays_services_count": 0
+                "todays_services_count": 0,
+                "costs_today_calculated": 0,
+                "costs_last_30_days_calculated": 0
             }
     
     def get_business_customers(self, business_phone: str, page: int = 1, page_size: int = 10):
@@ -473,4 +492,51 @@ class AnalyticsRepository:
             return {
                 "total": 0,
                 "customers": []
-            } 
+            }
+    
+    def get_recent_appointments(self, business_phone: str, limit: int = 10):
+        """
+        Get the most recently booked appointments with details.
+        
+        Args:
+            business_phone: The business phone number
+            limit: Number of recent appointments to return (default 10)
+            
+        Returns:
+            List of dictionaries with recent appointment details.
+        """
+        try:
+            query = (
+                self.db.query(
+                    BookModel.id.label('booking_id'),
+                    BookingDetail.item_nm.label('service_name'),
+                    func.date(BookingDetail.begin_ts).label('appointment_date'),
+                    func.time(BookingDetail.begin_ts).label('appointment_time'),
+                    CustomerModel.first_name.label('customer_first_name'),
+                    CustomerModel.last_name.label('customer_last_name'),
+                    CustomerModel.mobile_number.label('customer_phone')
+                )
+                .join(BookingDetail, BookModel.id == BookingDetail.book_id)
+                .join(CustomerModel, BookModel.customer_id == CustomerModel.id)
+                .filter(BookModel.business_phone_number == business_phone)
+                .order_by(desc(BookingDetail.begin_ts))
+                .limit(limit)
+            )
+            
+            results = query.all()
+            
+            return [
+                {
+                    "booking_id": row.booking_id,
+                    "service_name": row.service_name or "Unknown Service",
+                    "appointment_date": str(row.appointment_date),
+                    "appointment_time": str(row.appointment_time),
+                    "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
+                    "customer_phone": row.customer_phone
+                }
+                for row in results
+            ]
+            
+        except Exception as e:
+            main_logger.error(f"Error getting recent appointments: {str(e)}")
+            return [] 
