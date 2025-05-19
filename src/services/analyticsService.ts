@@ -78,6 +78,16 @@ const formatDateForApi = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
+// Utility to format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
 const analyticsService = {
   // Get available date ranges
   getAvailableDateRanges: async (): Promise<DateRangeData> => {

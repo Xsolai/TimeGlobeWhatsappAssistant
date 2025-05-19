@@ -330,13 +330,11 @@ const DashboardPage: React.FC = () => {
   const servicesBookedTodayEnd = dashboardData?.summary?.todays_services || 0;
   const servicesBookedToday = useCountUp({ end: servicesBookedTodayEnd, duration: 3500, startOnMount: !!dashboardData });
 
-  // Example for "Kosten Monat"
-  const monthlyCostEnd = dashboardData?.summary?.costs_last_30_days || 0;
-  const monthlyCost = useCountUp({ end: monthlyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
+  // Cost for the month
+  const monthlyCost = dashboardData?.summary?.costs_last_30_days || 0;
 
-  // Example for "Kosten Heute"
-  const dailyCostEnd = dashboardData?.summary?.costs_today || 0;
-  const dailyCost = useCountUp({ end: dailyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
+  // Cost for today
+  const dailyCost = dashboardData?.summary?.costs_today || 0;
 
   // Example for "Termine" in month overview
   const thirtyDayAppointmentsEnd = dashboardData?.summary?.monthly_appointments || 0;
@@ -551,7 +549,7 @@ const DashboardPage: React.FC = () => {
                                 Monat
                               </Typography>
                               <Typography variant="h5" sx={{ color: '#1976D2', fontWeight: 500 }}>
-                                {monthlyCost} €
+                                {monthlyCost.toFixed(2).replace('.', ',')} €
                               </Typography>
                             </Box>
                             <Box sx={{ textAlign: 'right' }}>
@@ -559,7 +557,7 @@ const DashboardPage: React.FC = () => {
                                 Heute
                               </Typography>
                               <Typography variant="h6" sx={{ color: '#4CAF50' }}>
-                                {dailyCost} €
+                                {dailyCost.toFixed(2).replace('.', ',')} €
                               </Typography>
                             </Box>
                           </Box>
