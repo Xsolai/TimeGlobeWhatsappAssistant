@@ -84,3 +84,7 @@ class BusinessInfoUpdate(BaseModel):
 
 class BusinessInfoDelete(BaseModel):
     fields: List[str]
+
+
+class ForgetPasswordRequest(BaseModel):
+    email: EmailStr

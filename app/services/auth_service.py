@@ -10,6 +10,7 @@ from ..schemas.auth import (
     OTPVerificationRequest,
     ResetPasswordRequest,
     Business,
+    ForgetPasswordRequest,
 )
 from ..models.business_model import Business
 from ..core.config import settings
@@ -182,28 +183,35 @@ class AuthService:
             "message": "OTP has been resent to your email. Please verify to complete registration."
         }
 
-    def forget_password(self, request: OTPVerificationRequest):
-        main_logger.debug(
-            f"Processing forgot password request for email: {request.email}"
-        )
+    def forget_password(self, request: ForgetPasswordRequest):
+        """Handles forgot password flow and sends OTP for password reset."""
+        main_logger.debug(f"Processing forget password request for email: {request.email}")
+        
+        # Check if business exists
         business = self.business_repository.get_by_email(request.email)
         if not business:
-            main_logger.warning(f"Business not found for email: {request.email}")
-            raise HTTPException(
-                status_code=404, detail="Business with this email does not exist"
-            )
-
-        reset_token = str(uuid4())
-        reset_tokens[reset_token] = business.id
-
-        reset_link = f"https://frontend.d1qj820rqysre7.amplifyapp.com/reset-password/{business.id}/{reset_token}"
-
-        subject = "Reset Your Password"
-        body = f"Hello {business.business_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nBest regards,\nYour App Team"
-
-        email_util.send_email(business.email, subject, body)
-        main_logger.info(f"Reset password link {reset_link} sent to {request.email}")
-        return {"message": "Reset password link has been sent to your email."}
+            main_logger.warning(f"No business found with email: {request.email}")
+            raise HTTPException(status_code=404, detail="No business found with this email.")
+        
+        # Generate OTP
+        otp = self.generate_otp()
+        expiry = time.time() + 300  # OTP valid for 5 minutes
+        
+        # Store OTP
+        otp_storage[request.email] = {
+            "otp": otp,
+            "expiry": expiry,
+            "type": "password_reset"
+        }
+        
+        # Send OTP via email
+        body = f"Dear Business Owner,\n\nYour OTP for password reset is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
+        email_util.send_email(request.email, "Password Reset OTP", body)
+        
+        main_logger.info(f"Password reset OTP sent to {request.email}")
+        return {
+            "message": "OTP has been sent to your email. Please use it to reset your password."
+        }
 
     def reset_password(self, data: ResetPasswordRequest):
         main_logger.debug("Processing reset password request")

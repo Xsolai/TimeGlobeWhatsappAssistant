@@ -15,6 +15,7 @@ from ..schemas.auth import (
     TimeGlobeAuthKeyResponse,
     BusinessInfoUpdate,
     BusinessInfoDelete,
+    ForgetPasswordRequest,
 )
 from ..services.auth_service import AuthService
 from ..core.dependencies import get_auth_service, get_current_business
@@ -81,7 +82,7 @@ def resend_otp(
 
 @router.post("/forget-password", response_class=JSONResponse)
 def forget_password(
-    request: OTPVerificationRequest,
+    request: ForgetPasswordRequest,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Handles forgot password flow and sends OTP for password reset."""
