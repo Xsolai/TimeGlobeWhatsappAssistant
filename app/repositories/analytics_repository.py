@@ -376,13 +376,23 @@ class AnalyticsRepository:
                 growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
                               / previous_thirty_day_appointments) * 100
                 
+            todays_services = (
+                self.db.query(func.count(BookingDetail.id))
+                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                .filter(
+                    BookModel.business_phone_number == business_phone,
+                    func.date(BookModel.created_at) == today.date()
+                )
+                .scalar() or 0
+            )
+                
             return {
                 "today_appointments": appointments_today_count,
                 "yesterday_appointments": yesterday_appointments,
                 "thirty_day_appointments": appointments_last_30_days_count,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "customer_stats": customer_stats,
-                "todays_services_count": today_appointments,
+                "todays_services_count": todays_services,
                 "costs_today_calculated": costs_today,
                 "costs_last_30_days_calculated": costs_last_30_days
             }
