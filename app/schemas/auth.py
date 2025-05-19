@@ -21,7 +21,6 @@ class BusinessBase(BaseModel):
 
 class BusinessCreate(BusinessBase):
     password: str
-    timeglobe_auth_key: Optional[str] = None
 
 
 class Business(BusinessBase):
@@ -30,7 +29,6 @@ class Business(BusinessBase):
     created_at: datetime
     whatsapp_number: Optional[str] = None
     customer_cd: Optional[str] = None  # TimeGlobe customer code
-    timeglobe_auth_key: Optional[str] = None
     # Business information fields
     tax_id: Optional[str] = None
     street_address: Optional[str] = None

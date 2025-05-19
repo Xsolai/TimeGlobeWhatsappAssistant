@@ -68,7 +68,7 @@ class AuthService:
                 "email": business_data.email,
                 "password": business_data.password,
                 "phone_number": business_data.phone_number,
-                "timeglobe_auth_key": business_data.timeglobe_auth_key,
+                # timeglobe_auth_key is removed from initial registration
                 # No customer_cd here since we haven't validated the auth key yet
             },
         }
