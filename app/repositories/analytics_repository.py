@@ -295,13 +295,13 @@ class AnalyticsRepository:
             thirty_days_ago = today - timedelta(days=30)
             previous_thirty_days = thirty_days_ago - timedelta(days=30)
             
-            # Appointments booked today (using BookingDetail.begin_ts)
+            # Appointments booked today (using BookModel creation date)
             today_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.begin_ts) == today.date()
+                    func.date(BookModel.created_at) == today.date()
                 )
                 .scalar() or 0
             )
@@ -312,7 +312,7 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.begin_ts) == yesterday.date()
+                    func.date(BookModel.created_at) == yesterday.date()
                 )
                 .scalar() or 0
             )
@@ -323,8 +323,8 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= thirty_days_ago,
-                    BookingDetail.begin_ts <= today
+                    BookModel.created_at >= thirty_days_ago,
+                    BookModel.created_at <= today
                 )
                 .scalar() or 0
             )
@@ -335,8 +335,8 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= previous_thirty_days,
-                    BookingDetail.begin_ts <= thirty_days_ago
+                    BookModel.created_at >= previous_thirty_days,
+                    BookModel.created_at <= thirty_days_ago
                 )
                 .scalar() or 0
             )

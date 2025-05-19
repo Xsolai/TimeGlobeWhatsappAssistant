@@ -30,7 +30,7 @@ class AnalyticsService:
             recent_appointments = self.analytics_repo.get_recent_appointments(business_phone, limit=10)
 
             # Get appointment time series data for the last 30 days
-            appointment_time_series = self.analytics_repo.get_appointments_by_timeframe(business_phone, days=30)
+            appointment_time_series_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, days=30)
 
             # Construct the dashboard response with only the required fields
             dashboard_data = {
@@ -44,7 +44,7 @@ class AnalyticsService:
                     "monthly_growth_rate": summary["thirty_day_growth_rate"]
                 },
                 "recent_appointments": recent_appointments,
-                "appointment_time_series": appointment_time_series
+                "appointment_time_series": appointment_time_series_data
             }
             
             return {
