@@ -2,6 +2,10 @@
 
 const API_URL = 'https://timeglobe-server.ecomtask.de/api/auth';
 
+// Token refresh configuration
+const TOKEN_REFRESH_THRESHOLD = 5 * 60; // 5 minutes in seconds
+let refreshPromise: Promise<void> | null = null;
+
 // Helper function to handle fetch calls
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('token');
@@ -11,7 +15,14 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   };
   
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    // Check if token needs refresh before making the call
+    await checkAndRefreshTokenIfNeeded();
+    
+    // Get potentially refreshed token
+    const currentToken = localStorage.getItem('token');
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    }
   }
   
   const response = await fetch(url, {
@@ -21,7 +32,10 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   
   // Handle specific status codes
   if (response.status === 401) {
-    // Token expired or unauthorized - but don't clear token here
+    // Clear token and trigger logout
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('currentUser');
+    window.dispatchEvent(new Event('auth-error'));
     throw new Error('Authentication expired. Please login again.');
   }
   
@@ -33,30 +47,82 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 };
 
 // Check if token is valid by decoding its expiration
-const isTokenValid = (): boolean => {
-  const token = localStorage.getItem('token');
-  if (!token) return false;
-  
+const isTokenValid = (token: string): boolean => {
   try {
-    // For JWT tokens, they are structured as header.payload.signature
-    // We need to decode the payload part
     const payload = token.split('.')[1];
     if (!payload) return false;
     
-    // Decode base64 payload
     const decodedPayload = JSON.parse(atob(payload));
     
-    // Check if token has expiration and if it's still valid
-    if (decodedPayload.exp) {
-      // exp is in seconds, Date.now() is in milliseconds
-      return decodedPayload.exp * 1000 > Date.now();
-    }
+    if (!decodedPayload.exp) return false;
     
-    // If token doesn't have expiration, assume it's valid
-    return true;
+    // Check if token expires within threshold
+    const expiresIn = decodedPayload.exp - (Date.now() / 1000);
+    return expiresIn > 0;
   } catch (e) {
     console.error('Failed to decode token:', e);
     return false;
+  }
+};
+
+// Check if token needs refresh (expires within threshold)
+const needsRefresh = (token: string): boolean => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    
+    const decodedPayload = JSON.parse(atob(payload));
+    
+    if (!decodedPayload.exp) return true;
+    
+    const expiresIn = decodedPayload.exp - (Date.now() / 1000);
+    return expiresIn < TOKEN_REFRESH_THRESHOLD;
+  } catch (e) {
+    console.error('Failed to check token refresh:', e);
+    return true;
+  }
+};
+
+// Refresh token if needed
+const checkAndRefreshTokenIfNeeded = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  if (needsRefresh(token)) {
+    // Use singleton promise to prevent multiple simultaneous refresh calls
+    if (!refreshPromise) {
+      refreshPromise = (async () => {
+        try {
+          const response = await fetch(`${API_URL}/refresh-token`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.access_token) {
+              localStorage.setItem('token', data.access_token);
+            }
+          } else {
+            // If refresh fails, clear token and trigger logout
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('currentUser');
+            window.dispatchEvent(new Event('auth-error'));
+          }
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('currentUser');
+          window.dispatchEvent(new Event('auth-error'));
+        } finally {
+          refreshPromise = null;
+        }
+      })();
+    }
+    await refreshPromise;
   }
 };
 
@@ -148,7 +214,7 @@ const authService = {
   },
 
   // Reset password
-  resetPassword: async (data: { token: string; new_password: string }) => {
+  resetPassword: async (data: { business_id: string; token: string; new_password: string }) => {
     try {
       return await fetchWithAuth(`${API_URL}/reset-password`, {
         method: 'POST',
@@ -167,11 +233,23 @@ const authService = {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      
+      // Assuming the /business/me endpoint no longer returns the auth key
       return await fetchWithAuth(`${API_URL}/business/me`, {
         method: 'GET',
       });
     } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get TimeGlobe API key for the business
+  getTimeglobeAuthKey: async (): Promise<{ timeglobe_auth_key: string; customer_cd: string }> => {
+    try {
+      return await fetchWithAuth(`${API_URL}/business/timeglobe-key`, {
+        method: 'GET',
+      });
+    } catch (error) {
+      console.error('Error fetching TimeGlobe Auth Key:', error);
       throw error;
     }
   },
@@ -206,7 +284,8 @@ const authService = {
 
   // Check if user is authenticated
   isAuthenticated: () => {
-    return isTokenValid();
+    const token = localStorage.getItem('token');
+    return token ? isTokenValid(token) : false;
   },
 
   // Get TimeGlobe API key for the business
@@ -304,6 +383,43 @@ const authService = {
       });
     } catch (error) {
       throw error;
+    }
+  },
+
+  // Validate password for auth key visibility
+  validatePassword: async (password: string) => {
+    try {
+      // Get current user email from storage
+      const currentUserStr = sessionStorage.getItem('currentUser');
+      const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+      
+      if (!currentUser?.email) {
+        console.error('No user email found');
+        return false;
+      }
+
+      // Use the same format as login
+      const formData = new URLSearchParams();
+      formData.append('username', currentUser.email);
+      formData.append('password', password);
+      
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        return false;
+      }
+      
+      const data = await response.json();
+      return data.access_token ? true : false;
+    } catch (error) {
+      console.error('Password validation failed:', error);
+      return false;
     }
   },
 };

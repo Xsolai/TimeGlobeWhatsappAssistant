@@ -17,6 +17,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
+import authService from '../services/authService';
 
 interface LocationState {
   from?: {
@@ -61,7 +62,7 @@ const LoginPage: React.FC = () => {
     setError(null);
     
     if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      setError('Bitte füllen Sie alle Felder aus');
       return;
     }
 
@@ -70,12 +71,25 @@ const LoginPage: React.FC = () => {
       const success = await login(formData.email, formData.password);
       
       if (success) {
-        navigate(from, { replace: true });
+        // Nach erfolgreichem Login das Benutzerprofil abrufen
+        try {
+          const userProfile = await authService.getBusinessProfile();
+          // Wenn WhatsApp-Nummer vorhanden ist, zum Dashboard weiterleiten
+          if (userProfile.whatsapp_number) {
+            navigate('/dashboard', { replace: true });
+          } else {
+            // Wenn keine WhatsApp-Nummer vorhanden ist, zum Onboarding weiterleiten
+            navigate('/onboarding', { replace: true });
+          }
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+          navigate('/onboarding', { replace: true });
+        }
       } else {
-        setError('Invalid email or password');
+        setError('Ungültige E-Mail oder Passwort');
       }
     } catch (err) {
-      setError('An error occurred during login');
+      setError('Ein Fehler ist während des Anmeldevorgangs aufgetreten');
       console.error(err);
     } finally {
       setLoading(false);
@@ -98,19 +112,30 @@ const LoginPage: React.FC = () => {
       backgroundColor: '#FFFFFF',
       pb: 6
     }}>
-      <Container maxWidth="sm" sx={{ flex: 1 }}>
+      <Box 
+        sx={{ 
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E0E0E0',
+          width: '100%'
+        }}
+      >
         <Box 
           sx={{ 
             display: 'flex', 
-            justifyContent: 'center',
-            mb: 6, 
-            mt: 5,
-            transform: 'scale(1.2)'
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%',
+            px: 4,
+            py: 2
           }}
         >
-          <Logo />
+          <Box sx={{ transform: 'scale(0.9)', ml: -2 }}>
+            <Logo />
+          </Box>
         </Box>
-        
+      </Box>
+
+      <Container maxWidth="sm" sx={{ flex: 1, mt: 8 }}>
         <Paper 
           elevation={2} 
           sx={{ 
@@ -132,7 +157,7 @@ const LoginPage: React.FC = () => {
               color: '#333333',
             }}
           >
-            Log In <span style={{ fontWeight: 'normal' }}>to Your Account</span>
+            Willkommen <span style={{ fontWeight: 'normal' }}>zurück</span>
           </Typography>
           
           {error && (
@@ -147,13 +172,44 @@ const LoginPage: React.FC = () => {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label="E-Mail-Adresse"
               name="email"
               autoComplete="email"
               value={formData.email}
               onChange={handleChange}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#F8FAFC',
+                  '& fieldset': {
+                    borderColor: '#E2E8F0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#CBD5E1',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1967D2',
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#64748B',
+                  '&.Mui-focused': {
+                    color: '#1967D2',
+                  }
+                },
+                '& input': {
+                  padding: '16px 14px',
+                  '&::placeholder': {
+                    color: '#94A3B8',
+                    opacity: 1,
+                  }
+                }
+              }}
+              variant="outlined"
               disabled={loading}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             
             <TextField
@@ -161,7 +217,7 @@ const LoginPage: React.FC = () => {
               required
               fullWidth
               name="password"
-              label="Password"
+              label="Passwort"
               type={showPassword ? 'text' : 'password'}
               id="password"
               autoComplete="current-password"
@@ -171,18 +227,55 @@ const LoginPage: React.FC = () => {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label="toggle password visibility"
+                      aria-label="Passwort anzeigen"
                       onClick={handleClickShowPassword}
                       edge="end"
                       disabled={loading}
+                      sx={{
+                        color: '#64748B',
+                        '&:hover': {
+                          color: '#1967D2',
+                        }
+                      }}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 )
               }}
-              sx={{ mb: 3 }}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#F8FAFC',
+                  '& fieldset': {
+                    borderColor: '#E2E8F0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#CBD5E1',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1967D2',
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#64748B',
+                  '&.Mui-focused': {
+                    color: '#1967D2',
+                  }
+                },
+                '& input': {
+                  padding: '16px 14px',
+                  '&::placeholder': {
+                    color: '#94A3B8',
+                    opacity: 1,
+                  }
+                }
+              }}
+              variant="outlined"
               disabled={loading}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             
             <Button
@@ -194,21 +287,37 @@ const LoginPage: React.FC = () => {
                 mb: 3,
                 py: 1.5,
                 bgcolor: '#1967D2',
+                fontSize: '1rem',
+                textTransform: 'none',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                 '&:hover': {
                   bgcolor: '#1756af',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 },
               }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Log In'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Anmelden'}
             </Button>
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Link component={RouterLink} to="/forgot-password" variant="body2" sx={{ color: '#1967D2' }}>
-                Forgot password?
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              '& a': {
+                color: '#1967D2',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  textDecoration: 'underline',
+                }
+              }
+            }}>
+              <Link component={RouterLink} to="/forgot-password">
+                Passwort vergessen?
               </Link>
-              <Link component={RouterLink} to="/signup" variant="body2" sx={{ color: '#1967D2' }}>
-                Don't have an account? Sign Up
+              <Link component={RouterLink} to="/signup">
+                Noch kein Konto? Jetzt registrieren
               </Link>
             </Box>
           </Box>
@@ -218,10 +327,45 @@ const LoginPage: React.FC = () => {
           open={showSuccessMessage}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          message="Registration successful! Please log in with your credentials."
+          message="Registrierung erfolgreich! Bitte melden Sie sich mit Ihren Zugangsdaten an."
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
       </Container>
+
+      <Box 
+        sx={{ 
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          height: '20px',
+          width: '100%',
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          py: 0.5,
+          backgroundColor: 'rgba(255, 255, 255, 0)',
+          backdropFilter: 'blur(5px)',
+          opacity: 1,
+          zIndex: 10,
+          borderTop: '1px solidrgba(224, 224, 224, 0)'
+        }}
+      >
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            color: '#666666',
+            mr: 1,
+            fontSize: '0.75rem'
+          }}
+        >
+          powered by
+        </Typography>
+        <img 
+          src="/images/EcomTask_logo.svg" 
+          alt="EcomTask Logo" 
+          style={{ height: '30px' }} 
+        />
+      </Box>
     </Box>
   );
 };

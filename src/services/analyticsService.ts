@@ -6,41 +6,34 @@ const API_URL = 'https://timeglobe-server.ecomtask.de/api';
 export interface DashboardData {
   summary: {
     today_appointments: number;
-    yesterday_appointments: number;
-    thirty_day_appointments: number;
-    thirty_day_growth_rate: number;
-    customer_stats: {
-      total_customers: number;
-      new_customers_30d: number;
-      returning_customers: number;
-      retention_rate: number;
-    }
+    todays_services: number;
+    costs_today: number;
+    costs_last_30_days: number;
+    monthly_appointments: number;
+    monthly_services_booked: number;
+    monthly_growth_rate: number;
   };
-  appointment_trend: Array<{
+  recent_appointments: Array<{
+    booking_id: number;
+    service_name: string;
+    appointment_date: string;
+    appointment_time: string;
+    customer_name: string;
+    customer_phone: string;
+  }>;
+  appointment_time_series: Array<{
     date: string;
     count: number;
   }>;
-  top_services: Array<{
-    item_no: number;
-    service_name: string;
-    booking_count: number;
-  }>;
-  busy_times: {
-    busiest_hours: Array<{
-      hour: number;
-      count: number;
-    }>;
-    busiest_days: Array<{
-      day: string;
-      count: number;
-    }>;
-  };
-  revenue: {
-    period_days: number;
-    services_booked: number;
-    estimated_revenue: number;
-    avg_service_value: number;
-  };
+  // Note: top_services and busy_times are no longer in this payload structure
+  // Note: revenue is replaced by costs in summary
+}
+
+// Neue Interface für Datumsbereiche
+export interface DateRangeData {
+  start_date: string;
+  end_date: string;
+  available_dates: string[];
 }
 
 // Response structure
@@ -62,10 +55,16 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(url, { ...options, headers });
+  
+  // Handle specific status codes
+  if (response.status === 401) {
+    // Clear token and trigger logout
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('currentUser');
+    window.dispatchEvent(new Event('auth-error'));
+    throw new Error('Authentication expired. Please login again.');
+  }
   
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -74,11 +73,31 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   return response.json();
 };
 
+// Format date to YYYY-MM-DD
+const formatDateForApi = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
 const analyticsService = {
+  // Get available date ranges
+  getAvailableDateRanges: async (): Promise<DateRangeData> => {
+    try {
+      // Assuming available dates is still needed and provided by a different endpoint or the dashboard endpoint directly
+      // If the dashboard endpoint provides it, we might need to adjust getDashboard
+      // For now, keeping the separate call based on previous context
+      const response = await fetchWithAuth(`${API_URL}/analytics/available-dates`);
+      return response.data as DateRangeData;
+    } catch (error) {
+      console.error('Error fetching available dates:', error);
+      throw error;
+    }
+  },
+
   // Get dashboard analytics
   getDashboard: async (): Promise<DashboardData> => {
     try {
       const response = await fetchWithAuth(`${API_URL}/analytics/dashboard`);
+      // Assuming the new payload structure is directly under 'data'
       return response.data as DashboardData;
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -86,7 +105,51 @@ const analyticsService = {
     }
   },
 
-  // Future analytics methods can be added here
+  // Get appointments for a specific date (adjusting to new summary field)
+  getAppointmentsForDate: async (date: Date): Promise<{ summary: { today_appointments: number } }> => {
+    try {
+      const formattedDate = formatDateForApi(date);
+      // Assuming a specific endpoint for daily appointments might still exist or is needed for the date picker
+      // If not, this function might need to be refactored or removed.
+      const response = await fetchWithAuth(`${API_URL}/analytics/appointments/date/${formattedDate}`);
+      // Assuming the response for this specific endpoint has a similar structure or at least the summary field
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching appointments for date:', error);
+      throw error;
+    }
+  },
+
+  // Get services booked for a specific date (adjusting to new summary field)
+  getServicesForDate: async (date: Date): Promise<{ summary: { todays_services: number } }> => {
+    try {
+      const formattedDate = formatDateForApi(date);
+      // Assuming a specific endpoint for daily services might still exist or is needed for the date picker
+      // If not, this function might need to be refactored or removed.
+      const response = await fetchWithAuth(`${API_URL}/analytics/services/date/${formattedDate}`);
+      // Assuming the response for this specific endpoint has a similar structure or at least the summary field
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching services for date:', error);
+      throw error;
+    }
+  },
+
+  // Get analytics for a specific month (adjusting to new summary fields)
+  getMonthlyAnalytics: async (date: Date): Promise<{ summary: { monthly_appointments: number; monthly_growth_rate: number; monthly_services_booked: number }; appointment_time_series: Array<{ date: string; count: number }> }> => {
+    try {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // JavaScript months are 0-based
+      // Assuming a specific endpoint for monthly analytics might still exist or is needed for the date picker
+      // If not, this function might need to be refactored or removed.
+      const response = await fetchWithAuth(`${API_URL}/analytics/monthly/${year}/${month}`);
+      // Assuming the response for this specific endpoint has a similar structure or at least the summary and time_series fields
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching monthly analytics:', error);
+      throw error;
+    }
+  }
 };
 
 export default analyticsService; 

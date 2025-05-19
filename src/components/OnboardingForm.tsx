@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Stepper, Step, StepLabel, Container, Paper, Typography, useTheme, StepConnector, stepConnectorClasses } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Stepper, Step, StepLabel, Container, Paper, Typography, useTheme, StepConnector, stepConnectorClasses, IconButton, Tooltip, Snackbar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ApiKeyStep from './steps/ApiKeyStep';
 import CompanyInfoStep from './steps/CompanyInfoStep';
@@ -8,6 +8,8 @@ import ConfirmationStep from './steps/ConfirmationStep';
 import { OnboardingFormData, OnboardingStep } from '../types';
 import Logo from './Logo';
 import UserMenu from './UserMenu';
+import { ContentCopy } from '@mui/icons-material';
+import TopBar from './TopBar';
 
 // Anpassung des Steppers für TimeGlobe-Design
 const TimeGlobeConnector = styled(StepConnector)(({ theme }) => ({
@@ -100,6 +102,7 @@ const OnboardingForm: React.FC = () => {
     directDebitSignature: null,
     currentSignatureStep: 0
   });
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Hilfsfunktion um den nächsten Schritt zu ermitteln
   const getNextStep = (currentStep: OnboardingStep): OnboardingStep => {
@@ -184,6 +187,12 @@ const OnboardingForm: React.FC = () => {
     setFormData((prevData) => ({ ...prevData, ...data }));
   };
 
+  const handleCopy = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyFeedback(`${type} wurde kopiert`);
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
+
   const steps = ['API-Schlüssel', 'Unternehmensinformationen', 'Vertrag', 'Bestätigung'];
 
   const renderStepContent = () => {
@@ -234,21 +243,80 @@ const OnboardingForm: React.FC = () => {
       backgroundColor: '#FFFFFF',
       pb: 6
     }}>
-      <Container maxWidth="md" sx={{ flex: 1 }}>
+      <TopBar />
+
+      <Box 
+        sx={{ 
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E0E0E0',
+          width: '100%'
+        }}
+      >
         <Box 
           sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 6, 
-            mt: 5,
+            width: '100%',
+            px: 4,
+            py: 2
           }}
         >
-          <Box sx={{ transform: 'scale(1.2)' }}>
+          <Box sx={{ transform: 'scale(0.9)', ml: -2 }}>
             <Logo />
           </Box>
-          <UserMenu formData={formData} />
+          <Box sx={{ mr: -2 }}>
+            <UserMenu formData={formData} />
+          </Box>
         </Box>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ flex: 1, py: 4 }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            mb: 6, 
+            textAlign: 'center',
+            color: '#333333',
+            fontWeight: 500
+          }}
+        >
+          WhatsApp Termin Assistent Onboarding
+        </Typography>
+        
+        <Stepper 
+          activeStep={getStepIndex(activeStep)} 
+          alternativeLabel 
+          connector={<TimeGlobeConnector />}
+          sx={{ mb: 6 }}
+        >
+          {steps.map((label, index) => (
+            <Step key={label}>
+              <StepLabel 
+                StepIconComponent={(iconProps) => 
+                  <TimeGlobeStepIcon 
+                    {...iconProps} 
+                    onClick={() => handleStepClick(index)} 
+                  />
+                }
+              >
+                <Typography 
+                  sx={{ 
+                    color: '#333333',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      color: '#1967D2',
+                      fontWeight: 'medium'
+                    }
+                  }}
+                  onClick={() => handleStepClick(index)}
+                >
+                  {label}
+                </Typography>
+              </StepLabel>
+            </Step>
+          ))}
+        </Stepper>
         
         <Paper 
           elevation={2} 
@@ -261,59 +329,21 @@ const OnboardingForm: React.FC = () => {
             border: '1px solid #F0F0F0',
           }}
         >
-          <Box>
-            <Typography 
-              variant="h4" 
-              align="center" 
-              gutterBottom
-              sx={{ 
-                fontWeight: 'bold',
-                mb: 3,
-                color: '#333333',
-              }}
-            >
-              WhatsApp Termin AI <span style={{ fontWeight: 'normal' }}>Onboarding</span>
-            </Typography>
-            
-            <Box sx={{ mb: 5 }}>
-              <Stepper 
-                activeStep={getStepIndex(activeStep)} 
-                alternativeLabel 
-                connector={<TimeGlobeConnector />}
-              >
-                {steps.map((label, index) => (
-                  <Step key={label}>
-                    <StepLabel 
-                      StepIconComponent={(iconProps) => 
-                        <TimeGlobeStepIcon 
-                          {...iconProps} 
-                          onClick={() => handleStepClick(index)} 
-                        />
-                      }
-                    >
-                      <Typography 
-                        sx={{ 
-                          color: '#333333',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            color: '#1967D2',
-                            fontWeight: 'medium'
-                          }
-                        }}
-                        onClick={() => handleStepClick(index)}
-                      >
-                        {label}
-                      </Typography>
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
-            </Box>
-            
-            {renderStepContent()}
-          </Box>
+          {renderStepContent()}
         </Paper>
       </Container>
+
+      <Snackbar
+        open={!!copyFeedback}
+        message={copyFeedback}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            bgcolor: '#4CAF50',
+            color: 'white'
+          }
+        }}
+      />
     </Box>
   );
 };

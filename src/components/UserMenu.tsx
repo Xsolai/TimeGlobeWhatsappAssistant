@@ -34,29 +34,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
     navigate('/profile');
   };
 
-  // Generate initials from user's business name or email
-  const getInitials = () => {
-    // First check formData if in onboarding
-    if (formData?.companyName) {
-      return formData.companyName
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase())
-        .join('')
-        .substring(0, 2);
-    }
-    
-    // Then check currentUser from auth context
-    if (currentUser?.business_name) {
-      // Get first letter of each word in business name
-      return currentUser.business_name
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase())
-        .join('')
-        .substring(0, 2);
-    }
-    return currentUser?.email?.charAt(0).toUpperCase() || '?';
-  };
-
   // Get display name for the menu
   const getDisplayName = () => {
     // First check formData if in onboarding
@@ -65,13 +42,23 @@ const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
     }
     
     // Then check currentUser from auth context
-    return currentUser?.business_name || 'Your Business';
+    return currentUser?.business_name || '';
   };
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Box sx={{ mr: 2, display: { xs: 'none', sm: 'flex' } }}>
-        <Typography variant="body2" color="text.secondary">
+      <Box sx={{ 
+        mr: 2, 
+        display: 'flex',
+        alignItems: 'center'
+      }}>
+        <Typography 
+          variant="body1" 
+          sx={{
+            color: 'text.primary',
+            fontWeight: 500
+          }}
+        >
           {getDisplayName()}
         </Typography>
       </Box>
@@ -79,16 +66,18 @@ const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
         size="large"
         onClick={handleMenu}
         color="inherit"
-        sx={{ p: 0 }}
-      >
-        <Avatar sx={{ 
+        sx={{ 
+          p: 0.5,
           bgcolor: '#1967D2',
+          '&:hover': {
+            bgcolor: '#1756B6'
+          }
+        }}
+      >
+        <AccountCircle sx={{ 
           color: 'white',
-          width: 40,
-          height: 40
-        }}>
-          {getInitials()}
-        </Avatar>
+          fontSize: 24
+        }} />
       </IconButton>
       <Menu
         id="menu-appbar"
@@ -111,7 +100,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
       >
         <Box sx={{ px: 2, py: 1 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 500, display: 'flex', alignItems: 'center' }}>
-            <Business fontSize="small" sx={{ mr: 1 }} />
             {getDisplayName()}
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -121,15 +109,15 @@ const UserMenu: React.FC<UserMenuProps> = ({ formData }) => {
         <Divider />
         <MenuItem onClick={handleProfileClick} sx={{ gap: 1 }}>
           <AccountCircle fontSize="small" />
-          <Typography variant="body2">My Profile</Typography>
+          <Typography variant="body2">Unternehmen</Typography>
         </MenuItem>
         <MenuItem onClick={() => { handleClose(); navigate('/dashboard'); }} sx={{ gap: 1 }}>
           <Dashboard fontSize="small" />
-          <Typography variant="body2">Dashboard</Typography>
+          <Typography variant="body2">Übersicht</Typography>
         </MenuItem>
         <MenuItem onClick={handleLogout} sx={{ gap: 1 }}>
           <ExitToApp fontSize="small" />
-          <Typography variant="body2">Logout</Typography>
+          <Typography variant="body2">Abmelden</Typography>
         </MenuItem>
       </Menu>
     </Box>

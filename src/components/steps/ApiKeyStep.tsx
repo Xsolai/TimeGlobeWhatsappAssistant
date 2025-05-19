@@ -26,16 +26,10 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
     onFormChange(data);
   }, [onFormChange]);
 
-  // Fetch TimeGlobe key on component mount
+  // Fetch TimeGlobe key on component mount and check validation status
   useEffect(() => {
     let isMounted = true;
     const fetchExistingKey = async () => {
-      // Skip fetching if we already have an API key
-      if (apiKey) {
-        setIsInitialLoading(false);
-        return;
-      }
-      
       try {
         setIsInitialLoading(true);
         const response = await authService.getBusinessTimeglobeKey();
@@ -45,18 +39,20 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
         if (!isMounted) return;
 
         if (response && response.timeglobe_auth_key) {
-          // If key exists, set it and validate it
+          // If key exists, set it
           stableOnFormChange({ apiKey: response.timeglobe_auth_key });
           
-          // Check if the response already contains customer data
+          // If the key exists and is validated, set validation status
           if (response.customer_id || response.customer_cd) {
             setCustomerCd(response.customer_id || response.customer_cd);
             setIsValidated(true);
+          } else if (apiKey) {
+            // Wenn wir einen API-Key haben aber keine Validierung, validieren wir erneut
+            validateApiKey();
           }
         }
       } catch (err) {
         console.error('Error fetching existing TimeGlobe key:', err);
-        // Don't show error to user as this is just initial loading
       } finally {
         if (isMounted) {
           setIsInitialLoading(false);
@@ -66,13 +62,16 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
 
     fetchExistingKey();
     
-    // Cleanup function to prevent state updates if unmounted
     return () => {
       isMounted = false;
     };
-  }, []); // Only run once on mount
+  }, []);
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Prevent changes if already validated
+    if (isValidated) {
+      return;
+    }
     onFormChange({ apiKey: e.target.value });
     setError(null);
     setIsValidated(false);
@@ -104,7 +103,7 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
           return true;
         } else {
           // Handle case when the API returns a 200 status but validation failed
-          setError(data.message || data.detail || 'Der API-Schlüssel ist ungültig.');
+          setError('Der TimeGlobe API-Schlüssel ist ungültig. Bitte überprüfen Sie den Schlüssel und versuchen Sie es erneut.');
           return false;
         }
       } catch (apiError: any) {
@@ -112,9 +111,9 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
         
         // Check if there's a specific error message from the API
         if (apiError.message) {
-          setError(apiError.message);
+          setError('Der TimeGlobe API-Schlüssel konnte nicht validiert werden: ' + apiError.message);
         } else {
-          setError('Verbindung zum API-Server fehlgeschlagen. Bitte versuchen Sie es später erneut.');
+          setError('Die Verbindung zum TimeGlobe-Server konnte nicht hergestellt werden. Bitte versuchen Sie es später erneut.');
         }
         return false;
       }
@@ -143,14 +142,12 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, pb: 8 }}>
-      <Paper
-        elevation={0}
+      <Box
         sx={{
           p: 4,
           mb: 4,
           borderRadius: 2,
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E0E0E0',
         }}
       >
         {isInitialLoading ? (
@@ -234,35 +231,37 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
                 mt: 4,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1,
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: isValidated ? '#f5f5f5' : '#FFFFFF',
                   '&:hover': {
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: isValidated ? '#f5f5f5' : '#FFFFFF',
                   },
                   '&.Mui-focused': {
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: isValidated ? '#f5f5f5' : '#FFFFFF',
                   },
                   height: '56px'
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#555',
+                  color: isValidated ? '#666666' : '#555',
                   fontWeight: 500
                 },
                 '& .MuiInputBase-input': {
-                  color: '#000000',
+                  color: isValidated ? '#666666' : '#000000',
                   fontWeight: 500,
+                  cursor: isValidated ? 'not-allowed' : 'text'
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Key sx={{ color: '#1967d2', mr: 1 }} />
+                    <Key sx={{ color: isValidated ? '#666666' : '#1967d2', mr: 1 }} />
                   </InputAdornment>
                 ),
                 endAdornment: isValidated ? (
                   <InputAdornment position="end">
                     <CheckCircle sx={{ color: '#4CAF50' }} />
                   </InputAdornment>
-                ) : null
+                ) : null,
+                readOnly: isValidated
               }}
             />
             
@@ -301,7 +300,7 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ apiKey, onFormChange, onNext, o
             </Box>
           </>
         )}
-      </Paper>
+      </Box>
       <Box sx={{ display: 'none' }}>
         <Footer />
       </Box>
@@ -316,22 +315,25 @@ const Footer = () => (
       position: 'fixed',
       bottom: 0,
       left: 0,
+      height: '20px',
       width: '100%',
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center',
-      py: 1,
-      backgroundColor: '#FFFFFF',
+      py: 0.5,
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      backdropFilter: 'blur(5px)',
       opacity: 1,
-      zIndex: 10
+      zIndex: 10,
+      borderTop: '1px solidrgba(224, 224, 224, 0)'
     }}
   >
     <Typography 
       variant="body2" 
       sx={{ 
-        color: '#000000',
+        color: '#666666',
         mr: 1,
-        fontSize: '0.85rem'
+        fontSize: '0.75rem'
       }}
     >
       powered by
@@ -339,7 +341,7 @@ const Footer = () => (
     <img 
       src="/images/EcomTask_logo.svg" 
       alt="EcomTask Logo" 
-      style={{ height: '36px' }} 
+      style={{ height: '30px' }} 
     />
   </Box>
 );

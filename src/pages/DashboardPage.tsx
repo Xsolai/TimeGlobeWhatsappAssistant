@@ -11,8 +11,15 @@ import {
   Divider,
   useTheme,
   Stack,
-  Button
+  Button,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  Popover
 } from '@mui/material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker, DateCalendar } from '@mui/x-date-pickers';
+import { de } from 'date-fns/locale';
 import { 
   TodayOutlined, 
   CalendarTodayOutlined, 
@@ -21,18 +28,32 @@ import {
   AccessTimeOutlined,
   AttachMoneyOutlined,
   NewReleasesOutlined,
-  RepeatOutlined
+  RepeatOutlined,
+  ContentCopy,
+  WhatsApp
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from '../components/UserMenu';
 import Logo from '../components/Logo';
-import analyticsService, { DashboardData } from '../services/analyticsService';
+import TopBar from '../components/TopBar';
+import analyticsService, { DashboardData, DateRangeData } from '../services/analyticsService';
+import authService from '../services/authService';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer
+} from 'recharts';
+import useCountUp from '../hooks/useCountUp';
 
 // Utility function to format date string
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
+  return date.toLocaleDateString('de-DE', { 
     month: 'short', 
     day: 'numeric' 
   });
@@ -40,9 +61,9 @@ const formatDate = (dateString: string) => {
 
 // Utility to format currency
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('de-DE', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'EUR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(amount);
@@ -56,6 +77,56 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [calendarAnchorEl, setCalendarAnchorEl] = useState<HTMLElement | null>(null);
+  const [activeCalendarType, setActiveCalendarType] = useState<'today' | 'services' | 'month' | null>(null);
+  const [accountCreationDate, setAccountCreationDate] = useState<Date | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+
+  // Hilfsfunktion für die Formatierung des Monatstitels
+  const getMonthTitle = (date: Date) => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const selectedMonth = date.getMonth();
+    const selectedYear = date.getFullYear();
+
+    if (currentMonth === selectedMonth && currentYear === selectedYear) {
+      return 'Aktueller Monat';
+    } else if (
+      currentMonth === selectedMonth + 1 && 
+      currentYear === selectedYear
+    ) {
+      return 'Letzter Monat';
+    } else {
+      return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date);
+    }
+  };
+
+  // Hilfsfunktion für die Formatierung des Tagstitels
+  const getDayTitle = (type: string, date: Date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    if (isToday) {
+      return type === 'appointments' ? 'Termine Heute' : 'Gebuchte Leistungen Heute';
+    } else if (isYesterday) {
+      return type === 'appointments' ? 'Termine Gestern' : 'Gebuchte Leistungen Gestern';
+    } else {
+      const formattedDate = new Intl.DateTimeFormat('de-DE', { 
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      }).format(date);
+      return `${type === 'appointments' ? 'Termine' : 'Gebuchte Leistungen'} ${formattedDate}`;
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,21 +134,44 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
+        // Hole das Geschäftsprofil für das Erstellungsdatum
+        const businessProfile = await authService.getBusinessProfile();
+        if (businessProfile.created_at) {
+          setAccountCreationDate(new Date(businessProfile.created_at));
+        }
+
+        // Hole die verfügbaren Datumsbereiche
+        try {
+          const dateRanges = await analyticsService.getAvailableDateRanges();
+          setAvailableDates(dateRanges.available_dates);
+        } catch (error) {
+          console.error('Fehler beim Laden der verfügbaren Datumsbereiche:', error);
+          // Wenn die Datumsbereiche nicht geladen werden können, fahren wir trotzdem fort
+        }
+
+        // Hole die Dashboard-Daten
         const data = await analyticsService.getDashboard();
         setDashboardData(data);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
+        console.error('Error fetching data:', err);
+        setError('Fehler beim Laden der Daten');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchData();
   }, [isAuthenticated, navigate]);
+
+  // Hilfsfunktion zur Überprüfung, ob ein Datum verfügbar ist
+  const isDateAvailable = (date: Date) => {
+    if (!availableDates.length) return true; // Wenn keine Daten verfügbar sind, erlauben wir alle Daten
+    const dateString = date.toISOString().split('T')[0];
+    return availableDates.includes(dateString);
+  };
 
   // Function to render a simple stat card
   const StatCard = ({ 
@@ -135,6 +229,134 @@ const DashboardPage: React.FC = () => {
     );
   };
 
+  const handleCopy = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyFeedback(`${type} wurde kopiert`);
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
+
+  // Handle calendar icon click
+  const handleCalendarClick = (event: React.MouseEvent<HTMLElement>, type: 'today' | 'services' | 'month') => {
+    setCalendarAnchorEl(event.currentTarget);
+    setActiveCalendarType(type);
+  };
+
+  // Handle calendar close
+  const handleCalendarClose = () => {
+    setCalendarAnchorEl(null);
+    setActiveCalendarType(null);
+  };
+
+  // Handle date selection
+  const handleDateChange = async (newDate: Date | null) => {
+    if (newDate) {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Überprüfe, ob das ausgewählte Datum in der Zukunft liegt
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (newDate > today) {
+          throw new Error('Bitte wählen Sie ein Datum in der Vergangenheit oder heute aus');
+        }
+
+        console.log('Ausgewähltes Datum:', newDate.toISOString());
+        console.log('Kalendertyp:', activeCalendarType);
+
+        switch (activeCalendarType) {
+          case 'today':
+            setSelectedDate(newDate);
+            const appointmentsData = await analyticsService.getAppointmentsForDate(newDate);
+            console.log('Empfangene Termindaten:', appointmentsData);
+            if (appointmentsData && appointmentsData.summary) {
+              setDashboardData(prevData => ({
+                ...prevData!,
+                summary: {
+                  ...prevData!.summary,
+                  today_appointments: appointmentsData.summary.today_appointments
+                }
+              }));
+            } else {
+              throw new Error('Ungültige Daten vom Server empfangen');
+            }
+            break;
+
+          case 'services':
+            setSelectedDate(newDate);
+            const servicesData = await analyticsService.getServicesForDate(newDate);
+            console.log('Empfangene Servicedaten:', servicesData);
+            if (servicesData && servicesData.summary) {
+              setDashboardData(prevData => ({
+                ...prevData!,
+                summary: {
+                  ...prevData!.summary,
+                  todays_services: servicesData.summary.todays_services
+                }
+              }));
+            } else {
+              throw new Error('Ungültige Daten vom Server empfangen');
+            }
+            break;
+
+          case 'month':
+            setSelectedMonth(newDate);
+            const monthlyData = await analyticsService.getMonthlyAnalytics(newDate);
+            console.log('Empfangene Monatsdaten:', monthlyData);
+            if (monthlyData && monthlyData.summary) {
+              setDashboardData(prevData => ({
+                ...prevData!,
+                summary: {
+                  ...prevData!.summary,
+                  monthly_appointments: monthlyData.summary.monthly_appointments,
+                  monthly_growth_rate: monthlyData.summary.monthly_growth_rate,
+                  monthly_services_booked: monthlyData.summary.monthly_services_booked
+                },
+                appointment_time_series: monthlyData.appointment_time_series || []
+              }));
+            } else {
+              throw new Error('Ungültige Daten vom Server empfangen');
+            }
+            break;
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+        if (error instanceof Error && error.message.includes('404')) {
+          setError('Keine Daten für das ausgewählte Datum verfügbar');
+        } else {
+          setError(error instanceof Error ? error.message : 'Fehler beim Laden der Daten für das ausgewählte Datum');
+        }
+      } finally {
+        setLoading(false);
+        handleCalendarClose();
+      }
+    }
+  };
+
+  // Example for "Termine Heute"
+  const todayAppointmentsEnd = dashboardData?.summary?.today_appointments || 0;
+  const todayAppointments = useCountUp({ end: todayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
+
+  // Example for "Gebuchte Leistungen Heute"
+  const servicesBookedTodayEnd = dashboardData?.summary?.todays_services || 0;
+  const servicesBookedToday = useCountUp({ end: servicesBookedTodayEnd, duration: 3500, startOnMount: !!dashboardData });
+
+  // Example for "Kosten Monat"
+  const monthlyCostEnd = dashboardData?.summary?.costs_last_30_days || 0;
+  const monthlyCost = useCountUp({ end: monthlyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
+
+  // Example for "Kosten Heute"
+  const dailyCostEnd = dashboardData?.summary?.costs_today || 0;
+  const dailyCost = useCountUp({ end: dailyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
+
+  // Example for "Termine" in month overview
+  const thirtyDayAppointmentsEnd = dashboardData?.summary?.monthly_appointments || 0;
+  const thirtyDayAppointments = useCountUp({ end: thirtyDayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
+
+  // Example for "Gebuchte Services" in month overview
+  const monthlyServicesBookedEnd = dashboardData?.summary?.monthly_services_booked || 0;
+  const monthlyServicesBooked = useCountUp({ end: monthlyServicesBookedEnd, duration: 3500, startOnMount: !!dashboardData });
+
   if (loading) {
     return (
       <Box sx={{ 
@@ -149,395 +371,570 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      backgroundColor: '#F9FAFC',
-      pb: 6
-    }}>
-      <Container maxWidth="lg" sx={{ flex: 1 }}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        backgroundColor: '#FFFFFF',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* WhatsApp Wasserzeichen */}
+        <Box
+          sx={{
+            position: 'fixed',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '140%',
+            height: '140%',
+            opacity: 0.020,
+            zIndex: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <WhatsApp sx={{ width: '100%', height: '100%' }} />
+        </Box>
+
+        <TopBar />
+
         <Box 
           sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 4, 
-            mt: 3,
+            backgroundColor: '#FFFFFF',
+            borderBottom: '1px solid #E0E0E0',
+            width: '100%'
           }}
         >
-          <Box sx={{ transform: 'scale(1.2)' }}>
-            <Logo />
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%',
+              px: 4,
+              py: 2
+            }}
+          >
+            <Box sx={{ transform: 'scale(0.9)', ml: -2 }}>
+              <Logo />
+            </Box>
+            <Box sx={{ mr: -2 }}>
+              <UserMenu formData={currentUser ? { 
+                companyName: currentUser.business_name || '',
+                email: currentUser.email || ''
+              } : undefined} />
+            </Box>
           </Box>
-          <UserMenu formData={currentUser ? { 
-            companyName: currentUser.business_name || '',
-            email: currentUser.email || ''
-          } : undefined} />
         </Box>
 
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 'bold', 
-            mb: 4,
-            color: theme.palette.primary.main 
-          }}
-        >
-          Business Dashboard
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        {dashboardData && (
-          <>
-            {/* Summary Metrics */}
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'medium' }}>
-              Appointment Overview
-            </Typography>
-            <Stack spacing={3} sx={{ mb: 4 }}>
-              <Stack 
-                direction={{ xs: 'column', sm: 'row' }} 
-                spacing={3} 
-                sx={{ width: '100%' }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Today's Appointments" 
-                    value={dashboardData.summary.today_appointments} 
-                    icon={<TodayOutlined />} 
-                    color={theme.palette.primary.main}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Yesterday's Appointments" 
-                    value={dashboardData.summary.yesterday_appointments} 
-                    icon={<CalendarTodayOutlined />} 
-                    color="#4CAF50"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="30-Day Appointments" 
-                    value={dashboardData.summary.thirty_day_appointments} 
-                    icon={<CalendarTodayOutlined />} 
-                    color="#9C27B0"
-                    secondaryValue={`${dashboardData.summary.thirty_day_growth_rate}%`}
-                    secondaryLabel="Growth"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Total Customers" 
-                    value={dashboardData.summary.customer_stats.total_customers} 
-                    icon={<PeopleOutlined />} 
-                    color="#E91E63"
-                    secondaryValue={`${dashboardData.summary.customer_stats.retention_rate}%`}
-                    secondaryLabel="Retention"
-                  />
-                </Box>
-              </Stack>
-            </Stack>
-
-            {/* Revenue Metrics */}
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'medium' }}>
-              Revenue Metrics (Last {dashboardData.revenue.period_days} Days)
-            </Typography>
-            <Stack spacing={3} sx={{ mb: 4 }}>
-              <Stack 
-                direction={{ xs: 'column', sm: 'row' }} 
-                spacing={3} 
-                sx={{ width: '100%' }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Estimated Revenue" 
-                    value={formatCurrency(dashboardData.revenue.estimated_revenue)} 
-                    icon={<AttachMoneyOutlined />} 
-                    color="#2196F3"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Services Booked" 
-                    value={dashboardData.revenue.services_booked} 
-                    icon={<CalendarTodayOutlined />} 
-                    color="#673AB7"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="Avg. Service Value" 
-                    value={formatCurrency(dashboardData.revenue.avg_service_value)} 
-                    icon={<AttachMoneyOutlined />} 
-                    color="#FF9800"
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <StatCard 
-                    title="New Customers (30d)" 
-                    value={dashboardData.summary.customer_stats.new_customers_30d} 
-                    icon={<NewReleasesOutlined />} 
-                    color="#00BCD4"
-                    secondaryValue={dashboardData.summary.customer_stats.returning_customers}
-                    secondaryLabel="Returning"
-                  />
-                </Box>
-              </Stack>
-            </Stack>
-
-            {/* Top Services and Busy Times */}
-            <Stack 
-              direction={{ xs: 'column', md: 'row' }} 
-              spacing={3} 
-              sx={{ mb: 4 }}
+        <Box sx={{ 
+          display: 'flex',
+          gap: 4,
+          px: 4,
+          maxWidth: 1600,
+          width: '100%',
+          py: 4,
+          flex: 1
+        }}>
+          {/* Hauptbereich */}
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            height: 'calc(100vh - 140px)',
+            overflow: 'hidden'
+          }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 1100, 
+                mb: 4,
+                color: '#000000',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
             >
-              {/* Top Services */}
-              <Box sx={{ flex: 1 }}>
-                <Paper sx={{ 
-                  p: 3, 
-                  height: '100%', 
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Top Services
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Stack spacing={2}>
-                    {dashboardData.top_services.map((service) => (
-                      <Box 
-                        key={service.item_no}
+              WhatsApp Termin Assistent
+            </Typography>
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+
+            {dashboardData && (
+              <>
+                {/* Summary Metrics */}
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 500, color: '#2C3E50', textAlign: 'left' }}>
+                  Terminübersicht
+                </Typography>
+                <Stack spacing={3} sx={{ mb: 4 }}>
+                  <Box 
+                    sx={{ 
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' },
+                      gap: 3,
+                      width: '100%'
+                    }}
+                  >
+                    <Stack spacing={3}>
+                      <Box>
+                        <Paper 
+                          sx={{ 
+                            height: 'auto',
+                            p: 2,
+                            borderRadius: 2,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.02)',
+                              boxShadow: '0 5px 10px rgba(0,0,0,0.12)',
+                              opacity: 1
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              {getDayTitle('appointments', selectedDate)}
+                            </Typography>
+                            <IconButton 
+                              onClick={(e) => handleCalendarClick(e, 'today')}
+                              sx={{ color: '#1976D2' }}
+                            >
+                              <TodayOutlined />
+                            </IconButton>
+                          </Box>
+                          <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                            {todayAppointments}
+                          </Typography>
+                        </Paper>
+                      </Box>
+
+                      <Box>
+                        <Paper 
+                          sx={{ 
+                            height: 'auto',
+                            p: 2,
+                            borderRadius: 2,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.02)',
+                              boxShadow: '0 5px 10px rgba(0,0,0,0.12)',
+                              opacity: 1
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              {getDayTitle('services', selectedDate)}
+                            </Typography>
+                            <IconButton 
+                              onClick={(e) => handleCalendarClick(e, 'services')}
+                              sx={{ color: '#1976D2' }}
+                            >
+                              <TodayOutlined />
+                            </IconButton>
+                          </Box>
+                          <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                            {servicesBookedToday}
+                          </Typography>
+                        </Paper>
+                      </Box>
+
+                      <Box>
+                        <Paper 
+                          sx={{ 
+                            p: 2,
+                            borderRadius: 2,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.02)',
+                              boxShadow: '0 5px 10px rgba(0,0,0,0.12)',
+                              opacity: 1
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              Kosten
+                            </Typography>
+                            <AttachMoneyOutlined sx={{ color: '#1976D2', fontSize: 20 }} />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">
+                                Monat
+                              </Typography>
+                              <Typography variant="h5" sx={{ color: '#1976D2', fontWeight: 500 }}>
+                                {monthlyCost} €
+                              </Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Heute
+                              </Typography>
+                              <Typography variant="h6" sx={{ color: '#4CAF50' }}>
+                                {dailyCost} €
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Paper>
+                      </Box>
+                    </Stack>
+
+                    <Box>
+                      <Paper 
                         sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          p: 1,
-                          borderRadius: 1,
-                          bgcolor: 'rgba(25, 103, 210, 0.05)',
+                          height: '100%',
+                          p: 2,
+                          borderRadius: 2,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
+                          '&:hover': {
+                            transform: 'scale(1.02)',
+                            boxShadow: '0 5px 10px rgba(0,0,0,0.12)',
+                            opacity: 1
+                          }
                         }}
                       >
-                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                          {service.service_name}
-                        </Typography>
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            bgcolor: theme.palette.primary.main,
-                            color: 'white',
-                            borderRadius: '50%',
-                            width: 30,
-                            height: 30,
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {service.booking_count}
-                        </Box>
-                      </Box>
-                    ))}
-                    {dashboardData.top_services.length === 0 && (
-                      <Typography variant="body2" sx={{ textAlign: 'center', py: 2 }}>
-                        No services data available yet
-                      </Typography>
-                    )}
-                  </Stack>
-                </Paper>
-              </Box>
-
-              {/* Busy Times */}
-              <Box sx={{ flex: 1 }}>
-                <Paper sx={{ 
-                  p: 3, 
-                  height: '100%', 
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Busy Times
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                      Busiest Days
-                    </Typography>
-                    <Stack spacing={1}>
-                      {dashboardData.busy_times.busiest_days.map((day) => (
-                        <Box 
-                          key={day.day}
-                          sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            p: 1,
-                            borderRadius: 1,
-                            bgcolor: 'rgba(233, 30, 99, 0.05)',
-                          }}
-                        >
-                          <Typography variant="body2">{day.day}</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {day.count} appointments
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            {getMonthTitle(selectedMonth)}
                           </Typography>
+                          <IconButton 
+                            onClick={(e) => handleCalendarClick(e, 'month')}
+                            sx={{ color: '#1976D2' }}
+                          >
+                            <CalendarTodayOutlined />
+                          </IconButton>
                         </Box>
-                      ))}
-                      {dashboardData.busy_times.busiest_days.length === 0 && (
-                        <Typography variant="body2" sx={{ textAlign: 'center', py: 1 }}>
-                          No data available yet
-                        </Typography>
-                      )}
-                    </Stack>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Termine
+                            </Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                              {thirtyDayAppointments}
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Gebuchte Services
+                            </Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                              {monthlyServicesBooked}
+                            </Typography>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Wachstum: {dashboardData?.summary?.monthly_growth_rate}%
+                          </Typography>
+                          
+                          {/* Liniendiagramm */}
+                          <Box sx={{ height: 200, mt: 2 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart
+                                data={dashboardData?.appointment_time_series || []}
+                                margin={{
+                                  top: 5,
+                                  right: 5,
+                                  left: -20,
+                                  bottom: 5,
+                                }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis 
+                                  dataKey="date"
+                                  tickFormatter={(date) => {
+                                    return new Date(date).toLocaleDateString('de-DE', { 
+                                      day: '2-digit',
+                                      month: '2-digit'
+                                    });
+                                  }}
+                                  stroke="#666"
+                                  fontSize={12}
+                                />
+                                <YAxis 
+                                  stroke="#666"
+                                  fontSize={12}
+                                  tickFormatter={(value) => Math.round(value).toString()}
+                                />
+                                <RechartsTooltip
+                                  formatter={(value: number, name: string) => [
+                                    value,
+                                    'Termine'
+                                  ]}
+                                  labelFormatter={(label: string) => {
+                                    return new Date(label).toLocaleDateString('de-DE', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric'
+                                    });
+                                  }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="count"
+                                  stroke="#1976D2"
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Box>
                   </Box>
-                  
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                      Busiest Hours
-                    </Typography>
-                    <Stack spacing={1}>
-                      {dashboardData.busy_times.busiest_hours.map((hour) => (
-                        <Box 
-                          key={hour.hour}
-                          sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            p: 1,
-                            borderRadius: 1,
-                            bgcolor: 'rgba(76, 175, 80, 0.05)',
-                          }}
-                        >
-                          <Typography variant="body2">
-                            {hour.hour}:00 - {hour.hour + 1}:00
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {hour.count} appointments
-                          </Typography>
-                        </Box>
-                      ))}
-                      {dashboardData.busy_times.busiest_hours.length === 0 && (
-                        <Typography variant="body2" sx={{ textAlign: 'center', py: 1 }}>
-                          No data available yet
-                        </Typography>
-                      )}
-                    </Stack>
-                  </Box>
-                </Paper>
-              </Box>
-            </Stack>
+                </Stack>
+              </>
+            )}
+          </Box>
 
-            {/* Appointment Trends */}
-            <Paper sx={{ 
-              p: 3, 
-              mb: 4, 
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
+          {/* Seitenleiste für Aktivitäten */}
+          <Box sx={{ 
+            width: '300px',
+            flexShrink: 0,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 2,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignSelf: 'stretch'
+          }}>
+            <Typography variant="h6" sx={{ p: 3, pb: 2, fontWeight: 500, color: '#2C3E50', flexShrink: 0 }}>
+              Letzte Aktivitäten
+            </Typography>
+
+            <Box sx={{ 
+              flex: 1,
+              overflowY: 'auto',
+              p: 3,
+              pt: 0,
+              display: 'flex',
+              flexDirection: 'column'
             }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Appointment Trends
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              <Box sx={{ height: 300, width: '100%', display: 'flex' }}>
-                {dashboardData.appointment_trend.length > 0 ? (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    width: '100%', 
-                    overflow: 'auto',
-                    gap: 2
-                  }}>
-                    <Stack 
-                      direction="row" 
-                      alignItems="flex-end" 
-                      spacing={2}
+              {dashboardData?.recent_appointments && dashboardData.recent_appointments.length > 0 ? (
+                <Stack spacing={2}>
+                  {dashboardData.recent_appointments.map((activity) => (
+                    <Box 
+                      key={activity.booking_id}
                       sx={{ 
-                        height: '100%', 
                         p: 2,
-                        overflowX: 'auto'
+                        borderRadius: 1,
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }
                       }}
                     >
-                      {dashboardData.appointment_trend.map((day) => (
-                        <Stack 
-                          key={day.date}
-                          direction="column"
-                          alignItems="center"
-                          sx={{ flex: '1 0 auto', minWidth: '60px' }}
-                        >
-                          <Box 
-                            sx={{ 
-                              height: `${day.count > 0 ? day.count * 30 + 30 : 30}px`,
-                              width: '80%',
-                              backgroundColor: theme.palette.primary.main,
-                              borderRadius: '4px 4px 0 0',
-                              minHeight: '30px',
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'flex-start',
-                              color: 'white',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {day.count}
-                          </Box>
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              mt: 1, 
-                              fontWeight: 'medium',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {formatDate(day.date)}
-                          </Typography>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </Box>
-                ) : (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    width: '100%',
-                    height: '100%'
-                  }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No appointment trend data available yet
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Paper>
-          </>
-        )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 500, flex: 1 }}>
+                          {activity.service_name}
+                        </Typography>
+                      </Box>
+                      
+                      <Typography variant="body2" sx={{ 
+                        color: 'text.secondary',
+                        mb: 1.5,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        <Box component="span" sx={{ 
+                          display: 'inline-block',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                          color: '#1967D2',
+                          textAlign: 'center',
+                          lineHeight: '24px',
+                          mr: 1,
+                          fontSize: '12px'
+                        }}>
+                          {activity.customer_name.charAt(0).toUpperCase()}
+                        </Box>
+                        {activity.customer_name}
+                      </Typography>
 
-        {/* Navigation buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/profile')}
-            sx={{ 
-              color: theme.palette.primary.main, 
-              borderColor: theme.palette.primary.main,
-              mr: 2
-            }}
-          >
-            View Profile
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/onboarding')}
-            sx={{ 
-              color: theme.palette.primary.main, 
-              borderColor: theme.palette.primary.main 
-            }}
-          >
-            Back to Onboarding
-          </Button>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Typography variant="caption" sx={{ 
+                          color: 'text.secondary',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5
+                        }}>
+                          <Box component="span" sx={{ color: '#666666' }}>Termin:</Box>
+                          {new Date(`${activity.appointment_date}T${activity.appointment_time}`).toLocaleString('de-DE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })} Uhr
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Box sx={{ 
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                  borderRadius: 2,
+                  p: 3
+                }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Keine aktuellen Aktivitäten
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                    Neue Buchungen erscheinen hier automatisch
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
         </Box>
-      </Container>
-    </Box>
+
+        {/* Calendar Popover */}
+        <Popover
+          open={Boolean(calendarAnchorEl)}
+          anchorEl={calendarAnchorEl}
+          onClose={handleCalendarClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            <DateCalendar 
+              value={activeCalendarType === 'month' ? selectedMonth : selectedDate}
+              onChange={handleDateChange}
+              views={activeCalendarType === 'month' ? ['month', 'year'] : ['day']}
+              minDate={accountCreationDate || undefined}
+              maxDate={new Date()}
+              disableFuture={true}
+              shouldDisableDate={(date) => !isDateAvailable(date)}
+              sx={{
+                '& .MuiPickersDay-root.Mui-disabled': {
+                  opacity: 0.4,
+                  textDecoration: 'line-through',
+                  color: 'text.disabled'
+                },
+                '& .MuiPickersMonth-root': {
+                  position: 'relative',
+                  '&.Mui-disabled': {
+                    opacity: 0.7,
+                    color: '#999',
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    textDecoration: 'line-through',
+                    '&::after': {
+                      content: '"Nicht verfügbar"',
+                      position: 'absolute',
+                      bottom: '-18px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontSize: '0.6rem',
+                      color: '#666',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none'
+                    }
+                  }
+                },
+                '& .MuiPickersMonth-monthButton': {
+                  border: '1px solid transparent',
+                  transition: 'all 0.2s ease',
+                  '&:not(.Mui-disabled)': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.15)',
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: '#1976D2',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: '#1565C0',
+                      }
+                    }
+                  },
+                  '&.Mui-disabled': {
+                    borderColor: '#ddd',
+                    background: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04) 10px, rgba(0, 0, 0, 0.08) 10px, rgba(0, 0, 0, 0.08) 20px)'
+                  }
+                }
+              }}
+            />
+          </Box>
+        </Popover>
+
+        <Snackbar
+          open={!!copyFeedback}
+          message={copyFeedback}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{
+            '& .MuiSnackbarContent-root': {
+              bgcolor: '#4CAF50',
+              color: 'white'
+            }
+          }}
+        />
+
+        {/* Footer */}
+        <Box 
+          sx={{ 
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            height: '20px',
+            width: '100%',
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            py: 0.5,
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            backdropFilter: 'blur(5px)',
+            opacity: 1,
+            zIndex: 10,
+            borderTop: '1px solidrgba(224, 224, 224, 0)'
+          }}
+        >
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#666666',
+              mr: 1,
+              fontSize: '0.75rem'
+            }}
+          >
+            powered by
+          </Typography>
+          <img 
+            src="/images/EcomTask_logo.svg" 
+            alt="EcomTask Logo" 
+            style={{ height: '30px' }} 
+          />
+        </Box>
+      </Box>
+    </LocalizationProvider>
   );
 };
 

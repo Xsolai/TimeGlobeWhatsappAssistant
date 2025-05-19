@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Box, AppBar, Toolbar, IconButton, useTheme } from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { Box, AppBar, Toolbar, IconButton, useTheme, Typography, Link } from '@mui/material';
+import { Menu as MenuIcon, Email as EmailIcon } from '@mui/icons-material';
 import Sidebar from './Sidebar';
 import Logo from './Logo';
 
@@ -32,20 +32,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           color: 'text.primary',
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
           
-          {/* Show logo only on mobile */}
-          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-            <Logo />
+            {/* Show logo only on mobile */}
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              <Logo />
+            </Box>
+          </Box>
+
+          {/* Support Email */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EmailIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+            <Link 
+              href="mailto:support@ecomtask.de"
+              underline="none"
+              sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                color: theme.palette.primary.main,
+                '&:hover': {
+                  color: theme.palette.primary.dark
+                }
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                support@ecomtask.de
+              </Typography>
+            </Link>
           </Box>
         </Toolbar>
       </AppBar>

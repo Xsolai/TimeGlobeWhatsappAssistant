@@ -71,17 +71,17 @@ const SignupPage: React.FC = () => {
     
     // Validate inputs
     if (!formData.businessName || !formData.email || !formData.phoneNumber || !formData.password) {
-      setError('Please fill in all required fields');
+      setError('Bitte füllen Sie alle erforderlichen Felder aus');
       return;
     }
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Die Passwörter stimmen nicht überein');
       return;
     }
     
     if (!formData.acceptTerms) {
-      setError('You must accept the terms and conditions');
+      setError('Bitte akzeptieren Sie die Nutzungsbedingungen');
       return;
     }
 
@@ -97,10 +97,10 @@ const SignupPage: React.FC = () => {
       if (success) {
         setActiveStep(SignupStep.OTP_VERIFICATION);
       } else {
-        setError('Failed to create account');
+        setError('Konto konnte nicht erstellt werden');
       }
     } catch (err) {
-      setError('An error occurred during signup');
+      setError('Ein Fehler ist während der Registrierung aufgetreten');
       console.error(err);
     } finally {
       setLoading(false);
@@ -161,7 +161,7 @@ const SignupPage: React.FC = () => {
         required
         fullWidth
         id="businessName"
-        label="Business Name"
+        label="Firmenname"
         name="businessName"
         autoComplete="organization"
         value={formData.businessName}
@@ -175,7 +175,7 @@ const SignupPage: React.FC = () => {
           required
           fullWidth
           id="email"
-          label="Email Address"
+          label="E-Mail-Adresse"
           name="email"
           autoComplete="email"
           value={formData.email}
@@ -186,7 +186,7 @@ const SignupPage: React.FC = () => {
           required
           fullWidth
           id="phoneNumber"
-          label="Phone Number"
+          label="Telefonnummer"
           name="phoneNumber"
           autoComplete="tel"
           value={formData.phoneNumber}
@@ -200,7 +200,7 @@ const SignupPage: React.FC = () => {
         required
         fullWidth
         name="password"
-        label="Password"
+        label="Passwort"
         type={showPassword ? 'text' : 'password'}
         id="password"
         autoComplete="new-password"
@@ -210,7 +210,7 @@ const SignupPage: React.FC = () => {
           endAdornment: (
             <InputAdornment position="end">
               <IconButton
-                aria-label="toggle password visibility"
+                aria-label="Passwort anzeigen"
                 onClick={handleClickShowPassword}
                 edge="end"
                 disabled={loading}
@@ -229,7 +229,7 @@ const SignupPage: React.FC = () => {
         required
         fullWidth
         name="confirmPassword"
-        label="Confirm Password"
+        label="Passwort bestätigen"
         type={showConfirmPassword ? 'text' : 'password'}
         id="confirmPassword"
         autoComplete="new-password"
@@ -239,7 +239,7 @@ const SignupPage: React.FC = () => {
           endAdornment: (
             <InputAdornment position="end">
               <IconButton
-                aria-label="toggle confirm password visibility"
+                aria-label="Passwort bestätigen anzeigen"
                 onClick={handleClickShowConfirmPassword}
                 edge="end"
                 disabled={loading}
@@ -265,7 +265,7 @@ const SignupPage: React.FC = () => {
         }
         label={
           <Box component="span" sx={{ fontSize: '0.875rem' }}>
-            I agree to the <Link component={RouterLink} to="/terms" sx={{ color: '#1967D2' }}>Terms of Service</Link> and <Link component={RouterLink} to="/privacy" sx={{ color: '#1967D2' }}>Privacy Policy</Link>
+            Ich stimme den <Link component={RouterLink} to="/terms" sx={{ color: '#1967D2' }}>Nutzungsbedingungen</Link> und der <Link component={RouterLink} to="/privacy" sx={{ color: '#1967D2' }}>Datenschutzerklärung</Link> zu
           </Box>
         }
         sx={{ mt: 1 }}
@@ -286,14 +286,14 @@ const SignupPage: React.FC = () => {
           },
         }}
       >
-        {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
+        {loading ? <CircularProgress size={24} color="inherit" /> : 'Registrieren'}
       </Button>
       
       <Divider sx={{ my: 2 }} />
       
       <Box sx={{ textAlign: 'center' }}>
         <Link component={RouterLink} to="/login" variant="body2" sx={{ color: '#1967D2' }}>
-          Already have an account? Log In
+          Bereits ein Konto? Jetzt anmelden
         </Link>
       </Box>
     </Box>
@@ -302,8 +302,8 @@ const SignupPage: React.FC = () => {
   const renderOtpVerification = () => (
     <Box component="form" onSubmit={handleOtpSubmit} sx={{ mt: 2 }}>
       <Typography variant="body1" sx={{ mb: 2, textAlign: 'center' }}>
-        We've sent a verification code to <strong>{formData.email}</strong>. 
-        Please enter the code below to verify your account.
+        Wir haben einen Bestätigungscode an <strong>{formData.email}</strong> gesendet. 
+        Bitte geben Sie den Code unten ein, um Ihr Konto zu verifizieren.
       </Typography>
       
       <TextField
@@ -311,7 +311,7 @@ const SignupPage: React.FC = () => {
         required
         fullWidth
         id="otp"
-        label="Verification Code"
+        label="Bestätigungscode"
         name="otp"
         value={otp}
         onChange={handleOtpChange}
@@ -334,7 +334,7 @@ const SignupPage: React.FC = () => {
           },
         }}
       >
-        {loading ? <CircularProgress size={24} color="inherit" /> : 'Verify'}
+        {loading ? <CircularProgress size={24} color="inherit" /> : 'Bestätigen'}
       </Button>
       
       <Box sx={{ textAlign: 'center', mb: 2 }}>
@@ -355,7 +355,7 @@ const SignupPage: React.FC = () => {
             }
           }}
         >
-          Didn't receive the code? Resend
+          Keinen Code erhalten? Erneut senden
         </Link>
       </Box>
       
@@ -368,7 +368,7 @@ const SignupPage: React.FC = () => {
           onClick={() => setActiveStep(SignupStep.REGISTRATION)}
           sx={{ color: '#1967D2', textDecoration: 'none', border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          Back to Registration
+          Zurück zur Registrierung
         </Link>
       </Box>
     </Box>
@@ -397,10 +397,10 @@ const SignupPage: React.FC = () => {
         
         <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
           <Step>
-            <StepLabel>Register</StepLabel>
+            <StepLabel>Registrierung</StepLabel>
           </Step>
           <Step>
-            <StepLabel>Verify</StepLabel>
+            <StepLabel>Verifizierung</StepLabel>
           </Step>
         </Stepper>
         
@@ -426,8 +426,8 @@ const SignupPage: React.FC = () => {
             }}
           >
             {activeStep === SignupStep.REGISTRATION 
-              ? <><span>Sign Up</span> <span style={{ fontWeight: 'normal' }}>for a New Account</span></>
-              : <><span>Verify</span> <span style={{ fontWeight: 'normal' }}>your Account</span></>
+              ? <><span>Registrierung</span> <span style={{ fontWeight: 'normal' }}>für ein neues Konto</span></>
+              : <><span>Bestätigen</span> <span style={{ fontWeight: 'normal' }}>Sie Ihr Konto</span></>
             }
           </Typography>
           
@@ -445,7 +445,7 @@ const SignupPage: React.FC = () => {
         
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <Link component={RouterLink} to="/onboarding" variant="body2" sx={{ color: '#666' }}>
-            Continue to Onboarding
+            Onboarding fortsetzen
           </Link>
         </Box>
       </Container>

@@ -17,6 +17,9 @@ import Upload from '@mui/icons-material/Upload';
 import FileUpload from '@mui/icons-material/FileUpload';
 import CloudUpload from '@mui/icons-material/CloudUpload';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
+// Import contract text from separate files
+import { getMainContractText, getMainContractPreviewText } from '../../contracts/MainContract';
+import { getDataProcessingContractText, getDataProcessingContractPreviewText } from '../../contracts/DataProcessingContract';
 
 // Inline contract service if import fails
 const API_URL = 'https://timeglobe-server.ecomtask.de';
@@ -788,73 +791,22 @@ const ContractStep: React.FC<ContractStepProps> = ({ formData, onFormChange, onN
   const getFullContractText = () => {
     // Get the complete contract text based on the current step
     if (currentStep === 0) {
-      return `Vertrag über die Bereitstellung des Add-ons "AI-Assistant" für den TimeGlobe-Kalender
-
-zwischen
-
-EcomTask UG
-Rauenthaler Str. 12
-65197 Wiesbaden
-Deutschland
-(im Folgenden "EcomTask")
-
-und
-
-${formData.companyName || '[Unternehmensname]'}
-${formData.street || '[Straße]'}
-${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
-${formData.country || '[Land]'}
-(im Folgenden "Kunde")
-
-(EcomTask und Kunde einzeln jeweils auch "Partei" und gemeinsam "Parteien")
-
-1. Vertragsgegenstand
-Gegenstand des Vertrags ist die entgeltliche und zeitlich auf die Dauer des Vertrags begrenzte Gewährung der Nutzung des Add-ons "AI-Assistent" für den TimeGlobe-Kalender (nachfolgend "Software") im Unternehmen des Kunden über das Internet.
-
-2. Leistungen von EcomTask
-EcomTask gewährt dem Kunden (bzw. dessen Kunden) die Nutzung der jeweils aktuellen Version der Software mittels Zugriff durch WhatsApp.
-
-3. Nutzungsumfang und -rechte
-Der Kunde erhält an der jeweils aktuellen Version der Software einfache, d. h. nicht unterlizenzierbare und nicht übertragbare, zeitlich auf die Dauer des Vertrags beschränkte Rechte zur Nutzung.
-
-4. Vergütung
-Die monatliche Vergütung beträgt EUR ____.
-
-5. Vertragslaufzeit
-Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.`;
+      return getMainContractText(
+        formData.companyName, 
+        formData.street, 
+        formData.zipCode || '[PLZ]', 
+        formData.city || '[Ort]',
+        formData.contactPerson
+      );
     } else if (currentStep === 1) {
-      return `Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO
-
-zwischen
-
-${formData.companyName || '[Unternehmensname]'}
-${formData.street || '[Straße]'}
-${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
-${formData.country || '[Land]'}
-(im Folgenden "Verantwortlicher")
-
-und
-
-EcomTask UG
-Rauenthaler Str. 12
-65197 Wiesbaden
-Deutschland
-(im Folgenden "Auftragsverarbeiter")
-
-1. Gegenstand und Dauer der Verarbeitung
-Der Auftragsverarbeiter verarbeitet personenbezogene Daten im Auftrag des Verantwortlichen im Zusammenhang mit der Bereitstellung des WhatsApp-Chatbots für die Terminplanung. Die Verarbeitung beginnt mit Aktivierung des Dienstes und endet mit Beendigung des Hauptvertrags.
-
-2. Art und Zweck der Verarbeitung
-Die Verarbeitung umfasst die Daten von Kunden, die über den WhatsApp-Chatbot Termine buchen. Zweck ist die Terminvergabe und -verwaltung.
-
-3. Kategorien betroffener Personen
-Betroffen sind Kunden des Verantwortlichen, die den WhatsApp-Chatbot zur Terminvereinbarung nutzen.
-
-4. Arten der personenbezogenen Daten
-Verarbeitet werden Kontaktdaten (Name, Telefonnummer), Termindetails und Kommunikationsverlauf.
-
-5. Pflichten des Auftragsverarbeiters
-Der Auftragsverarbeiter verarbeitet personenbezogene Daten ausschließlich im Rahmen der vertraglichen Vereinbarungen und nach Weisung des Verantwortlichen. Er gewährleistet angemessene technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO.`;
+      return getDataProcessingContractText(
+        formData.companyName,
+        formData.street,
+        formData.zipCode,
+        formData.city,
+        formData.country,
+        formData.contactPerson
+      );
     } else if (currentStep === 2) {
       return `SEPA-Lastschriftmandat für ${formData.companyName || '[Unternehmensname]'}
 Mandatsreferenz: ${mandateReference}
@@ -1212,9 +1164,13 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
         mb: 4, 
         display: 'flex', 
         flexDirection: 'row',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 2
+        position: 'relative',
+        width: '100%',
+        maxWidth: '800px',
+        mx: 'auto',
+        px: 4
       }}>
         {contractSteps.map((step, index) => (
           <Box 
@@ -1227,13 +1183,16 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
               cursor: 'pointer',
               p: 1.5,
               borderRadius: 2,
-              backgroundColor: currentStep === index ? 'rgba(25, 103, 210, 0.1)' : 'transparent',
+              backgroundColor: currentStep === index ? 'rgba(25, 103, 210, 0.1)' : '#FFFFFF',
               border: currentStep === index ? '1px solid rgba(25, 103, 210, 0.3)' : '1px solid transparent',
               '&:hover': {
                 backgroundColor: 'rgba(25, 103, 210, 0.05)'
               },
               transition: 'all 0.2s ease-in-out',
-              width: 150
+              width: '180px',
+              textAlign: 'center',
+              position: 'relative',
+              zIndex: 1
             }}
           >
             <Box sx={{ 
@@ -1245,7 +1204,8 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
               justifyContent: 'center',
               backgroundColor: currentStep === index ? '#1967D2' : 'rgba(0, 0, 0, 0.1)',
               color: currentStep === index ? '#FFFFFF' : '#666666',
-              mb: 1
+              mb: 1,
+              mx: 'auto'
             }}>
               {React.cloneElement(step.icon, { fontSize: 'small' })}
             </Box>
@@ -1279,15 +1239,12 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
         ))}
       </Box>
 
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          p: 3,
+          p: 4,
           mb: 4,
-          borderRadius: 3,
+          borderRadius: 2,
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E0E0E0',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
         }}
       >
         <Typography 
@@ -1341,47 +1298,14 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
             }}
             onScroll={handleScroll}
           >
-            <Typography variant="body2" sx={{ color: '#333333' }}>
-              <strong>Vertrag über die Bereitstellung des<br />
-              Add-ons "AI-Assistant" für den TimeGlobe-Kalender</strong>
-              <br /><br />
-              zwischen
-              <br /><br />
-              <span style={{ color: '#1967D2' }}>EcomTask UG<br />
-              Rauenthaler Str. 12<br />
-              65197 Wiesbaden<br />
-              Deutschland</span>
-              <br />
-              (im Folgenden "EcomTask")
-              <br /><br />
-              und
-              <br /><br />
-              <span style={{ color: '#1967D2' }}>{formData.companyName || '[Unternehmensname]'}<br />
-              {formData.street || '[Straße]'}<br />
-              {formData.zipCode || '[PLZ]'} {formData.city || '[Stadt]'}<br />
-              {formData.country || '[Land]'}</span>
-              <br />
-              (im Folgenden "Kunde")
-              <br /><br />
-              (EcomTask und Kunde einzeln jeweils auch "Partei" und gemeinsam "Parteien")
-              <br /><br />
-              {/* Gekürzte Version des Vertrags für die Übersichtlichkeit */}
-              <strong>1. Vertragsgegenstand</strong><br />
-              Gegenstand des Vertrags ist die entgeltliche und zeitlich auf die Dauer des Vertrags begrenzte Gewährung der Nutzung des Add-ons "AI-Assistent" für den TimeGlobe-Kalender (nachfolgend "Software") im Unternehmen des Kunden über das Internet. 
-              <br /><br />
-              <strong>2. Leistungen von EcomTask</strong><br />
-              EcomTask gewährt dem Kunden (bzw. dessen Kunden) die Nutzung der jeweils aktuellen Version der Software mittels Zugriff durch WhatsApp.
-              <br /><br />
-              <strong>3. Nutzungsumfang und -rechte</strong><br />
-              Der Kunde erhält an der jeweils aktuellen Version der Software einfache, d. h. nicht unterlizenzierbare und nicht übertragbare, zeitlich auf die Dauer des Vertrags beschränkte Rechte zur Nutzung.
-              <br /><br />
-              <strong>4. Vergütung</strong><br />
-              Die monatliche Vergütung beträgt EUR ____.
-              <br /><br />
-              <strong>5. Vertragslaufzeit</strong><br />
-              Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.
-              <br /><br />
-              (Unterschriften der Parteien)
+            <Typography variant="body2" sx={{ color: '#333333', whiteSpace: 'pre-line' }}>
+              {getMainContractPreviewText(
+                formData.companyName, 
+                formData.street, 
+                formData.zipCode || '[PLZ]', 
+                formData.city || '[Ort]',
+                formData.contactPerson
+              )}
             </Typography>
           </Paper>
         )}
@@ -1401,49 +1325,15 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
             }}
             onScroll={handleScroll}
           >
-            <Typography variant="body2" sx={{ color: '#333333' }}>
-              <strong>Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO</strong>
-              <br /><br />
-              zwischen
-              <br /><br />
-              <span style={{ color: '#1967D2' }}>{formData.companyName || '[Unternehmensname]'}<br />
-              {formData.street || '[Straße]'}<br />
-              {formData.zipCode || '[PLZ]'} {formData.city || '[Stadt]'}<br />
-              {formData.country || '[Land]'}</span>
-              <br />
-              (im Folgenden "Verantwortlicher")
-              <br /><br />
-              und
-              <br /><br />
-              <span style={{ color: '#1967D2' }}>EcomTask UG<br />
-              Rauenthaler Str. 12<br />
-              65197 Wiesbaden<br />
-              Deutschland</span>
-              <br />
-              (im Folgenden "Auftragsverarbeiter")
-              <br /><br />
-              
-              <strong>1. Gegenstand und Dauer der Verarbeitung</strong><br />
-              Der Auftragsverarbeiter verarbeitet personenbezogene Daten im Auftrag des Verantwortlichen im Zusammenhang mit der Bereitstellung des WhatsApp-Chatbots für die Terminplanung. Die Verarbeitung beginnt mit Aktivierung des Dienstes und endet mit Beendigung des Hauptvertrags.
-              <br /><br />
-              
-              <strong>2. Art und Zweck der Verarbeitung</strong><br />
-              Die Verarbeitung umfasst die Daten von Kunden, die über den WhatsApp-Chatbot Termine buchen. Zweck ist die Terminvergabe und -verwaltung.
-              <br /><br />
-              
-              <strong>3. Kategorien betroffener Personen</strong><br />
-              Betroffen sind Kunden des Verantwortlichen, die den WhatsApp-Chatbot zur Terminvereinbarung nutzen.
-              <br /><br />
-              
-              <strong>4. Arten der personenbezogenen Daten</strong><br />
-              Verarbeitet werden Kontaktdaten (Name, Telefonnummer), Termindetails und Kommunikationsverlauf.
-              <br /><br />
-              
-              <strong>5. Pflichten des Auftragsverarbeiters</strong><br />
-              Der Auftragsverarbeiter verarbeitet personenbezogene Daten ausschließlich im Rahmen der vertraglichen Vereinbarungen und nach Weisung des Verantwortlichen. Er gewährleistet angemessene technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO.
-              <br /><br />
-              
-              (Unterschriften der Parteien)
+            <Typography variant="body2" sx={{ color: '#333333', whiteSpace: 'pre-line' }}>
+              {getDataProcessingContractPreviewText(
+                formData.companyName,
+                formData.street,
+                formData.zipCode,
+                formData.city,
+                formData.country,
+                formData.contactPerson
+              )}
             </Typography>
           </Paper>
         )}
@@ -1793,7 +1683,7 @@ Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, 
             </Box>
           </Box>
         )}
-      </Paper>
+      </Box>
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
         <Button 
@@ -1854,22 +1744,25 @@ const Footer = () => (
       position: 'fixed',
       bottom: 0,
       left: 0,
+      height: '20px',
       width: '100%',
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center',
-      py: 1,
-      backgroundColor: '#FFFFFF',
+      py: 0.5,
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      backdropFilter: 'blur(5px)',
       opacity: 1,
-      zIndex: 10
+      zIndex: 10,
+      borderTop: '1px solidrgba(224, 224, 224, 0)'
     }}
   >
     <Typography 
       variant="body2" 
       sx={{ 
-        color: '#000000',
+        color: '#666666',
         mr: 1,
-        fontSize: '0.85rem'
+        fontSize: '0.75rem'
       }}
     >
       powered by
@@ -1877,7 +1770,7 @@ const Footer = () => (
     <img 
       src="/images/EcomTask_logo.svg" 
       alt="EcomTask Logo" 
-      style={{ height: '36px' }} 
+      style={{ height: '30px' }} 
     />
   </Box>
 );

@@ -6,18 +6,24 @@ import {
   Typography,
   TextField,
   Button,
-  Divider,
-  Alert,
   CircularProgress,
   Snackbar,
-  Stack,
-  Chip
+  IconButton,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import UserMenu from '../components/UserMenu';
 import Logo from '../components/Logo';
+import TopBar from '../components/TopBar';
 import authService from '../services/authService';
+import { Visibility, VisibilityOff, ContentCopy } from '@mui/icons-material';
+import analyticsService, { DashboardData, DateRangeData } from '../services/analyticsService';
 
 // Define a more complete business interface
 interface BusinessDetails {
@@ -29,41 +35,33 @@ interface BusinessDetails {
   created_at: string;
   whatsapp_number: string;
   customer_id: string;
-  timeglobe_auth_key: string;
+  timeglobe_auth_key?: string; // Make optional
 }
 
 const ProfilePage: React.FC = () => {
-  const { isAuthenticated, refreshUserData, currentUser } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();
   
-  const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showAuthKey, setShowAuthKey] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({
-    business_name: '',
-    email: '',
-    phone_number: '',
-    timeglobe_auth_key: '',
-    whatsapp_number: '',
-  });
-
   // Fetch business profile details
   const fetchBusinessDetails = async () => {
     try {
       setFetchLoading(true);
       const data = await authService.getBusinessProfile();
-      
-      setBusinessDetails(data);
-      setFormData({
-        business_name: data.business_name || '',
-        email: data.email || '',
-        phone_number: data.phone_number || '',
-        timeglobe_auth_key: data.timeglobe_auth_key || '',
-        whatsapp_number: data.whatsapp_number || '',
-      });
+      // Exclude timeglobe_auth_key from initial fetch as it's fetched separately
+      const { timeglobe_auth_key, ...rest } = data; // Destructure to exclude auth key
+      setBusinessDetails(rest as BusinessDetails); // Cast back to BusinessDetails
     } catch (err) {
       console.error('Error fetching business details:', err);
       setError('Failed to load business profile');
@@ -82,61 +80,105 @@ const ProfilePage: React.FC = () => {
     fetchBusinessDetails();
   }, [isAuthenticated, navigate]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Use the authService to update the profile
-      await authService.updateBusinessProfile({
-        business_name: formData.business_name,
-        phone_number: formData.phone_number,
-        timeglobe_auth_key: formData.timeglobe_auth_key,
-        whatsapp_number: formData.whatsapp_number
-      });
-      
-      // Refresh business details
-      await fetchBusinessDetails();
-      await refreshUserData();
-      
-      setSuccess(true);
-      
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update profile.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCloseSuccessMessage = () => {
-    setSuccess(false);
-  };
-
   // Format date string to a more readable format
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('de-DE', {
       year: 'numeric', 
       month: 'long', 
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Funktion zum Maskieren des Auth-Schlüssels
+  const maskAuthKey = (key: string) => {
+    if (!key) return '';
+    return '•'.repeat(key.length);
+  };
+
+  // Handle visibility toggle click
+  const handleVisibilityToggle = () => {
+    if (showAuthKey) {
+      // If already showing, hide it
+      setShowAuthKey(false);
+    } else {
+      // If hidden, open the password dialog
+      setPasswordDialogOpen(true);
+    }
+  };
+
+  // Handle password dialog close
+  const handlePasswordDialogClose = () => {
+    setPasswordDialogOpen(false);
+    setPassword(''); // Clear password on close
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+  };
+
+  // Handle password input change
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+  };
+
+  // Handle password submission
+  const handlePasswordSubmit = async () => {
+    if (!password) {
+      setPasswordError(true);
+      setPasswordErrorMessage('Bitte geben Sie Ihr Passwort ein.');
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const isValid = await authService.validatePassword(password);
+      if (isValid) {
+        // Password is correct, now fetch the auth key
+        try {
+          const authKeyData = await authService.getTimeglobeAuthKey();
+          setBusinessDetails(prevDetails => ({
+            ...prevDetails!,
+            timeglobe_auth_key: authKeyData.timeglobe_auth_key
+          }));
+          setShowAuthKey(true);
+          handlePasswordDialogClose();
+        } catch (authKeyError) {
+          console.error('Error fetching Auth Key after password validation:', authKeyError);
+          setPasswordError(true); // Indicate error in dialog
+          setPasswordErrorMessage('Fehler beim Abrufen des Auth-Schlüssels.');
+          // Optionally, close the dialog on a non-recoverable error
+          // handlePasswordDialogClose(); 
+        }
+      } else {
+        setPasswordError(true);
+        setPasswordErrorMessage('Ungültiges Passwort.');
+      }
+    } catch (err) {
+      console.error('Password validation error:', err);
+      setPasswordError(true);
+      setPasswordErrorMessage('Fehler bei der Passwortprüfung. Bitte versuchen Sie es erneut.');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleCopyAuthKey = () => {
+    if (businessDetails?.timeglobe_auth_key) {
+      navigator.clipboard.writeText(businessDetails.timeglobe_auth_key);
+      setCopyFeedback('Auth-Schlüssel kopiert!');
+      setTimeout(() => setCopyFeedback(null), 2000);
+    }
+  };
+
+  // Gemeinsamer Style für alle Textfelder
+  const commonTextFieldStyle = {
+    '& .MuiInputBase-root': {
+      height: '56px'  // Standard MUI TextField Höhe
+    }
   };
 
   if (fetchLoading) {
@@ -160,196 +202,241 @@ const ProfilePage: React.FC = () => {
       backgroundColor: '#FFFFFF',
       pb: 6
     }}>
-      <Container maxWidth="md" sx={{ flex: 1 }}>
+      <TopBar />
+
+      <Box 
+        sx={{ 
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E0E0E0',
+          width: '100%'
+        }}
+      >
         <Box 
           sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 6, 
-            mt: 5,
+            width: '100%',
+            px: 4,
+            py: 2
           }}
         >
-          <Box sx={{ transform: 'scale(1.2)' }}>
+          <Box sx={{ transform: 'scale(0.9)', ml: -2 }}>
             <Logo />
           </Box>
-          <UserMenu formData={
-            businessDetails ? {
+          <Box sx={{ mr: -2 }}>
+            <UserMenu formData={businessDetails ? {
               companyName: businessDetails.business_name,
               email: businessDetails.email
-            } : currentUser ? {
-              companyName: currentUser.business_name || '',
-              email: currentUser.email
-            } : undefined
-          } />
-        </Box>
-        
-        <Paper 
-          elevation={2} 
-          sx={{ 
-            p: 4, 
-            mb: 4,
-            borderRadius: 3,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #F0F0F0',
-          }}
-        >
-          <Typography 
-            variant="h4" 
-            align="center" 
-            gutterBottom
-            sx={{ 
-              fontWeight: 'bold',
-              mb: 3,
-              color: '#333333',
-            }}
-          >
-            Business Profile
-          </Typography>
-          
-          {/* Show account status */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Chip 
-              label={businessDetails?.is_active ? 'Active Account' : 'Inactive Account'} 
-              color={businessDetails?.is_active ? 'success' : 'error'}
-              sx={{ fontWeight: 500 }}
-            />
+            } : undefined} />
           </Box>
-          
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-          
-          <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
+        </Box>
+      </Box>
+
+      <Box sx={{ flex: 1, px: 4, maxWidth: 1200, mx: 'auto', width: '100%', py: 4 }}>
+        <Paper sx={{ p: 4, borderRadius: 2, maxWidth: 800, mx: 'auto' }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" sx={{ mb: 2, textAlign: 'left' }}>
+              Unternehmensinformationen
+            </Typography>
+            
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              bgcolor: '#4CAF50', 
+              color: 'white',
+              px: 1,
+              py: 0.5,
+              fontSize: '0.8rem',
+              borderRadius: 1
+            }}>
+              Aktives Konto
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                E-Mail-Adresse
+              </Typography>
               <TextField
                 fullWidth
-                label="Business Name"
-                name="business_name"
-                value={formData.business_name}
-                onChange={handleChange}
-                variant="outlined"
-                disabled={loading}
+                value={businessDetails?.email || ''}
+                disabled
+                helperText="E-Mail kann nicht geändert werden"
+                sx={commonTextFieldStyle}
               />
-              
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField
-                  fullWidth
-                  label="Email Address"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  variant="outlined"
-                  disabled
-                  helperText="Email cannot be changed"
-                />
-                
-                <TextField
-                  fullWidth
-                  label="Phone Number"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
-                  variant="outlined"
-                  disabled={loading}
-                />
-              </Stack>
-              
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField
-                  fullWidth
-                  label="TimeGlobe Auth Key"
-                  name="timeglobe_auth_key"
-                  value={formData.timeglobe_auth_key}
-                  onChange={handleChange}
-                  variant="outlined"
-                  disabled={loading}
-                />
-                
-                <TextField
-                  fullWidth
-                  label="WhatsApp Number"
-                  name="whatsapp_number"
-                  value={formData.whatsapp_number}
-                  onChange={handleChange}
-                  variant="outlined"
-                  disabled={loading}
-                  placeholder="Example: +1234567890"
-                />
-              </Stack>
-              
-              {/* Display additional read-only information */}
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Account Information
-                </Typography>
-                <Stack spacing={1} sx={{ pl: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Business ID:</strong> {businessDetails?.id}
-                  </Typography>
-                  {businessDetails?.customer_id && (
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Customer ID:</strong> {businessDetails.customer_id}
-                    </Typography>
-                  )}
-                  {businessDetails?.created_at && (
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Account Created:</strong> {formatDate(businessDetails.created_at)}
-                    </Typography>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-            
-            <Divider sx={{ my: 4 }} />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={loading}
-                sx={{ 
-                  py: 1.5,
-                  px: 4,
-                  bgcolor: '#1967D2',
-                  '&:hover': {
-                    bgcolor: '#1756af',
-                  },
-                }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Changes'}
-              </Button>
             </Box>
-          </form>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Telefonnummer
+              </Typography>
+              <TextField
+                fullWidth
+                value={businessDetails?.phone_number || ''}
+                disabled
+                sx={commonTextFieldStyle}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                WhatsApp-Nummer
+              </Typography>
+              <TextField
+                fullWidth
+                value={businessDetails?.whatsapp_number || ''}
+                disabled
+                sx={commonTextFieldStyle}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              TimeGlobe Auth-Schlüssel
+            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1,
+              alignItems: 'center'
+            }}>
+              <TextField
+                fullWidth
+                value={showAuthKey ? businessDetails?.timeglobe_auth_key || '' : maskAuthKey(businessDetails?.timeglobe_auth_key || '')}
+                disabled
+                sx={{
+                  ...commonTextFieldStyle,
+                  '& .MuiInputBase-root': {
+                    height: '56px',
+                    '& .MuiInputAdornment-root': {
+                      height: '100%'
+                    }
+                  }
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="Toggle auth key visibility"
+                        onClick={handleVisibilityToggle}
+                        edge="end"
+                        size="small"
+                        sx={{ p: 0.5 }}
+                      >
+                        {showAuthKey ? <VisibilityOff sx={{ fontSize: 20 }} /> : <Visibility sx={{ fontSize: 20 }} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              {showAuthKey && ( // Only show copy button if key is visible
+                <Tooltip title="Auth-Schlüssel kopieren">
+                  <IconButton
+                    onClick={handleCopyAuthKey}
+                    size="small"
+                    sx={{ color: '#1967D2', p: 0.5 }}
+                  >
+                    <ContentCopy sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Kontoinformationen
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Business ID:</strong> {businessDetails?.id}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Konto erstellt:</strong> {formatDate(businessDetails?.created_at || '')}
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Änderungen können nur im Onboarding vorgenommen werden
+            </Typography>
+            <Button 
+              variant="outlined" 
+              color="primary"
+              onClick={() => navigate('/onboarding')}
+            >
+              Zum Onboarding
+            </Button>
+          </Box>
+
+          <Dialog open={passwordDialogOpen} onClose={handlePasswordDialogClose}>
+            <DialogTitle>Passwort erforderlich</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Bitte geben Sie Ihr Passwort ein, um den Auth-Schlüssel anzuzeigen.
+              </Typography>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Passwort"
+                type="password"
+                fullWidth
+                value={password}
+                onChange={handlePasswordChange}
+                error={passwordError}
+                helperText={passwordErrorMessage}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !isValidating) {
+                    handlePasswordSubmit();
+                  }
+                }}
+                disabled={isValidating}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={handlePasswordDialogClose}
+                disabled={isValidating}
+              >
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={handlePasswordSubmit} 
+                variant="contained"
+                disabled={isValidating}
+              >
+                {isValidating ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Bestätigen'
+                )}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Paper>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/onboarding')}
-            sx={{ color: '#1967D2', borderColor: '#1967D2', mr: 2 }}
-          >
-            Back to Onboarding
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/dashboard')}
-            sx={{ color: '#1967D2', borderColor: '#1967D2' }}
-          >
-            View Dashboard
-          </Button>
-        </Box>
-      </Container>
+      </Box>
       
+      {error && (
+        <Snackbar
+          open={!!error}
+          autoHideDuration={5000}
+          onClose={() => setError(null)}
+          message={error}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
+      )}
+
       <Snackbar
-        open={success}
-        autoHideDuration={5000}
-        onClose={handleCloseSuccessMessage}
-        message="Profile updated successfully!"
+        open={!!copyFeedback}
+        message={copyFeedback}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            bgcolor: '#4CAF50',
+            color: 'white'
+          }
+        }}
       />
     </Box>
   );

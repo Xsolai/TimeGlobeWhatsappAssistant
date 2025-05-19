@@ -30,7 +30,7 @@ const ForgotPasswordPage: React.FC = () => {
     setError(null);
     
     if (!email) {
-      setError('Please enter your email address');
+      setError('Bitte geben Sie Ihre E-Mail-Adresse ein');
       return;
     }
 
@@ -41,10 +41,10 @@ const ForgotPasswordPage: React.FC = () => {
       if (result) {
         setSuccess(true);
       } else {
-        setError('Failed to send password reset link. Please check your email address.');
+        setError('Link zum Zurücksetzen konnte nicht gesendet werden. Bitte überprüfen Sie Ihre E-Mail-Adresse.');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -93,7 +93,7 @@ const ForgotPasswordPage: React.FC = () => {
               color: '#333333',
             }}
           >
-            Reset Password
+            Passwort zurücksetzen
           </Typography>
           
           <Typography 
@@ -101,7 +101,7 @@ const ForgotPasswordPage: React.FC = () => {
             align="center" 
             sx={{ mb: 3, color: '#666' }}
           >
-            Enter your email address and we'll send you instructions to reset your password.
+            Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen Anweisungen zum Zurücksetzen Ihres Passworts.
           </Typography>
           
           {error && (
@@ -112,7 +112,7 @@ const ForgotPasswordPage: React.FC = () => {
           
           {success ? (
             <Alert severity="success" sx={{ mb: 2 }}>
-              Password reset link has been sent to your email. Please check your inbox for the OTP code.
+              Der Link zum Zurücksetzen wurde an Ihre E-Mail-Adresse gesendet. Bitte prüfen Sie Ihren Posteingang für den OTP-Code.
             </Alert>
           ) : (
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
@@ -121,7 +121,7 @@ const ForgotPasswordPage: React.FC = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label="E-Mail-Adresse"
                 name="email"
                 autoComplete="email"
                 value={email}
@@ -145,14 +145,14 @@ const ForgotPasswordPage: React.FC = () => {
                 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Send Reset Link'}
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Link zum Zurücksetzen senden'}
               </Button>
             </Box>
           )}
           
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <Link component={RouterLink} to="/login" variant="body2" sx={{ color: '#1967D2' }}>
-              Back to Login
+              Zurück zur Anmeldung
             </Link>
           </Box>
         </Paper>

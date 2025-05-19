@@ -179,15 +179,12 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({ formData, onFormChang
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, pb: 8 }}>
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          p: 3,
+          p: 4,
           mb: 4,
-          borderRadius: 3,
+          borderRadius: 2,
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E0E0E0',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
         }}
       >
         {success && (
@@ -445,7 +442,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({ formData, onFormChang
             />
           </Box>
         </Stack>
-      </Paper>
+      </Box>
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
         <Button
@@ -502,22 +499,25 @@ const Footer = () => (
       position: 'fixed',
       bottom: 0,
       left: 0,
+      height: '20px',
       width: '100%',
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center',
-      py: 1,
-      backgroundColor: '#FFFFFF',
+      py: 0.5,
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      backdropFilter: 'blur(5px)',
       opacity: 1,
-      zIndex: 10
+      zIndex: 10,
+      borderTop: '1px solidrgba(224, 224, 224, 0)'
     }}
   >
     <Typography 
       variant="body2" 
       sx={{ 
-        color: '#000000',
+        color: '#666666',
         mr: 1,
-        fontSize: '0.85rem'
+        fontSize: '0.75rem'
       }}
     >
       powered by
@@ -525,7 +525,7 @@ const Footer = () => (
     <img 
       src="/images/EcomTask_logo.svg" 
       alt="EcomTask Logo" 
-      style={{ height: '36px' }} 
+      style={{ height: '30px' }} 
     />
   </Box>
 );

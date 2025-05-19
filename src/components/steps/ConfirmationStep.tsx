@@ -144,9 +144,9 @@ interface ConfirmationStepProps {
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack }) => {
   const theme = useTheme();
   const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'success' | 'error'>('idle');
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'success' | 'error' | 'disconnected'>('idle');
   const [whatsappConnected, setWhatsappConnected] = useState(false);
-  const [whatsappNumber, setWhatsappNumber] = useState<string | undefined>(undefined);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const popupWindowRef = useRef<Window | null>(null);
   const popupCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -174,15 +174,19 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
         if (statusResponse.status === 'connected') {
           setWhatsappConnected(true);
           setConnectionStatus('success');
-          if (statusResponse.whatsapp_number) {
-            setWhatsappNumber(statusResponse.whatsapp_number);
+          // Sicherere Überprüfung der WhatsApp-Nummer
+          const whatsappNum = statusResponse.whatsapp_number;
+          if (typeof whatsappNum === 'string' && whatsappNum.trim()) {
+            setWhatsappNumber(whatsappNum);
           }
         } else {
           setWhatsappConnected(false);
+          setConnectionStatus('disconnected');
         }
       } catch (error) {
         console.error('Error fetching WhatsApp status:', error);
         setWhatsappConnected(false);
+        setConnectionStatus('error');
       }
     };
     
@@ -298,16 +302,17 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
 zwischen
 
 EcomTask UG
-Rauenthaler Str. 12
-65197 Wiesbaden
-Deutschland
+vertreten durch Nick Wirth,
+Rauenthaler Straße 12,
+65197, Wiesbaden,
 (im Folgenden "EcomTask")
 
 und
 
 ${formData.companyName || '[Unternehmensname]'}
-${formData.street || '[Straße]'}
-${formData.zipCode || '[PLZ]'} ${formData.city || '[Stadt]'}
+vertreten durch ${formData.contactPerson || '[Ansprechpartner]'},
+${formData.street || '[Straße]'},
+${formData.zipCode || '[PLZ]'}, ${formData.city || '[Stadt]'},
 ${formData.country || '[Land]'}
 (im Folgenden "Kunde")
 
@@ -429,15 +434,12 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
 
   return (
     <Box sx={{ mt: 3, pb: 8 }}>
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          p: 3,
+          p: 4,
           mb: 4,
-          borderRadius: 3,
+          borderRadius: 2,
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E0E0E0',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
         }}
       >
         <Typography 
@@ -746,58 +748,49 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
             Bei der Verknüpfung mit WhatsApp ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.
           </Alert>
         )}
-      </Paper>
+      </Box>
       
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mt: 4
+      }}>
         <Button 
+          startIcon={<ArrowBack />}
           onClick={onBack}
           variant="outlined"
-          startIcon={<ArrowBack />}
-          sx={{ 
-            borderRadius: 3,
-            borderColor: '#1967D2',
-            color: '#1967D2',
-            px: 3,
-            py: 1.2,
-            '&:hover': {
-              borderColor: '#1967D2',
-              backgroundColor: 'rgba(25, 103, 210, 0.05)'
-            }
-          }}
+          color="primary"
         >
           Zurück
         </Button>
+        
+        {whatsappConnected ? (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            bgcolor: 'rgba(76, 175, 80, 0.1)',
+            color: '#4CAF50',
+            px: 2,
+            py: 1,
+            borderRadius: 1
+          }}>
+            <CheckCircle sx={{ mr: 1 }} />
+            <Typography variant="body2">
+              Erfolgreich verknüpft
+            </Typography>
+          </Box>
+        ) : (
         <Button
-          onClick={handleWhatsAppConnect}
           variant="contained"
           color="primary"
-          disabled={connectionStatus === 'connecting' || whatsappConnected}
-          endIcon={connectionStatus === 'connecting' ? null : <WhatsApp />}
-          sx={{ 
-            px: 4, 
-            py: 1.5,
-            borderRadius: 3,
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-            backgroundColor: whatsappConnected || connectionStatus === 'success' ? '#4CAF50' : '#25D366', // WhatsApp green
-            '&:hover': {
-              boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
-              backgroundColor: whatsappConnected || connectionStatus === 'success' ? '#388E3C' : '#128C7E', // Darker WhatsApp green
-            },
-            '&.Mui-disabled': {
-              backgroundColor: whatsappConnected ? '#4CAF50' : 'rgba(0, 0, 0, 0.12)',
-              color: whatsappConnected ? 'white' : 'rgba(0, 0, 0, 0.26)',
-              opacity: whatsappConnected ? 1 : 0.7
-            }
-          }}
+            onClick={handleWhatsAppConnect}
+            disabled={connectionStatus === 'connecting'}
+            endIcon={connectionStatus === 'connecting' ? undefined : <WhatsApp />}
         >
-          {connectionStatus === 'connecting' ? 'Verbindung wird hergestellt...' : 
-           whatsappConnected || connectionStatus === 'success' ? (
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-               <CheckCircleOutline fontSize="small" />
-               Erfolgreich verknüpft
-             </Box>
-           ) : 'WhatsApp verknüpfen'}
+            {connectionStatus === 'connecting' ? 'Verbinde...' : 'Mit WhatsApp verbinden'}
         </Button>
+        )}
       </Box>
     </Box>
   );
@@ -810,22 +803,25 @@ const Footer = () => (
       position: 'fixed',
       bottom: 0,
       left: 0,
+      height: '20px',
       width: '100%',
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center',
-      py: 1,
-      backgroundColor: '#FFFFFF',
+      py: 0.5,
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      backdropFilter: 'blur(5px)',
       opacity: 1,
-      zIndex: 10
+      zIndex: 10,
+      borderTop: '1px solidrgba(224, 224, 224, 0)'
     }}
   >
     <Typography 
       variant="body2" 
       sx={{ 
-        color: '#000000',
+        color: '#666666',
         mr: 1,
-        fontSize: '0.85rem'
+        fontSize: '0.75rem'
       }}
     >
       powered by
@@ -833,7 +829,7 @@ const Footer = () => (
     <img 
       src="/images/EcomTask_logo.svg" 
       alt="EcomTask Logo" 
-      style={{ height: '36px' }} 
+      style={{ height: '30px' }} 
     />
   </Box>
 );

@@ -38,17 +38,17 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, handleDrawerToggle }) => 
   // Navigation items
   const navigationItems = [
     {
-      text: 'Dashboard',
+      text: 'Übersicht',
       icon: <DashboardIcon />,
       path: '/dashboard',
     },
     {
-      text: 'My Profile',
+      text: 'Mein Profil',
       icon: <ProfileIcon />,
       path: '/profile',
     },
     {
-      text: 'Onboarding',
+      text: 'Einrichtung',
       icon: <OnboardingIcon />,
       path: '/onboarding',
     }
@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, handleDrawerToggle }) => 
           <ListItemIcon sx={{ minWidth: 42, color: 'inherit' }}>
             <LogoutIcon />
           </ListItemIcon>
-          <ListItemText primary="Logout" />
+          <ListItemText primary="Abmelden" />
         </ListItemButton>
       </List>
     </Box>

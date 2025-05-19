@@ -26,7 +26,7 @@ interface AuthContextType {
   verifyOtp: (email: string, otp: string) => Promise<boolean>;
   resendOtp: (email: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
-  resetPassword: (token: string, newPassword: string) => Promise<boolean>;
+  resetPassword: (businessId: string, token: string, newPassword: string) => Promise<boolean>;
   refreshUserData: () => Promise<boolean>;
   logout: () => void;
   loading: boolean;
@@ -62,7 +62,6 @@ const getUserFromSession = (): User | null => {
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Initialize state from sessionStorage if available
   const [currentUser, setCurrentUser] = useState<User | null>(() => getUserFromSession());
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -70,6 +69,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     storeUserInSession(currentUser);
   }, [currentUser]);
+
+  // Listen for auth errors
+  useEffect(() => {
+    const handleAuthError = () => {
+      setCurrentUser(null);
+      // Optional: Redirect to login page
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+    return () => window.removeEventListener('auth-error', handleAuthError);
+  }, []);
 
   // Helper function to fetch and set user data
   const fetchUserData = async (): Promise<boolean> => {
@@ -89,21 +100,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           console.error('Error fetching user profile:', error);
           
-          // Only log out if the error is specifically auth-related
-          // Otherwise, we might keep existing user data to avoid logout on transient errors
           if (error instanceof Error && 
               (error.message.includes('Authentication expired') || 
                error.message.includes('No authentication token found'))) {
-            authService.logout();
-            setCurrentUser(null);
+            logout();
           }
           return false;
         }
       }
-      return !!currentUser; // Return true if we still have a user even if token check failed
+      return false;
     } catch (error) {
       console.error('Error checking authentication:', error);
-      return !!currentUser;
+      return false;
     }
   };
 
@@ -216,10 +224,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const resetPassword = async (token: string, newPassword: string): Promise<boolean> => {
+  const resetPassword = async (businessId: string, token: string, newPassword: string): Promise<boolean> => {
     try {
       setLoading(true);
       await authService.resetPassword({ 
+        business_id: businessId,
         token, 
         new_password: newPassword 
       });
@@ -236,6 +245,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authService.logout();
     setCurrentUser(null);
     sessionStorage.removeItem('currentUser');
+    // Optional: Redirect to login page
+    window.location.href = '/login';
   };
 
   const value = {
