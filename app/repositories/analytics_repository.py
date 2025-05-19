@@ -29,20 +29,20 @@ class AnalyticsRepository:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
             
-            # Query appointments grouped by day (using BookingDetail begin_ts)
+            # Query appointments grouped by day (using BookModel created_at)
             query = (
                 self.db.query(
-                    func.date(BookingDetail.begin_ts).label('date'),
+                    func.date(BookModel.created_at).label('date'),
                     func.count().label('count')
                 )
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= start_date,
-                    BookingDetail.begin_ts <= end_date
+                    BookModel.created_at >= start_date,
+                    BookModel.created_at <= end_date
                 )
-                .group_by(func.date(BookingDetail.begin_ts))
-                .order_by(func.date(BookingDetail.begin_ts))
+                .group_by(func.date(BookModel.created_at))
+                .order_by(func.date(BookModel.created_at))
             )
             
             results = query.all()
@@ -184,7 +184,7 @@ class AnalyticsRepository:
             # Busiest hours of the day
             hours_query = (
                 self.db.query(
-                    extract('hour', BookingDetail.begin_ts).label('hour'),
+                    extract('hour', BookingDetail.created_at).label('hour'),
                     func.count().label('count')
                 )
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
@@ -198,7 +198,7 @@ class AnalyticsRepository:
             # Busiest days of the week
             days_query = (
                 self.db.query(
-                    extract('dow', BookingDetail.begin_ts).label('day'),
+                    extract('dow', BookingDetail.created_at).label('day'),
                     func.count().label('count')
                 )
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
@@ -253,8 +253,8 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= start_date,
-                    BookingDetail.begin_ts <= end_date
+                    BookingDetail.created_at >= start_date,
+                    BookingDetail.created_at <= end_date
                 )
                 .scalar() or 0
             )
@@ -463,10 +463,10 @@ class AnalyticsRepository:
                 
                 # Get most recent booking date
                 latest_booking = (
-                    self.db.query(BookingDetail.begin_ts)
+                    self.db.query(BookingDetail.created_at)
                     .join(BookModel, BookModel.id == BookingDetail.book_id)
                     .filter(BookModel.customer_id == customer.id)
-                    .order_by(BookingDetail.begin_ts.desc())
+                    .order_by(BookingDetail.created_at.desc())
                     .first()
                 )
                 
@@ -476,7 +476,7 @@ class AnalyticsRepository:
                     "mobile_number": customer.mobile_number,
                     "email": customer.email,
                     "booking_count": booking_count,
-                    "latest_booking": str(latest_booking.begin_ts) if latest_booking else None,
+                    "latest_booking": str(latest_booking.created_at) if latest_booking else None,
                     "created_at": str(customer.created_at)
                 }
                 
@@ -510,8 +510,8 @@ class AnalyticsRepository:
                 self.db.query(
                     BookModel.id.label('booking_id'),
                     BookingDetail.item_nm.label('service_name'),
-                    func.date(BookingDetail.begin_ts).label('appointment_date'),
-                    func.time(BookingDetail.begin_ts).label('appointment_time'),
+                    func.date(BookingDetail.created_at).label('appointment_date'),
+                    func.time(BookingDetail.created_at).label('appointment_time'),
                     CustomerModel.first_name.label('customer_first_name'),
                     CustomerModel.last_name.label('customer_last_name'),
                     CustomerModel.mobile_number.label('customer_phone')
@@ -519,7 +519,7 @@ class AnalyticsRepository:
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .join(CustomerModel, BookModel.customer_id == CustomerModel.id)
                 .filter(BookModel.business_phone_number == business_phone)
-                .order_by(desc(BookingDetail.begin_ts))
+                .order_by(desc(BookingDetail.created_at))
                 .limit(limit)
             )
             
