@@ -349,13 +349,25 @@ class AnalyticsRepository:
             if previous_thirty_day_appointments > 0:
                 growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
                               / previous_thirty_day_appointments) * 100
+                
+            # Get today's services count from BookingDetail
+            todays_services = (
+                self.db.query(func.count(BookingDetail.id))
+                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                .filter(
+                    BookModel.business_phone_number == business_phone,
+                    func.date(BookModel.created_at) == today.date()
+                )
+                .scalar() or 0
+            )
             
             return {
                 "today_appointments": today_appointments,
                 "yesterday_appointments": yesterday_appointments,
                 "thirty_day_appointments": thirty_day_appointments,
                 "thirty_day_growth_rate": round(growth_rate, 2),
-                "customer_stats": customer_stats
+                "customer_stats": customer_stats,
+                "todays_services_count": todays_services
             }
             
         except Exception as e:
@@ -370,7 +382,8 @@ class AnalyticsRepository:
                     "new_customers_30d": 0,
                     "returning_customers": 0,
                     "retention_rate": 0
-                }
+                },
+                "todays_services_count": 0
             }
     
     def get_business_customers(self, business_phone: str, page: int = 1, page_size: int = 10):

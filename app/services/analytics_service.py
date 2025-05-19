@@ -37,7 +37,14 @@ class AnalyticsService:
             
             # Combine all data into a single dashboard response
             dashboard = {
-                "summary": summary,
+                "summary": {
+                    "today_appointments": summary["today_appointments"],
+                    "yesterday_appointments": summary["yesterday_appointments"],
+                    "thirty_day_appointments": summary["thirty_day_appointments"],
+                    "thirty_day_growth_rate": summary["thirty_day_growth_rate"],
+                    "customer_stats": summary["customer_stats"],
+                    "todays_services": summary["todays_services_count"]
+                },
                 "appointment_trend": appointment_trend,
                 "top_services": top_services,
                 "busy_times": busy_times,

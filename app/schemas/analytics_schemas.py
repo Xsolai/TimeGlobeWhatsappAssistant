@@ -53,6 +53,7 @@ class DashboardSummary(BaseModel):
     thirty_day_appointments: int
     thirty_day_growth_rate: float
     customer_stats: CustomerStats
+    todays_services: int
     
 # Complete dashboard response
 class DashboardData(BaseModel):
