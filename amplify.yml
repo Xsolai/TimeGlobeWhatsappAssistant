@@ -4,20 +4,14 @@ frontend:
     preBuild:
       commands:
         - npm cache clean --force
-        - npm install
+        - npm install  # Changed from npm ci to npm install
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: build
+    baseDirectory: build  # or dist, depending on your setup
     files:
       - '**/*'
   cache:
     paths:
       - node_modules/**/*
-      - .npm/**/*
-  customHeaders:
-    - pattern: '**/*'
-      headers:
-        - key: 'Cache-Control'
-          value: 'public, max-age=0, must-revalidate' 
