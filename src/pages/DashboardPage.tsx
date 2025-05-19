@@ -253,7 +253,7 @@ const DashboardPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Überprüfe, ob das ausgewählte Datum in der Zukunft liegt
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -286,12 +286,12 @@ const DashboardPage: React.FC = () => {
             setSelectedDate(newDate);
             const servicesData = await analyticsService.getServicesForDate(newDate);
             console.log('Empfangene Servicedaten:', servicesData);
-            if (servicesData && servicesData.revenue) {
+            if (servicesData && servicesData.summary) {
               setDashboardData(prevData => ({
                 ...prevData!,
-                revenue: {
-                  ...prevData!.revenue,
-                  services_booked: servicesData.revenue.services_booked
+                summary: {
+                  ...prevData!.summary,
+                  todays_services: servicesData.summary.todays_services
                 }
               }));
             } else {
@@ -308,10 +308,11 @@ const DashboardPage: React.FC = () => {
                 ...prevData!,
                 summary: {
                   ...prevData!.summary,
-                  thirty_day_appointments: monthlyData.summary.thirty_day_appointments,
-                  thirty_day_growth_rate: monthlyData.summary.thirty_day_growth_rate
+                  monthly_appointments: monthlyData.summary.monthly_appointments,
+                  monthly_growth_rate: monthlyData.summary.monthly_growth_rate,
+                  monthly_services_booked: monthlyData.summary.monthly_services_booked
                 },
-                appointment_trend: monthlyData.appointment_trend || []
+                appointment_time_series: monthlyData.appointment_time_series || []
               }));
             } else {
               throw new Error('Ungültige Daten vom Server empfangen');
@@ -337,24 +338,23 @@ const DashboardPage: React.FC = () => {
   const todayAppointments = useCountUp({ end: todayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
 
   // Example for "Gebuchte Leistungen Heute"
-  const servicesBookedTodayEnd = dashboardData?.revenue?.services_booked || 0; // Assuming this is daily, adjust if it's monthly from context
+  const servicesBookedTodayEnd = dashboardData?.summary?.todays_services || 0;
   const servicesBookedToday = useCountUp({ end: servicesBookedTodayEnd, duration: 3500, startOnMount: !!dashboardData });
 
   // Example for "Kosten Monat"
-  const monthlyCostEnd = (dashboardData?.summary?.thirty_day_appointments || 0) * 0.99;
+  const monthlyCostEnd = dashboardData?.summary?.costs_last_30_days || 0;
   const monthlyCost = useCountUp({ end: monthlyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
 
   // Example for "Kosten Heute"
-  const dailyCostEnd = (dashboardData?.summary?.today_appointments || 0) * 0.99;
+  const dailyCostEnd = dashboardData?.summary?.costs_today || 0;
   const dailyCost = useCountUp({ end: dailyCostEnd, duration: 3500, startOnMount: !!dashboardData, decimalPlaces: 2 });
 
   // Example for "Termine" in month overview
-  const thirtyDayAppointmentsEnd = dashboardData?.summary?.thirty_day_appointments || 0;
+  const thirtyDayAppointmentsEnd = dashboardData?.summary?.monthly_appointments || 0;
   const thirtyDayAppointments = useCountUp({ end: thirtyDayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
 
   // Example for "Gebuchte Services" in month overview
-  // Assuming 'services_booked' in 'revenue' might be total/monthly. If there's a specific monthly services booked field, use that.
-  const monthlyServicesBookedEnd = dashboardData?.revenue?.services_booked || 0; 
+  const monthlyServicesBookedEnd = dashboardData?.summary?.monthly_services_booked || 0;
   const monthlyServicesBooked = useCountUp({ end: monthlyServicesBookedEnd, duration: 3500, startOnMount: !!dashboardData });
 
   if (loading) {
@@ -634,14 +634,14 @@ const DashboardPage: React.FC = () => {
                             </Typography>
                           </Box>
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Wachstum: {dashboardData.summary.thirty_day_growth_rate}%
+                            Wachstum: {dashboardData?.summary?.monthly_growth_rate}%
                           </Typography>
                           
                           {/* Liniendiagramm */}
                           <Box sx={{ height: 200, mt: 2 }}>
                             <ResponsiveContainer width="100%" height="100%">
                               <LineChart
-                                data={dashboardData.appointment_trend}
+                                data={dashboardData?.appointment_time_series || []}
                                 margin={{
                                   top: 5,
                                   right: 5,
@@ -722,11 +722,11 @@ const DashboardPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column'
             }}>
-              {dashboardData?.recent_activities && dashboardData.recent_activities.length > 0 ? (
+              {dashboardData?.recent_appointments && dashboardData.recent_appointments.length > 0 ? (
                 <Stack spacing={2}>
-                  {dashboardData.recent_activities.map((activity) => (
+                  {dashboardData.recent_appointments.map((activity) => (
                     <Box 
-                      key={activity.id}
+                      key={activity.booking_id}
                       sx={{ 
                         p: 2,
                         borderRadius: 1,
@@ -739,37 +739,12 @@ const DashboardPage: React.FC = () => {
                         }
                       }}
                     >
-                      {/* Service und Status */}
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                        <Box 
-                          sx={{ 
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            backgroundColor: activity.status === 'confirmed' ? '#4CAF50' : 
-                                           activity.status === 'pending' ? '#FFA726' : '#EF5350',
-                            mr: 1
-                          }}
-                        />
                         <Typography variant="subtitle2" sx={{ fontWeight: 500, flex: 1 }}>
                           {activity.service_name}
                         </Typography>
-                        <Typography variant="caption" sx={{ 
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          backgroundColor: activity.status === 'confirmed' ? 'rgba(76, 175, 80, 0.1)' : 
-                                         activity.status === 'pending' ? 'rgba(255, 167, 38, 0.1)' : 
-                                         'rgba(239, 83, 80, 0.1)',
-                          color: activity.status === 'confirmed' ? '#4CAF50' : 
-                                 activity.status === 'pending' ? '#FFA726' : '#EF5350'
-                        }}>
-                          {activity.status === 'confirmed' ? 'Bestätigt' : 
-                           activity.status === 'pending' ? 'Ausstehend' : 'Storniert'}
-                        </Typography>
                       </Box>
                       
-                      {/* Kunde */}
                       <Typography variant="body2" sx={{ 
                         color: 'text.secondary',
                         mb: 1.5,
@@ -793,26 +768,7 @@ const DashboardPage: React.FC = () => {
                         {activity.customer_name}
                       </Typography>
 
-                      {/* Buchungs- und Terminzeit */}
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        {/* Buchungszeit */}
-                        <Typography variant="caption" sx={{ 
-                          color: 'text.secondary',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.5
-                        }}>
-                          <Box component="span" sx={{ color: '#666666' }}>Gebucht:</Box>
-                          {new Date(activity.booking_time).toLocaleString('de-DE', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} Uhr
-                        </Typography>
-                        
-                        {/* Terminzeit */}
                         <Typography variant="caption" sx={{ 
                           color: 'text.secondary',
                           display: 'flex',
@@ -820,7 +776,7 @@ const DashboardPage: React.FC = () => {
                           gap: 0.5
                         }}>
                           <Box component="span" sx={{ color: '#666666' }}>Termin:</Box>
-                          {new Date(activity.appointment_time).toLocaleString('de-DE', {
+                          {new Date(`${activity.appointment_date}T${activity.appointment_time}`).toLocaleString('de-DE', {
                             day: '2-digit',
                             month: '2-digit',
                             year: '2-digit',

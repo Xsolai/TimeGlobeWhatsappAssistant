@@ -26,7 +26,7 @@ interface AuthContextType {
   verifyOtp: (email: string, otp: string) => Promise<boolean>;
   resendOtp: (email: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
-  resetPassword: (token: string, newPassword: string) => Promise<boolean>;
+  resetPassword: (businessId: string, token: string, newPassword: string) => Promise<boolean>;
   refreshUserData: () => Promise<boolean>;
   logout: () => void;
   loading: boolean;
@@ -224,10 +224,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const resetPassword = async (token: string, newPassword: string): Promise<boolean> => {
+  const resetPassword = async (businessId: string, token: string, newPassword: string): Promise<boolean> => {
     try {
       setLoading(true);
       await authService.resetPassword({ 
+        business_id: businessId,
         token, 
         new_password: newPassword 
       });

@@ -23,6 +23,7 @@ import Logo from '../components/Logo';
 import TopBar from '../components/TopBar';
 import authService from '../services/authService';
 import { Visibility, VisibilityOff, ContentCopy } from '@mui/icons-material';
+import analyticsService, { DashboardData, DateRangeData } from '../services/analyticsService';
 
 // Define a more complete business interface
 interface BusinessDetails {
@@ -34,7 +35,7 @@ interface BusinessDetails {
   created_at: string;
   whatsapp_number: string;
   customer_id: string;
-  timeglobe_auth_key: string;
+  timeglobe_auth_key?: string; // Make optional
 }
 
 const ProfilePage: React.FC = () => {
@@ -58,7 +59,9 @@ const ProfilePage: React.FC = () => {
     try {
       setFetchLoading(true);
       const data = await authService.getBusinessProfile();
-      setBusinessDetails(data);
+      // Exclude timeglobe_auth_key from initial fetch as it's fetched separately
+      const { timeglobe_auth_key, ...rest } = data; // Destructure to exclude auth key
+      setBusinessDetails(rest as BusinessDetails); // Cast back to BusinessDetails
     } catch (err) {
       console.error('Error fetching business details:', err);
       setError('Failed to load business profile');
@@ -96,10 +99,37 @@ const ProfilePage: React.FC = () => {
     return '•'.repeat(key.length);
   };
 
+  // Handle visibility toggle click
+  const handleVisibilityToggle = () => {
+    if (showAuthKey) {
+      // If already showing, hide it
+      setShowAuthKey(false);
+    } else {
+      // If hidden, open the password dialog
+      setPasswordDialogOpen(true);
+    }
+  };
+
+  // Handle password dialog close
+  const handlePasswordDialogClose = () => {
+    setPasswordDialogOpen(false);
+    setPassword(''); // Clear password on close
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+  };
+
+  // Handle password input change
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+  };
+
+  // Handle password submission
   const handlePasswordSubmit = async () => {
-    if (password.trim() === '') {
+    if (!password) {
       setPasswordError(true);
-      setPasswordErrorMessage('Bitte geben Sie Ihr Passwort ein');
+      setPasswordErrorMessage('Bitte geben Sie Ihr Passwort ein.');
       return;
     }
 
@@ -107,34 +137,40 @@ const ProfilePage: React.FC = () => {
     try {
       const isValid = await authService.validatePassword(password);
       if (isValid) {
-        setShowAuthKey(true);
-        setPasswordDialogOpen(false);
-        setPassword('');
-        setPasswordError(false);
-        setPasswordErrorMessage('');
+        // Password is correct, now fetch the auth key
+        try {
+          const authKeyData = await authService.getTimeglobeAuthKey();
+          setBusinessDetails(prevDetails => ({
+            ...prevDetails!,
+            timeglobe_auth_key: authKeyData.timeglobe_auth_key
+          }));
+          setShowAuthKey(true);
+          handlePasswordDialogClose();
+        } catch (authKeyError) {
+          console.error('Error fetching Auth Key after password validation:', authKeyError);
+          setPasswordError(true); // Indicate error in dialog
+          setPasswordErrorMessage('Fehler beim Abrufen des Auth-Schlüssels.');
+          // Optionally, close the dialog on a non-recoverable error
+          // handlePasswordDialogClose(); 
+        }
       } else {
         setPasswordError(true);
-        setPasswordErrorMessage('Falsches Passwort');
+        setPasswordErrorMessage('Ungültiges Passwort.');
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Password validation error:', err);
       setPasswordError(true);
-      setPasswordErrorMessage('Fehler bei der Validierung. Bitte versuchen Sie es erneut.');
+      setPasswordErrorMessage('Fehler bei der Passwortprüfung. Bitte versuchen Sie es erneut.');
     } finally {
       setIsValidating(false);
     }
   };
 
-  const handleCopy = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    setCopyFeedback(`${type} wurde kopiert`);
-    setTimeout(() => setCopyFeedback(null), 2000);
-  };
-
-  const handleVisibilityToggle = () => {
-    if (!showAuthKey) {
-      setPasswordDialogOpen(true);
-    } else {
-      setShowAuthKey(false);
+  const handleCopyAuthKey = () => {
+    if (businessDetails?.timeglobe_auth_key) {
+      navigator.clipboard.writeText(businessDetails.timeglobe_auth_key);
+      setCopyFeedback('Auth-Schlüssel kopiert!');
+      setTimeout(() => setCopyFeedback(null), 2000);
     }
   };
 
@@ -295,6 +331,17 @@ const ProfilePage: React.FC = () => {
                   ),
                 }}
               />
+              {showAuthKey && ( // Only show copy button if key is visible
+                <Tooltip title="Auth-Schlüssel kopieren">
+                  <IconButton
+                    onClick={handleCopyAuthKey}
+                    size="small"
+                    sx={{ color: '#1967D2', p: 0.5 }}
+                  >
+                    <ContentCopy sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </Box>
 
@@ -323,12 +370,7 @@ const ProfilePage: React.FC = () => {
             </Button>
           </Box>
 
-          <Dialog open={passwordDialogOpen} onClose={() => {
-            setPasswordDialogOpen(false);
-            setPassword('');
-            setPasswordError(false);
-            setPasswordErrorMessage('');
-          }}>
+          <Dialog open={passwordDialogOpen} onClose={handlePasswordDialogClose}>
             <DialogTitle>Passwort erforderlich</DialogTitle>
             <DialogContent>
               <Typography variant="body2" sx={{ mb: 2 }}>
@@ -341,11 +383,7 @@ const ProfilePage: React.FC = () => {
                 type="password"
                 fullWidth
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setPasswordError(false);
-                  setPasswordErrorMessage('');
-                }}
+                onChange={handlePasswordChange}
                 error={passwordError}
                 helperText={passwordErrorMessage}
                 onKeyPress={(e) => {
@@ -358,12 +396,7 @@ const ProfilePage: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button 
-                onClick={() => {
-                  setPasswordDialogOpen(false);
-                  setPassword('');
-                  setPasswordError(false);
-                  setPasswordErrorMessage('');
-                }}
+                onClick={handlePasswordDialogClose}
                 disabled={isValidating}
               >
                 Abbrechen

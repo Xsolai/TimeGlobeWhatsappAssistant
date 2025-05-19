@@ -13,12 +13,13 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 
 const ResetPasswordPage: React.FC = () => {
   const [formData, setFormData] = useState({
+    businessId: '',
     token: '',
     newPassword: '',
     confirmPassword: ''
@@ -32,16 +33,18 @@ const ResetPasswordPage: React.FC = () => {
   
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { businessId, token } = useParams();
   
-  // Get token from query parameters if available
+  // Get business ID and token from URL params
   React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tokenParam = params.get('token');
-    if (tokenParam) {
-      setFormData(prev => ({ ...prev, token: tokenParam }));
+    if (businessId && token) {
+      setFormData(prev => ({ 
+        ...prev, 
+        businessId,
+        token 
+      }));
     }
-  }, [location]);
+  }, [businessId, token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,7 +58,7 @@ const ResetPasswordPage: React.FC = () => {
     e.preventDefault();
     setError(null);
     
-    if (!formData.token || !formData.newPassword) {
+    if (!formData.businessId || !formData.token || !formData.newPassword) {
       setError('Please fill in all required fields');
       return;
     }
@@ -67,7 +70,7 @@ const ResetPasswordPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const result = await resetPassword(formData.token, formData.newPassword);
+      const result = await resetPassword(formData.businessId, formData.token, formData.newPassword);
       
       if (result) {
         setSuccess(true);
@@ -151,20 +154,6 @@ const ResetPasswordPage: React.FC = () => {
             </Alert>
           ) : (
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="token"
-                label="Reset Token"
-                name="token"
-                value={formData.token}
-                onChange={handleChange}
-                disabled={loading}
-                helperText="Enter the token received in your email"
-                sx={{ mb: 2 }}
-              />
-              
               <TextField
                 margin="normal"
                 required

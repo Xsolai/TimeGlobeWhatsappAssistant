@@ -214,7 +214,7 @@ const authService = {
   },
 
   // Reset password
-  resetPassword: async (data: { token: string; new_password: string }) => {
+  resetPassword: async (data: { business_id: string; token: string; new_password: string }) => {
     try {
       return await fetchWithAuth(`${API_URL}/reset-password`, {
         method: 'POST',
@@ -233,11 +233,23 @@ const authService = {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      
+      // Assuming the /business/me endpoint no longer returns the auth key
       return await fetchWithAuth(`${API_URL}/business/me`, {
         method: 'GET',
       });
     } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get TimeGlobe API key for the business
+  getTimeglobeAuthKey: async (): Promise<{ timeglobe_auth_key: string; customer_cd: string }> => {
+    try {
+      return await fetchWithAuth(`${API_URL}/business/timeglobe-key`, {
+        method: 'GET',
+      });
+    } catch (error) {
+      console.error('Error fetching TimeGlobe Auth Key:', error);
       throw error;
     }
   },
