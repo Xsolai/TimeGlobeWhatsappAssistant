@@ -506,7 +506,7 @@ class TimeGlobeService:
                 try:
                     # Adjust orderBegin
                     begin_dt = datetime.strptime(order["orderBegin"], "%Y-%m-%dT%H:%M:%S.%fZ")
-                    hours_to_add = 2 if begin_dt >= cutoff_date else 1
+                    hours_to_add = 0 if begin_dt >= cutoff_date else 0
                     adjusted_begin_dt = begin_dt.replace(hour=begin_dt.hour + hours_to_add)
                     order["orderBegin"] = adjusted_begin_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                     
