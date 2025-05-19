@@ -503,12 +503,6 @@ const DashboardPage: React.FC = () => {
                             <Typography variant="subtitle2" color="text.secondary">
                               {getDayTitle('appointments', selectedDate)}
                             </Typography>
-                            <IconButton 
-                              onClick={(e) => handleCalendarClick(e, 'today')}
-                              sx={{ color: '#1976D2' }}
-                            >
-                              <TodayOutlined />
-                            </IconButton>
                           </Box>
                           <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
                             {todayAppointments}
@@ -535,12 +529,6 @@ const DashboardPage: React.FC = () => {
                             <Typography variant="subtitle2" color="text.secondary">
                               {getDayTitle('services', selectedDate)}
                             </Typography>
-                            <IconButton 
-                              onClick={(e) => handleCalendarClick(e, 'services')}
-                              sx={{ color: '#1976D2' }}
-                            >
-                              <TodayOutlined />
-                            </IconButton>
                           </Box>
                           <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
                             {servicesBookedToday}
