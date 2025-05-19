@@ -29,20 +29,20 @@ class AnalyticsRepository:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
             
-            # Query appointments grouped by day (using BookModel creation date)
+            # Query appointments grouped by day (using BookingDetail begin_ts)
             query = (
                 self.db.query(
-                    func.date(BookModel.created_at).label('date'),
+                    func.date(BookingDetail.begin_ts).label('date'),
                     func.count().label('count')
                 )
-                .join(BookingDetail, BookModel.id == BookingDetail.book_id)
+                .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookModel.created_at >= start_date,
-                    BookModel.created_at <= end_date
+                    BookingDetail.begin_ts >= start_date,
+                    BookingDetail.begin_ts <= end_date
                 )
-                .group_by(func.date(BookModel.created_at))
-                .order_by(func.date(BookModel.created_at))
+                .group_by(func.date(BookingDetail.begin_ts))
+                .order_by(func.date(BookingDetail.begin_ts))
             )
             
             results = query.all()
