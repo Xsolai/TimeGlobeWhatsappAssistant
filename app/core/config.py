@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     API_BASE_URL: str = env.get("API_BASE_URL", "")
     EMAIL_SENDER: str = env.get("EMAIL_SENDER", "")
 
-    FRONTEND_RESET_PASSWORD_URL: str = "http://localhost:3000/reset-password"
+    FRONTEND_RESET_PASSWORD_URL: str = "https://timeglobe.ecomtask.de/reset-password"
 
     # This is the important part - allows extra fields
     model_config = {
