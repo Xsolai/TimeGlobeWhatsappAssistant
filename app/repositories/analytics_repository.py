@@ -29,20 +29,20 @@ class AnalyticsRepository:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
             
-            # Query appointments grouped by day
+            # Query appointments grouped by day (using BookModel creation date)
             query = (
                 self.db.query(
-                    func.date(BookingDetail.begin_ts).label('date'),
+                    func.date(BookModel.created_at).label('date'),
                     func.count().label('count')
                 )
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= start_date,
-                    BookingDetail.begin_ts <= end_date
+                    BookModel.created_at >= start_date,
+                    BookModel.created_at <= end_date
                 )
-                .group_by(func.date(BookingDetail.begin_ts))
-                .order_by(func.date(BookingDetail.begin_ts))
+                .group_by(func.date(BookModel.created_at))
+                .order_by(func.date(BookModel.created_at))
             )
             
             results = query.all()
@@ -295,48 +295,48 @@ class AnalyticsRepository:
             thirty_days_ago = today - timedelta(days=30)
             previous_thirty_days = thirty_days_ago - timedelta(days=30)
             
-            # Today's appointments
+            # Appointments booked today (using BookModel creation date)
             today_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.begin_ts) == today.date()
+                    func.date(BookModel.created_at) == today.date()
                 )
                 .scalar() or 0
             )
             
-            # Yesterday's appointments
+            # Appointments booked yesterday
             yesterday_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.begin_ts) == yesterday.date()
+                    func.date(BookModel.created_at) == yesterday.date()
                 )
                 .scalar() or 0
             )
             
-            # Last 30 days appointments
+            # Appointments booked in the last 30 days
             thirty_day_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= thirty_days_ago,
-                    BookingDetail.begin_ts <= today
+                    BookModel.created_at >= thirty_days_ago,
+                    BookModel.created_at <= today
                 )
                 .scalar() or 0
             )
             
-            # Previous 30 days appointments (for comparison)
+            # Appointments booked in the previous 30 days (for comparison)
             previous_thirty_day_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.begin_ts >= previous_thirty_days,
-                    BookingDetail.begin_ts <= thirty_days_ago
+                    BookModel.created_at >= previous_thirty_days,
+                    BookModel.created_at <= thirty_days_ago
                 )
                 .scalar() or 0
             )
