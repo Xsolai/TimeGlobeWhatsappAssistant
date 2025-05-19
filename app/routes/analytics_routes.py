@@ -49,7 +49,7 @@ async def get_analytics_dashboard(
         analytics_service = AnalyticsService(db)
         
         # Get dashboard data
-        result = analytics_service.get_business_dashboard(current_business.whatsapp_number)
+        result = analytics_service.get_business_dashboard(current_business.whatsapp_number,month=month)
         
         return result
     except Exception as e:
