@@ -6,6 +6,7 @@ from ..models.booking_detail import BookingDetail
 from ..models.customer_model import CustomerModel
 from ..logger import main_logger
 from ..models.business_model import Business
+from typing import List
 
 class AnalyticsRepository:
     """Repository class for business analytics data queries"""
@@ -539,4 +540,30 @@ class AnalyticsRepository:
             
         except Exception as e:
             main_logger.error(f"Error getting recent appointments: {str(e)}")
+            return []
+    
+    def get_dates_with_appointments(self, business_phone: str) -> List[str]:
+        """
+        Get a list of distinct dates for which appointments exist.
+        
+        Args:
+            business_phone: The business phone number.
+            
+        Returns:
+            List of dates in YYYY-MM-DD format.
+        """
+        try:
+            dates = (
+                self.db.query(func.date(BookModel.created_at))
+                .filter(BookModel.business_phone_number == business_phone)
+                .distinct()
+                .order_by(func.date(BookModel.created_at))
+                .all()
+            )
+            
+            # Extract date strings from results
+            return [str(date[0]) for date in dates]
+            
+        except Exception as e:
+            main_logger.error(f"Error getting dates with appointments: {str(e)}")
             return [] 

@@ -2,7 +2,7 @@ from ..repositories.analytics_repository import AnalyticsRepository
 from sqlalchemy.orm import Session
 from ..logger import main_logger
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 class AnalyticsService:
     """Service class for business analytics"""
@@ -219,4 +219,23 @@ class AnalyticsService:
             return {
                 "status": "error",
                 "message": f"Failed to retrieve customer list: {str(e)}"
-            } 
+            }
+    
+    def get_available_appointment_dates(self, business_phone: str) -> List[str]:
+        """
+        Get a list of distinct dates for which appointments exist.
+        
+        Args:
+            business_phone: The business phone number.
+            
+        Returns:
+            List of dates in YYYY-MM-DD format.
+        """
+        main_logger.debug(f"Fetching available appointment dates for business: {business_phone}")
+        try:
+            available_dates = self.analytics_repo.get_dates_with_appointments(business_phone)
+            main_logger.info(f"Found {len(available_dates)} available dates for business: {business_phone}")
+            return available_dates
+        except Exception as e:
+            main_logger.error(f"Error in AnalyticsService.get_available_appointment_dates: {str(e)}")
+            raise Exception(f"Failed to retrieve available dates: {str(e)}") 

@@ -13,7 +13,7 @@ from ..schemas.analytics_schemas import (
     ServiceAnalyticsResponse,
     CustomerListResponse
 )
-from typing import Optional
+from typing import Optional, List
 
 router = APIRouter()
 
@@ -265,4 +265,38 @@ async def list_business_customers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve customer list: {str(e)}"
+        )
+
+@router.get("/available-dates", status_code=status.HTTP_200_OK, response_model=List[str])
+async def get_available_analytics_dates(
+    db: Session = Depends(get_db),
+    current_business: Business = Depends(get_current_business)
+):
+    """
+    Fetch dates for which analytics data is available.
+
+    Returns:
+        A list of dates in YYYY-MM-DD format.
+    """
+    try:
+        # Make sure business has a WhatsApp number
+        if not current_business.whatsapp_number:
+            # Return empty list if no WhatsApp number configured, as no data would be available
+            return JSONResponse(
+                content=[],
+                status_code=200  # Returning 200 with empty list for no data
+            )
+        
+        # Create analytics service
+        analytics_service = AnalyticsService(db)
+        
+        # Get available dates
+        available_dates = analytics_service.get_available_appointment_dates(current_business.whatsapp_number)
+        
+        return available_dates
+    except Exception as e:
+        main_logger.error(f"Error in available-dates endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve available dates: {str(e)}"
         ) 
