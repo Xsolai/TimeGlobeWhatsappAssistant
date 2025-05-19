@@ -1,6 +1,8 @@
 from ..repositories.analytics_repository import AnalyticsRepository
 from sqlalchemy.orm import Session
 from ..logger import main_logger
+from datetime import datetime, timedelta
+from typing import Optional
 
 class AnalyticsService:
     """Service class for business analytics"""
@@ -9,28 +11,55 @@ class AnalyticsService:
         self.db = db
         self.analytics_repo = AnalyticsRepository(db)
     
-    def get_business_dashboard(self, business_phone: str):
+    def get_business_dashboard(self, business_phone: str, month: Optional[str] = None):
         """
         Get a complete dashboard data for a business
+        Optionally filter data by month.
         
         Args:
             business_phone: Business phone number to filter by
+            month: Optional month to filter data (format YYYY-MM).
             
         Returns:
             Dictionary with all dashboard components
         """
         try:
+            # Determine the date range based on the month parameter
+            if month:
+                try:
+                    year, month_num = map(int, month.split('-'))
+                    # Get the first day of the month
+                    start_date = datetime(year, month_num, 1)
+                    # Get the last day of the month
+                    if month_num == 12:
+                        end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+                    else:
+                        end_date = datetime(year, month_num + 1, 1) - timedelta(days=1)
+                    main_logger.info(f"Filtering dashboard data for month: {month}. Range: {start_date} to {end_date}")
+                except ValueError:
+                    main_logger.warning(f"Invalid month format: {month}. Using last 30 days instead.")
+                    month = None # Fallback to default
+
+            # If no valid month is provided, use the last 30 days
+            if not month:
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=30)
+                main_logger.info(f"Filtering dashboard data for last 30 days. Range: {start_date} to {end_date}")
+
             # Get summary data (quick stats)
-            summary = self.analytics_repo.get_dashboard_summary(business_phone)
+            # Pass start and end dates to the repository method
+            summary = self.analytics_repo.get_dashboard_summary(business_phone, start_date, end_date)
             
             # Get revenue estimates (needed for monthly services booked)
-            revenue = self.analytics_repo.get_revenue_estimates(business_phone)
+            # Pass start and end dates to the repository method
+            revenue = self.analytics_repo.get_revenue_estimates(business_phone, start_date, end_date)
             
-            # Get recent appointments
+            # Get recent appointments (still get the 10 most recent overall, not month-specific)
             recent_appointments = self.analytics_repo.get_recent_appointments(business_phone, limit=10)
 
-            # Get appointment time series data for the last 30 days
-            appointment_time_series_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, days=30)
+            # Get appointment time series data for the specified range
+            # Pass start and end dates to the repository method
+            appointment_time_series_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, start_date, end_date)
 
             # Construct the dashboard response with only the required fields
             dashboard_data = {

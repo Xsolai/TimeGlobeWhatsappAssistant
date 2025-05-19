@@ -13,21 +13,20 @@ class AnalyticsRepository:
     def __init__(self, db: Session):
         self.db = db
         
-    def get_appointments_by_timeframe(self, business_phone: str, days: int = 30):
+    def get_appointments_by_timeframe(self, business_phone: str, start_date: datetime, end_date: datetime):
         """
-        Get appointment count grouped by day for the specified timeframe
+        Get appointment count grouped by day for the specified date range.
         
         Args:
             business_phone: The business phone number
-            days: Number of days to look back (default 30)
+            start_date: The start date of the range (inclusive).
+            end_date: The end date of the range (inclusive).
             
         Returns:
             List of daily appointment counts
         """
         try:
-            # Calculate the date range
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
+            # Use provided start and end dates for filtering
             
             # Query appointments grouped by day (using BookModel created_at)
             query = (
@@ -230,23 +229,20 @@ class AnalyticsRepository:
             main_logger.error(f"Error getting busiest times: {str(e)}")
             return {"busiest_hours": [], "busiest_days": []}
     
-    def get_revenue_estimates(self, business_phone: str, days: int = 30):
+    def get_revenue_estimates(self, business_phone: str, start_date: datetime, end_date: datetime):
         """
-        Get estimated revenue based on service bookings
-        Note: This is a placeholder as we don't have price data
+        Get estimated revenue based on service bookings within a date range.
         
         Args:
             business_phone: The business phone number
-            days: Number of days to look back
+            start_date: The start date of the range (inclusive).
+            end_date: The end date of the range (inclusive).
             
         Returns:
             Revenue estimate data
         """
         try:
-            # For demonstration purposes - assuming average service value
-            # In a real implementation, you would join with a prices table
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
+            # Use provided start and end dates for filtering
             
             services_count = (
                 self.db.query(func.count(BookingDetail.id))
@@ -263,7 +259,7 @@ class AnalyticsRepository:
             avg_service_value = 50  # Example value
             
             return {
-                "period_days": days,
+                "period_days": (end_date - start_date).days + 1,
                 "services_booked": services_count,
                 "estimated_revenue": services_count * avg_service_value,
                 "avg_service_value": avg_service_value
@@ -272,28 +268,26 @@ class AnalyticsRepository:
         except Exception as e:
             main_logger.error(f"Error getting revenue estimates: {str(e)}")
             return {
-                "period_days": days,
+                "period_days": (end_date - start_date).days + 1,
                 "services_booked": 0,
                 "estimated_revenue": 0,
                 "avg_service_value": 0
             }
     
-    def get_dashboard_summary(self, business_phone: str):
+    def get_dashboard_summary(self, business_phone: str, start_date: datetime, end_date: datetime):
         """
-        Get a summary of key metrics for a business dashboard
+        Get a summary of key metrics for a business dashboard within a date range.
         
         Args:
             business_phone: The business phone number
+            start_date: The start date of the range (inclusive).
+            end_date: The end date of the range (inclusive).
             
         Returns:
             Dictionary with summary metrics
         """
         try:
-            # Get today's date and previous periods
-            today = datetime.now()
-            yesterday = today - timedelta(days=1)
-            thirty_days_ago = today - timedelta(days=30)
-            previous_thirty_days = thirty_days_ago - timedelta(days=30)
+            # Use provided start and end dates for filtering
             
             # Appointments booked today (using BookModel creation date)
             today_appointments = (
@@ -301,12 +295,13 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == today.date()
+                    func.date(BookModel.created_at) == datetime.now().date()
                 )
                 .scalar() or 0
             )
             
             # Appointments booked yesterday
+            yesterday = datetime.now() - timedelta(days=1)
             yesterday_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
@@ -317,47 +312,52 @@ class AnalyticsRepository:
                 .scalar() or 0
             )
             
-            # Appointments booked in the last 30 days
+            # Appointments booked in the specified date range
             thirty_day_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookModel.created_at >= thirty_days_ago,
-                    BookModel.created_at <= today
+                    BookModel.created_at >= start_date,
+                    BookModel.created_at <= end_date
                 )
                 .scalar() or 0
             )
             
-            # Appointments booked in the previous 30 days (for comparison)
+            # Appointments booked in the previous period (for comparison, relative to the specified range)
+            # Calculate the duration of the specified range
+            duration = end_date - start_date
+            previous_end_date = start_date - timedelta(days=1)
+            previous_start_date = previous_end_date - duration
+
             previous_thirty_day_appointments = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookModel.created_at >= previous_thirty_days,
-                    BookModel.created_at <= thirty_days_ago
+                    BookModel.created_at >= previous_start_date,
+                    BookModel.created_at <= previous_end_date
                 )
                 .scalar() or 0
             )
             
-            # Calculate appointments count from BookModel for today
+            # Calculate appointments count from BookModel for today (for costs)
             appointments_today_count = (
                 self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == today.date()
+                    func.date(BookModel.created_at) == datetime.now().date()
                 )
                 .scalar() or 0
             )
             
-            # Calculate appointments count from BookModel for the last 30 days
+            # Calculate appointments count from BookModel for the specified date range (for costs)
             appointments_last_30_days_count = (
                 self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookModel.created_at >= thirty_days_ago,
-                    BookModel.created_at <= today
+                    BookModel.created_at >= start_date,
+                    BookModel.created_at <= end_date
                 )
                 .scalar() or 0
             )
@@ -367,24 +367,14 @@ class AnalyticsRepository:
             costs_today = round(appointments_today_count * cost_per_appointment, 2)
             costs_last_30_days = round(appointments_last_30_days_count * cost_per_appointment, 2)
 
-            # Customer statistics
+            # Customer statistics (these are not time-bound in the current implementation, keep as is)
             customer_stats = self.get_customer_statistics(business_phone)
             
-            # Calculate growth rate
+            # Calculate growth rate based on the specified range and the previous period
             growth_rate = 0
             if previous_thirty_day_appointments > 0:
                 growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
                               / previous_thirty_day_appointments) * 100
-                
-            todays_services = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
-                .filter(
-                    BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == today.date()
-                )
-                .scalar() or 0
-            )
                 
             return {
                 "today_appointments": appointments_today_count,
@@ -392,7 +382,7 @@ class AnalyticsRepository:
                 "thirty_day_appointments": appointments_last_30_days_count,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "customer_stats": customer_stats,
-                "todays_services_count": todays_services,
+                "todays_services_count": today_appointments,
                 "costs_today_calculated": costs_today,
                 "costs_last_30_days_calculated": costs_last_30_days
             }

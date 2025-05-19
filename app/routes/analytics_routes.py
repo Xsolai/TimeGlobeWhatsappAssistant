@@ -13,16 +13,22 @@ from ..schemas.analytics_schemas import (
     ServiceAnalyticsResponse,
     CustomerListResponse
 )
+from typing import Optional
 
 router = APIRouter()
 
 @router.get("/dashboard", status_code=status.HTTP_200_OK, response_model=DashboardResponse)
 async def get_analytics_dashboard(
+    month: Optional[str] = None,
     db: Session = Depends(get_db),
     current_business: Business = Depends(get_current_business)
 ):
     """
     Get complete analytics dashboard for the logged-in business.
+    Optionally filter data by month.
+
+    Args:
+        month: Optional month to filter data (format YYYY-MM).
     
     Returns:
         A dashboard with summary metrics, appointment trends, top services,
