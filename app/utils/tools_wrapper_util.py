@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 from .timezone_util import BERLIN_TZ
 from ..core.config import settings
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ def get_employee(items, siteCd,week):
         return {"status": "error", "message": str(e)}
 
 
-def AppointmentSuggestion(week, employeeid, itemno, siteCd: str):
+def AppointmentSuggestion(week, employeeid, itemno, siteCd: str, dateSearchString: Optional[List[str]] = None):
     """Get available appointment slots for a selected employee,service and salon"""
     logger.info(
         f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd})"
@@ -105,9 +105,10 @@ def AppointmentSuggestion(week, employeeid, itemno, siteCd: str):
     try:
         suggestions = _get_timeglobe_service().AppointmentSuggestion(
             week=week,
-            employee_id=employeeid, 
-            item_no=itemno, 
-            siteCd=siteCd
+            employee_id=employeeid,
+            item_no=itemno,
+            siteCd=siteCd,
+            date_search_string=dateSearchString,
         )
         execution_time = time.time() - start_time
         logger.info(
@@ -727,8 +728,21 @@ def getOrders(mobile_number:str=None):
         logger.error(f"Error in getOrders wrapper: {str(e)}")
         return {"status": "error", "message": f"Error retrieving orders: {str(e)}"}
 
-def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict]):
-    """Wrapper for AppointmentSuggestion to match the new schema"""
+def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict], dateSearchString: Optional[List[str]] = None):
+    """Wrapper for AppointmentSuggestion to match the new schema.
+
+    Parameters
+    ----------
+    siteCd : str
+        Site code from getSites.
+    week : int
+        Week index for which suggestions are retrieved.
+    positions : List[Dict]
+        List of service positions.
+    dateSearchString : Optional[List[str]]
+        Optional list of date strings used to filter suggestions. After
+        filtering and sorting, the top five results are returned.
+    """
     # Check if positions are provided
     if not positions or len(positions) == 0:
         return {"status": "error", "message": "No positions specified"}
@@ -740,7 +754,8 @@ def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict])
         suggestions = service.AppointmentSuggestion(
             week=week,
             siteCd=siteCd,
-            positions=positions
+            positions=positions,
+            date_search_string=dateSearchString,
         )
         return {"status": "success", "suggestions": suggestions}
     except Exception as e:
