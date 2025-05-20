@@ -743,7 +743,7 @@ def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict],
         Optional list of date strings used to filter suggestions.
     """
     logger.info(
-        f"Tool called: AppointmentSuggestion_wrapper(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd},dateSearchString {dateSearchString})"
+        f"Tool called: AppointmentSuggestion_wrapper(week={week},siteCd={siteCd},dateSearchString {dateSearchString})"
     )
     # Check if positions are provided
     if not positions or len(positions) == 0:
