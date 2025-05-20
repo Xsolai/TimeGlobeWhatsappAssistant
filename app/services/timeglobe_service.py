@@ -458,6 +458,7 @@ class TimeGlobeService:
             # After adjusting times, optionally filter and sort suggestions
             suggestions_list = response.get("suggestions", [])
             if date_search_string:
+                main_logger.info("Got Date {} for filtering suggestions".format(date_search_string))
                 filtered = [
                     s for s in suggestions_list
                     if any(ds in s.get("beginTs", "") for ds in date_search_string)
