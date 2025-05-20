@@ -29,24 +29,30 @@ class AnalyticsService:
             # Determine the date range based on the month parameter
             if month:
                 try:
-                    year, month_num = map(int, month.split('-'))
+                    year, month_num = map(int, month.split("-"))
                     # Get the first day of the month
                     start_date = datetime(year, month_num, 1)
-                    # Get the last day of the month
+                    # Get the last moment of the month
                     if month_num == 12:
-                        end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+                        end_date = datetime(year + 1, 1, 1) - timedelta(seconds=1)
                     else:
-                        end_date = datetime(year, month_num + 1, 1) - timedelta(days=1)
-                    main_logger.info(f"Filtering dashboard data for month: {month}. Range: {start_date} to {end_date}")
+                        end_date = datetime(year, month_num + 1, 1) - timedelta(seconds=1)
+                    main_logger.info(
+                        f"Filtering dashboard data for month: {month}. Range: {start_date} to {end_date}"
+                    )
                 except ValueError:
-                    main_logger.warning(f"Invalid month format: {month}. Using last 30 days instead.")
-                    month = None # Fallback to default
+                    main_logger.warning(
+                        f"Invalid month format: {month}. Using last 30 days instead."
+                    )
+                    month = None  # Fallback to default
 
             # If no valid month is provided, use the last 30 days
             if not month:
-                end_date = datetime.now()
-                start_date = end_date - timedelta(days=30)
-                main_logger.info(f"Filtering dashboard data for last 30 days. Range: {start_date} to {end_date}")
+                end_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+                start_date = (end_date - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+                main_logger.info(
+                    f"Filtering dashboard data for last 30 days. Range: {start_date} to {end_date}"
+                )
 
             # Get summary data (quick stats)
             # Pass start and end dates to the repository method
@@ -103,8 +109,8 @@ class AnalyticsService:
         """
         try:
             # Determine analysis range based on timeframe
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=timeframe)
+            end_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+            start_date = (end_date - timedelta(days=timeframe)).replace(hour=0, minute=0, second=0, microsecond=0)
 
             # Get daily appointment data
             daily_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, start_date, end_date)
