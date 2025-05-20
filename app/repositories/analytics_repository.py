@@ -365,8 +365,9 @@ class AnalyticsRepository:
             # Calculate today's services from BookingDetail table
             today_services = (
                 self.db.query(func.count(BookingDetail.id))
+                .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
-                    BookingDetail.business_phone_number == business_phone,
+                    BookModel.business_phone_number == business_phone,
                     func.date(BookingDetail.created_at) == datetime.now().date()
                 )
                 .scalar() or 0
