@@ -184,10 +184,9 @@ class AnalyticsRepository:
             # Busiest hours of the day
             hours_query = (
                 self.db.query(
-                    extract('hour', BookingDetail.created_at).label('hour'),
+                    extract('hour', BookModel.created_at).label('hour'),
                     func.count().label('count')
                 )
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(BookModel.business_phone_number == business_phone)
                 .group_by('hour')
                 .order_by(desc('count'))
@@ -198,10 +197,9 @@ class AnalyticsRepository:
             # Busiest days of the week
             days_query = (
                 self.db.query(
-                    extract('dow', BookingDetail.created_at).label('day'),
+                    extract('dow', BookModel.created_at).label('day'),
                     func.count().label('count')
                 )
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(BookModel.business_phone_number == business_phone)
                 .group_by('day')
                 .order_by(desc('count'))
@@ -290,10 +288,9 @@ class AnalyticsRepository:
         try:
             # Use provided start and end dates for filtering
             
-            # Appointments booked today (using BookModel creation date)
+            # Appointments booked today (using BookedAppointment table)
             today_appointments = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     func.date(BookModel.created_at) == datetime.now().date()
@@ -304,8 +301,7 @@ class AnalyticsRepository:
             # Appointments booked yesterday
             yesterday = datetime.now() - timedelta(days=1)
             yesterday_appointments = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     func.date(BookModel.created_at) == yesterday.date()
@@ -315,8 +311,7 @@ class AnalyticsRepository:
             
             # Appointments booked in the specified date range
             thirty_day_appointments = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     BookModel.created_at >= start_date,
@@ -332,8 +327,7 @@ class AnalyticsRepository:
             previous_start_date = previous_end_date - duration
 
             previous_thirty_day_appointments = (
-                self.db.query(func.count(BookingDetail.id))
-                .join(BookModel, BookModel.id == BookingDetail.book_id)
+                self.db.query(func.count(BookModel.id))
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     BookModel.created_at >= previous_start_date,
@@ -376,6 +370,16 @@ class AnalyticsRepository:
             if previous_thirty_day_appointments > 0:
                 growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
                               / previous_thirty_day_appointments) * 100
+            
+            # Calculate today's services from BookingDetail table
+            today_services = (
+                self.db.query(func.count(BookingDetail.id))
+                .filter(
+                    BookingDetail.business_phone_number == business_phone,
+                    func.date(BookingDetail.created_at) == datetime.now().date()
+                )
+                .scalar() or 0
+            )
                 
             return {
                 "today_appointments": appointments_today_count,
@@ -383,7 +387,7 @@ class AnalyticsRepository:
                 "thirty_day_appointments": appointments_last_30_days_count,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "customer_stats": customer_stats,
-                "todays_services_count": today_appointments,
+                "todays_services_count": today_services,
                 "costs_today_calculated": costs_today,
                 "costs_last_30_days_calculated": costs_last_30_days
             }
