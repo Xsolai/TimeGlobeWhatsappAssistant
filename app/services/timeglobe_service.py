@@ -4,7 +4,8 @@ from fastapi import HTTPException, status
 from ..repositories.timeglobe_repository import TimeGlobeRepository
 from ..db.session import get_db
 from ..logger import main_logger
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
+from ..utils.timezone_util import BERLIN_TZ
 import re
 
 
@@ -400,7 +401,7 @@ class TimeGlobeService:
         response = self.request("POST", "/browse/getSuggestions", mobile_number=mobile_number, data=payload)
         
         # Define the cutoff date (April 1st, 2025)
-        cutoff_date = datetime(2025, 4, 1, tzinfo=timezone(timedelta(hours=2)))
+        cutoff_date = datetime(2025, 4, 1, tzinfo=BERLIN_TZ)
         main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
         
         # Increment beginTs based on the date

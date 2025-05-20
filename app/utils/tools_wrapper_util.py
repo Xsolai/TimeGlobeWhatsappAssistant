@@ -1,7 +1,8 @@
 import re
 import logging
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
+from .timezone_util import BERLIN_TZ
 from ..core.config import settings
 from typing import List, Dict
 
@@ -470,7 +471,7 @@ def remove_small_brackets(text):
 
 def format_datetime(user_date_time: str) -> str:
     """
-    Converts various user date-time formats to ISO 8601 format with GMT+2 timezone.
+    Converts various user date-time formats to ISO 8601 format using the Berlin timezone.
     Handles formats like:
     - YYYY-MM-DD HH:MM
     - YYYY-MM-DD HH:MM AM/PM
@@ -481,7 +482,7 @@ def format_datetime(user_date_time: str) -> str:
         user_date_time: A string containing date and time
 
     Returns:
-        ISO 8601 formatted string (YYYY-MM-DDT00:00:00.000Z) in GMT+2
+        ISO 8601 formatted string (YYYY-MM-DDT00:00:00.000Z) in Berlin timezone
 
     Raises:
         ValueError: If the date-time format cannot be parsed
@@ -494,15 +495,15 @@ def format_datetime(user_date_time: str) -> str:
     if re.match(iso_pattern, user_date_time):
         # Validate it's a real date by parsing and reformatting
         try:
-            dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
-            dt = dt.astimezone(timezone(timedelta(hours=2)))
+            dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=BERLIN_TZ)
+            dt = dt.astimezone(BERLIN_TZ)
             result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             logger.info(f"Input already in ISO format: {user_date_time}")
             return result
         except ValueError:
             try:
-                dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                dt = dt.astimezone(timezone(timedelta(hours=2)))
+                dt = datetime.strptime(user_date_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=BERLIN_TZ)
+                dt = dt.astimezone(BERLIN_TZ)
                 result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
                 logger.info(f"Input already in ISO format: {user_date_time}")
                 return result
@@ -533,7 +534,7 @@ def format_datetime(user_date_time: str) -> str:
         # Try both formats from the original function
         try:
             dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %H:%M")
-            dt = dt.replace(tzinfo=timezone(timedelta(hours=2)))
+            dt = dt.replace(tzinfo=BERLIN_TZ)
             result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             execution_time = time.time() - start_time
             logger.info(
@@ -546,7 +547,7 @@ def format_datetime(user_date_time: str) -> str:
             )
             try:
                 dt = datetime.strptime(f"{user_date} {user_time}", "%Y-%m-%d %I:%M %p")
-                dt = dt.replace(tzinfo=timezone(timedelta(hours=2)))
+                dt = dt.replace(tzinfo=BERLIN_TZ)
                 result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
                 execution_time = time.time() - start_time
                 logger.info(
@@ -564,7 +565,7 @@ def format_datetime(user_date_time: str) -> str:
         try:
             logger.debug(f"Trying format: {fmt}")
             dt = datetime.strptime(user_date_time, fmt)
-            dt = dt.replace(tzinfo=timezone(timedelta(hours=2)))
+            dt = dt.replace(tzinfo=BERLIN_TZ)
             result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             execution_time = time.time() - start_time
             logger.info(
@@ -607,7 +608,7 @@ def format_datetime(user_date_time: str) -> str:
             )
 
             dt = datetime.strptime(date_str, format_str)
-            dt = dt.replace(tzinfo=timezone(timedelta(hours=2)))
+            dt = dt.replace(tzinfo=BERLIN_TZ)
             result = dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             execution_time = time.time() - start_time
             logger.info(

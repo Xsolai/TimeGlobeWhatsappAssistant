@@ -2,7 +2,8 @@ from sqlalchemy.orm import Session
 from ..models.subscription_plan import SubscriptionPlan
 from ..models.business_subscription import BusinessSubscription
 from ..schemas.subscription_plan import SubscriptionPlanCreate, SubscriptionPlanUpdate
-from datetime import datetime, timezone
+from datetime import datetime
+from ..utils.timezone_util import BERLIN_TZ
 
 
 class SubscriptionPlanRepository:
@@ -28,7 +29,7 @@ class SubscriptionPlanRepository:
         new_subscription = BusinessSubscription(
             business_id=business_id,
             subscription_plan_id=subscription_id,
-            start_date=datetime.now(timezone.utc),
+            start_date=datetime.now(BERLIN_TZ),
         )
         new_subscription.activate_subscription(subscription_plan.duration_in_days)
 

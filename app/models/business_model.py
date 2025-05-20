@@ -1,7 +1,8 @@
 from sqlalchemy import Column, String, Enum, Boolean, DateTime, JSON
 import uuid
 from enum import Enum as PyEnum
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
+from ..utils.timezone_util import BERLIN_TZ
 from .base import Base
 from sqlalchemy.orm import relationship
 
@@ -19,7 +20,7 @@ class Business(Base):
     password = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone(timedelta(hours=2))))
+    created_at = Column(DateTime, default=lambda: datetime.now(BERLIN_TZ))
     
     # Business information fields
     tax_id = Column(String, nullable=True)  # Umsatzsteuer-ID

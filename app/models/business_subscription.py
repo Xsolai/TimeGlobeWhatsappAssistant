@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from ..utils.timezone_util import BERLIN_TZ
 from .base import Base
 
 
@@ -10,7 +11,7 @@ class BusinessSubscription(Base):
     id = Column(Integer, primary_key=True, index=True)
     business_id = Column(Integer, ForeignKey("businesses.id"), nullable=False)
     subscription_plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
-    start_date = Column(DateTime, default=datetime.now(timezone.utc))
+    start_date = Column(DateTime, default=datetime.now(BERLIN_TZ))
     end_date = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
 
