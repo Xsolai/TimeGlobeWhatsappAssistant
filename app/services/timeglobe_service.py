@@ -470,6 +470,7 @@ class TimeGlobeService:
             suggestions_list = sorted(suggestions_list, key=lambda x: x.get("beginTs", ""))
             if suggestions_list:
                 suggestions_list = suggestions_list[:5]
+                main_logger.info("filtered appointment suggestions upto {}".format(len(suggestions_list)))
             response["suggestions"] = suggestions_list
         else:
             main_logger.warning("No suggestions found in response or invalid response format")
