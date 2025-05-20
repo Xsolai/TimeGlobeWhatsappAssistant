@@ -60,7 +60,7 @@ Tools=[
         "type": "function",
         "function": {
             "name": "AppointmentSuggestion",
-            "description": "Zeigt freie Termin-Slots in einer bestimmten Woche für eine oder mehrere Dienstleistungen an. In 'positions' kannst du für jeden Service den 'itemNo' angeben und optional den 'employeeId', falls ein bestimmter Mitarbeiter gewünscht wird.",
+            "description": "Zeigt freie Termin-Slots in einer bestimmten Woche für eine oder mehrere Dienstleistungen an. In 'positions' kannst du für jeden Service den 'itemNo' angeben und optional den 'employeeId', falls ein bestimmter Mitarbeiter gewünscht wird. Optional kann mit 'dateSearchString' nach einem bestimmten Datum oder Datumsteil im 'beginTs' der Vorschläge gefiltert werden (z.B. '21T' oder '2025-05-21').",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -89,6 +89,13 @@ Tools=[
                             },
                             "required": ["itemNo"]
                         }
+                    },
+                    "dateSearchString": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Optional: Ein Array von Strings, um Terminvorschläge serverseitig nach bestimmten Tagen zu filtern. Wird in Kombination mit dem 'week'-Parameter verwendet. Formatiere die Tages-Strings als \"TTT\" (z.B. [\"02T\"] für den 2. Tag des Monats, oder [\"14T\", \"15T\"] für den 14. und 15. Tag). Wenn angegeben, werden nur Termine zurückgeliefert, deren 'beginTs' mindestens einem der Tages-Strings entspricht."
                     }
                 },
                 "required": ["siteCd", "week", "positions"]
