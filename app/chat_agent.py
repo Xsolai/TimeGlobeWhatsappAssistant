@@ -194,15 +194,40 @@ class ChatAgent:
         current_datetime = datetime.datetime.now(gmt2).strftime("%Y-%m-%d %H:%M:%S")
         question_with_time = f"{question}\n\n(Current Date and Time: {current_datetime})"
         
+        # Get business phone and name for this user
+        from app.utils.message_cache import MessageCache
+        from app.services.timeglobe_service import TimeGlobeService
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(user_id)
+        
+        # Get business name if we have a business phone
+        business_name = "TimeGlobe"
+        if business_phone:
+            logger.info(f"Found business phone number for user {user_id}: {business_phone}")
+            timeglobe_service = TimeGlobeService()
+            business = timeglobe_service.get_business_by_phone(business_phone)
+            if business and business.business_name:
+                business_name = business.business_name
+                logger.info(f"Using business name: {business_name}")
+        
+        # Format system prompt with business name
+        formatted_system_prompt = System_prompt.replace("{{company_name}}", business_name)
+        
         # Retrieve conversation history from database or initialize if new
         try:
             conversation_history = self._get_conversation_history(user_id)
             if not conversation_history:
                 logger.warning(f"No conversation history found for user {user_id}, using default")
-                conversation_history = [{"role": "system", "content": System_prompt}]
+                conversation_history = [{"role": "system", "content": formatted_system_prompt}]
+            else:
+                # Update system prompt in existing history
+                if conversation_history and conversation_history[0].get("role") == "system":
+                    conversation_history[0]["content"] = formatted_system_prompt
+                else:
+                    conversation_history.insert(0, {"role": "system", "content": formatted_system_prompt})
         except Exception as e:
             logger.error(f"Error retrieving conversation history: {str(e)}")
-            conversation_history = [{"role": "system", "content": System_prompt}]
+            conversation_history = [{"role": "system", "content": formatted_system_prompt}]
         
         # Set a reasonable timeout for the entire conversation
         timeout = 30  # 30 seconds max
@@ -428,7 +453,7 @@ class ChatAgent:
         except Exception as e:
             logger.error(f"Error saving conversation history: {str(e)}")
     
-    def _trim_conversation_history(self, history: List[Dict], max_messages: int = 30) -> List[Dict]:
+    def _trim_conversation_history(self, history: List[Dict], max_messages: int = 15) -> List[Dict]:
         """
         Trim conversation history to keep only the most recent messages.
         Always keeps the system message and trims before the first user message
