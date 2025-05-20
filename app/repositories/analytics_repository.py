@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, and_, distinct, extract
+from sqlalchemy import func, desc, and_, distinct, extract, case
 from datetime import datetime, timedelta
 import pytz
 from ..models.booked_appointment import BookModel
@@ -108,7 +108,8 @@ class AnalyticsRepository:
     
     def get_customer_statistics(self, business_phone: str):
         """
-        Get customer statistics for the business
+        Get customer statistics for the business.
+        All times are in Berlin timezone (GMT+2).
         
         Args:
             business_phone: The business phone number
@@ -130,38 +131,42 @@ class AnalyticsRepository:
                 }
             
             business_id = business.id
-            main_logger.info(f"Found business ID: {business_id} for phone: {business_phone}")
             
-            # Total customers directly linked to the business
-            total_customers = (
-                self.db.query(func.count(distinct(CustomerModel.id)))
+            # Get current time in Berlin
+            now = datetime.now(BERLIN_TZ)
+            thirty_days_ago = now - timedelta(days=30)
+            
+            # Get all statistics in a single query for better performance
+            stats = (
+                self.db.query(
+                    func.count(distinct(CustomerModel.id)).label('total_customers'),
+                    func.count(distinct(
+                        case(
+                            (CustomerModel.created_at >= thirty_days_ago, CustomerModel.id)
+                        )
+                    )).label('new_customers'),
+                    func.count(distinct(
+                        case(
+                            (func.count(BookModel.id) > 1, CustomerModel.id)
+                        )
+                    )).label('returning_customers')
+                )
+                .outerjoin(BookModel, BookModel.customer_id == CustomerModel.id)
                 .filter(CustomerModel.business_id == business_id)
-                .scalar() or 0
-            )
+                .group_by(CustomerModel.business_id)
+            ).first()
             
-            # New customers in the last 30 days directly linked to the business
-            thirty_days_ago = datetime.now() - timedelta(days=30)
-            new_customers = (
-                self.db.query(func.count(distinct(CustomerModel.id)))
-                .filter(
-                    CustomerModel.business_id == business_id,
-                    CustomerModel.created_at >= thirty_days_ago
-                )
-                .scalar() or 0
-            )
+            if not stats:
+                return {
+                    "total_customers": 0,
+                    "new_customers_30d": 0,
+                    "returning_customers": 0,
+                    "retention_rate": 0
+                }
             
-            # Returning customers (with more than one booking)
-            # Still need to join with BookModel to count bookings
-            returning_customers = (
-                self.db.query(func.count(distinct(CustomerModel.id)))
-                .join(BookModel, BookModel.customer_id == CustomerModel.id)
-                .filter(
-                    CustomerModel.business_id == business_id
-                )
-                .group_by(CustomerModel.id)
-                .having(func.count(BookModel.id) > 1)
-                .count() or 0
-            )
+            total_customers = stats.total_customers or 0
+            new_customers = stats.new_customers or 0
+            returning_customers = stats.returning_customers or 0
             
             return {
                 "total_customers": total_customers,
@@ -241,6 +246,7 @@ class AnalyticsRepository:
     def get_revenue_estimates(self, business_phone: str, start_date: datetime, end_date: datetime):
         """
         Get estimated revenue based on service bookings within a date range.
+        All times are in Berlin timezone (GMT+2).
         
         Args:
             business_phone: The business phone number
@@ -251,15 +257,30 @@ class AnalyticsRepository:
             Revenue estimate data
         """
         try:
-            # Use provided start and end dates for filtering
+            # Convert input dates to Berlin timezone if they aren't already
+            if start_date.tzinfo is None:
+                start_date = BERLIN_TZ.localize(start_date)
+            if end_date.tzinfo is None:
+                end_date = BERLIN_TZ.localize(end_date)
+            
+            # Validate business exists
+            business = self.db.query(Business).filter(Business.whatsapp_number == business_phone).first()
+            if not business:
+                main_logger.warning(f"No business found with WhatsApp number: {business_phone}")
+                return {
+                    "period_days": (end_date - start_date).days + 1,
+                    "services_booked": 0,
+                    "estimated_revenue": 0,
+                    "avg_service_value": 0
+                }
             
             services_count = (
                 self.db.query(func.count(BookingDetail.id))
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    BookingDetail.created_at >= start_date,
-                    BookingDetail.created_at <= end_date
+                    func.timezone('Europe/Berlin', BookingDetail.created_at) >= start_date,
+                    func.timezone('Europe/Berlin', BookingDetail.created_at) <= end_date
                 )
                 .scalar() or 0
             )
@@ -420,7 +441,8 @@ class AnalyticsRepository:
     
     def get_business_customers(self, business_phone: str, page: int = 1, page_size: int = 10):
         """
-        Get all customers for a business with pagination
+        Get all customers for a business with pagination.
+        All times are in Berlin timezone (GMT+2).
         
         Args:
             business_phone: The business phone number
@@ -453,10 +475,17 @@ class AnalyticsRepository:
                 .scalar() or 0
             )
             
-            # Get customers for the current page
+            # Get customers for the current page with their booking counts and latest booking
             customers_query = (
-                self.db.query(CustomerModel)
+                self.db.query(
+                    CustomerModel,
+                    func.count(BookModel.id).label('booking_count'),
+                    func.max(func.timezone('Europe/Berlin', BookingDetail.created_at)).label('latest_booking')
+                )
+                .outerjoin(BookModel, BookModel.customer_id == CustomerModel.id)
+                .outerjoin(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(CustomerModel.business_id == business_id)
+                .group_by(CustomerModel.id)
                 .order_by(CustomerModel.created_at.desc())
                 .offset(offset)
                 .limit(page_size)
@@ -466,31 +495,15 @@ class AnalyticsRepository:
             
             # Format customer data
             customer_list = []
-            for customer in customers:
-                # Count bookings for this customer
-                booking_count = (
-                    self.db.query(func.count(BookModel.id))
-                    .filter(BookModel.customer_id == customer.id)
-                    .scalar() or 0
-                )
-                
-                # Get most recent booking date
-                latest_booking = (
-                    self.db.query(BookingDetail.created_at)
-                    .join(BookModel, BookModel.id == BookingDetail.book_id)
-                    .filter(BookModel.customer_id == customer.id)
-                    .order_by(BookingDetail.created_at.desc())
-                    .first()
-                )
-                
+            for customer, booking_count, latest_booking in customers:
                 customer_data = {
                     "id": customer.id,
                     "name": f"{customer.first_name} {customer.last_name}".strip(),
                     "mobile_number": customer.mobile_number,
                     "email": customer.email,
                     "booking_count": booking_count,
-                    "latest_booking": str(latest_booking.created_at) if latest_booking else None,
-                    "created_at": str(customer.created_at)
+                    "latest_booking": str(latest_booking) if latest_booking else None,
+                    "created_at": str(customer.created_at.astimezone(BERLIN_TZ))
                 }
                 
                 customer_list.append(customer_data)
