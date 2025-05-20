@@ -136,7 +136,6 @@ def test_dashboard_endpoint():
 
     dashboard = payload["data"]
     summary = dashboard["summary"]
-
     expected_keys = {
         "today_appointments",
         "todays_services",
@@ -147,7 +146,6 @@ def test_dashboard_endpoint():
         "monthly_growth_rate",
     }
     assert expected_keys.issubset(summary.keys())
-
     assert summary["today_appointments"] == 1
     assert summary["todays_services"] == 1
     assert summary["costs_today"] == pytest.approx(0.99, rel=1e-2)
