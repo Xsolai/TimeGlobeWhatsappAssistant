@@ -6,6 +6,7 @@ from ..db.session import get_db
 from ..logger import main_logger
 from datetime import datetime, timedelta
 from ..utils.timezone_util import BERLIN_TZ
+from typing import List, Optional
 import re
 
 
@@ -363,7 +364,16 @@ class TimeGlobeService:
         main_logger.info(f"Successfully fetched employees for item: {items}")
         return response
 
-    def AppointmentSuggestion(self, week: int, siteCd: str, positions: list = None, employee_id: int = None, item_no: int = None, mobile_number: str = None):
+    def AppointmentSuggestion(
+        self,
+        week: int,
+        siteCd: str,
+        positions: list = None,
+        employee_id: int = None,
+        item_no: int = None,
+        mobile_number: str = None,
+        date_search_string: Optional[List[str]] = None,
+    ):
         """
         Retrieve available appointment slots for selected services.
         
@@ -374,6 +384,8 @@ class TimeGlobeService:
             employee_id: (Legacy) Employee ID for a single position
             item_no: (Legacy) Item number for a single position
             mobile_number: Customer mobile number
+            date_search_string: Optional list of date strings used to filter the
+                returned suggestions after retrieval.
         """
         main_logger.debug(f"Fetching appointment suggestions")
         
@@ -442,9 +454,26 @@ class TimeGlobeService:
                 except Exception as e:
                     main_logger.error(f"Error processing suggestion {idx}: {str(e)}")
                     continue
+
+            # After adjusting times, optionally filter and sort suggestions
+            suggestions_list = response.get("suggestions", [])
+            if date_search_string:
+                filtered = [
+                    s for s in suggestions_list
+                    if any(ds in s.get("beginTs", "") for ds in date_search_string)
+                ]
+                if filtered:
+                    suggestions_list = filtered
+                else:
+                    main_logger.info("No suggestions match date_search_string; returning full list")
+
+            suggestions_list = sorted(suggestions_list, key=lambda x: x.get("beginTs", ""))
+            if suggestions_list:
+                suggestions_list = suggestions_list[:5]
+            response["suggestions"] = suggestions_list
         else:
             main_logger.warning("No suggestions found in response or invalid response format")
-        
+
         main_logger.info("Successfully fetched appointment suggestions")
         return response
 
