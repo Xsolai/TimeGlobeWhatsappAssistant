@@ -644,7 +644,7 @@ const DashboardPage: React.FC = () => {
                                 <RechartsTooltip
                                   formatter={(value: number, name: string) => [
                                     value,
-                                    'Termine'
+                                    name === 'count' ? 'Termine' : 'Services'
                                   ]}
                                   labelFormatter={(label: string) => {
                                     return new Date(label).toLocaleDateString('de-DE', {
@@ -658,6 +658,14 @@ const DashboardPage: React.FC = () => {
                                   type="monotone"
                                   dataKey="count"
                                   stroke="#1976D2"
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="services"
+                                  stroke="#FF9800"
                                   strokeWidth={2}
                                   dot={{ r: 3 }}
                                   activeDot={{ r: 5 }}
