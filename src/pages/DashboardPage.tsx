@@ -167,6 +167,22 @@ const DashboardPage: React.FC = () => {
     fetchData();
   }, [isAuthenticated, navigate, selectedMonth]); // Abhängigkeit von selectedMonth hinzufügen
 
+  // Periodically refresh dashboard data without reloading the page
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const intervalId = setInterval(() => {
+      analyticsService
+        .getMonthlyAnalytics(selectedMonth)
+        .then((data) => setDashboardData(data))
+        .catch((err) =>
+          console.error('Error refreshing dashboard data:', err)
+        );
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, selectedMonth]);
+
   // Hilfsfunktion zur Überprüfung, ob ein Datum verfügbar ist
   const isDateAvailable = (date: Date) => {
     if (!availableDates.length) return true; // Wenn keine Daten verfügbar sind, erlauben wir alle Daten
