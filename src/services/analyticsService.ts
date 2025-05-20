@@ -24,6 +24,7 @@ export interface DashboardData {
   appointment_time_series: Array<{
     date: string;
     count: number;
+    services?: number;
   }>;
   // Note: top_services and busy_times are no longer in this payload structure
   // Note: revenue is replaced by costs in summary
