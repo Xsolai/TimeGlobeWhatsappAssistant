@@ -162,4 +162,5 @@ def test_dashboard_endpoint():
     series = dashboard["appointment_time_series"]
     assert len(series) == 2
     for day in series:
-        assert {"date", "count"}.issubset(day.keys())
+        assert {"date", "count", "services"}.issubset(day.keys())
+        assert day["services"] == 1

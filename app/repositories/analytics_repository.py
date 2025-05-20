@@ -15,41 +15,29 @@ class AnalyticsRepository:
         self.db = db
         
     def get_appointments_by_timeframe(self, business_phone: str, start_date: datetime, end_date: datetime):
-        """
-        Get appointment count grouped by day for the specified date range.
-        
-        Args:
-            business_phone: The business phone number
-            start_date: The start date of the range (inclusive).
-            end_date: The end date of the range (inclusive).
-            
-        Returns:
-            List of daily appointment counts
-        """
+        """Return appointment and service counts grouped by day for a date range."""
         try:
-            # Use provided start and end dates for filtering
-            
-            # Query appointments grouped by day (using BookModel created_at)
+            # Count unique appointments and total services for each day
             query = (
                 self.db.query(
-                    func.date(BookModel.created_at).label('date'),
-                    func.count().label('count')
+                    func.date(BookModel.created_at).label("date"),
+                    func.count(func.distinct(BookModel.id)).label("count"),
+                    func.count(BookingDetail.id).label("services")
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     BookModel.created_at >= start_date,
-                    BookModel.created_at <= end_date
+                    BookModel.created_at <= end_date,
                 )
                 .group_by(func.date(BookModel.created_at))
                 .order_by(func.date(BookModel.created_at))
             )
-            
+
             results = query.all()
-            
-            # Format results as list of dictionaries
+
             return [
-                {"date": str(row.date), "count": row.count}
+                {"date": str(row.date), "count": row.count, "services": row.services}
                 for row in results
             ]
             

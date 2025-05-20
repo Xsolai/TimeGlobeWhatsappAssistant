@@ -10,6 +10,7 @@ class BaseResponse(BaseModel):
 class DailyAppointment(BaseModel):
     date: str
     count: int
+    services: int
     
 # Service popularity data
 class ServicePopularity(BaseModel):
