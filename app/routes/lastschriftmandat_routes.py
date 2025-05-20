@@ -7,7 +7,8 @@ from ..schemas.lastschriftmandat import LastschriftmandatCreate, Lastschriftmand
 from ..core.dependencies import get_current_business, get_db
 import uuid
 import base64
-from datetime import datetime, timezone
+from datetime import datetime
+from ..utils.timezone_util import BERLIN_TZ
 from ..logger import main_logger
 
 router = APIRouter()
@@ -59,8 +60,8 @@ async def upload_lastschriftmandat(
             pdf_file=pdf_data,
             file_name=safe_filename,
             description=lastschriftmandat_data.description,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            created_at=datetime.now(BERLIN_TZ),
+            updated_at=datetime.now(BERLIN_TZ)
         )
         
         db.add(new_lastschriftmandat)
@@ -169,7 +170,7 @@ async def update_lastschriftmandat(
         existing_lastschriftmandat.pdf_file = pdf_data
         existing_lastschriftmandat.file_name = safe_filename
         existing_lastschriftmandat.description = lastschriftmandat_data.description
-        existing_lastschriftmandat.updated_at = datetime.now(timezone.utc)
+        existing_lastschriftmandat.updated_at = datetime.now(BERLIN_TZ)
         
         db.commit()
         db.refresh(existing_lastschriftmandat)
