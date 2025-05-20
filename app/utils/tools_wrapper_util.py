@@ -99,7 +99,7 @@ def get_employee(items, siteCd,week):
 def AppointmentSuggestion(week, employeeid, itemno, siteCd: str, dateSearchString: Optional[List[str]] = None):
     """Get available appointment slots for a selected employee,service and salon"""
     logger.info(
-        f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd})"
+        f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd},dateSearchString {dateSearchString})"
     )
     start_time = time.time()
     try:
