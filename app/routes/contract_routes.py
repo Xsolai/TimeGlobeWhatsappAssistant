@@ -7,7 +7,8 @@ from ..schemas.contract import ContractCreate, ContractResponse
 from ..utils.contract_util import generate_contract_pdf
 from ..core.dependencies import get_current_business, get_db
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from ..utils.timezone_util import BERLIN_TZ
 from ..logger import main_logger
 
 router = APIRouter()
@@ -53,8 +54,8 @@ async def create_main_contract(
             signature_image=contract_data.signature_image,
             pdf_file=pdf_data,
             file_name=file_name,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            created_at=datetime.now(BERLIN_TZ),
+            updated_at=datetime.now(BERLIN_TZ)
         )
         
         db.add(new_contract)
@@ -153,7 +154,7 @@ async def update_main_contract(
         existing_contract.signature_image = contract_data.signature_image
         existing_contract.pdf_file = pdf_data
         existing_contract.file_name = file_name
-        existing_contract.updated_at = datetime.now(timezone.utc)
+        existing_contract.updated_at = datetime.now(BERLIN_TZ)
         
         db.commit()
         db.refresh(existing_contract)

@@ -1,6 +1,7 @@
 from passlib.context import CryptContext
 from typing import Union, Any
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta, datetime
+from .timezone_util import BERLIN_TZ
 from ..core.config import settings
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -11,9 +12,9 @@ pwd_hasing = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_access_token(subject: str, expire_time: timedelta = None):
     if expire_time:
-        expire = datetime.now(timezone.utc) + expire_time
+        expire = datetime.now(BERLIN_TZ) + expire_time
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(BERLIN_TZ) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_TIME
         )
     # print(f"sub==>> {subject}")

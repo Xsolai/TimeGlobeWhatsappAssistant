@@ -12,7 +12,8 @@ from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools
 from .core.config import settings
-from datetime import timezone, timedelta
+from datetime import timedelta
+from .utils.timezone_util import BERLIN_TZ
 
 
 # Set up logging
@@ -189,9 +190,8 @@ class ChatAgent:
         """Run a conversation using ChatCompletion API instead of Assistant API."""
         logger.info(f"Starting conversation for user {user_id}")
         
-        # Add current date and time to the question for context with GMT+2 timezone
-        gmt2 = timezone(timedelta(hours=2))
-        current_datetime = datetime.datetime.now(gmt2).strftime("%Y-%m-%d %H:%M:%S")
+        # Add current date and time to the question for context using Berlin timezone
+        current_datetime = datetime.datetime.now(BERLIN_TZ).strftime("%Y-%m-%d %H:%M:%S")
         question_with_time = f"{question}\n\n(Current Date and Time: {current_datetime})"
         
         # Get business phone and name for this user

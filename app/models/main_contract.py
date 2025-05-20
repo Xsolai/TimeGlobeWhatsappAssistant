@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey, LargeBinary, Text
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from ..utils.timezone_util import BERLIN_TZ
 from .base import Base
 from sqlalchemy.orm import relationship
 
@@ -14,8 +15,8 @@ class MainContract(Base):
     signature_image_path = Column(String, nullable=True)  # Path to signature image if stored separately
     pdf_file = Column(LargeBinary, nullable=True)  # Store the PDF as binary data
     file_name = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.now(BERLIN_TZ))
+    updated_at = Column(DateTime, default=datetime.now(BERLIN_TZ), onupdate=datetime.now(BERLIN_TZ))
 
     # Relationship
     business = relationship("Business", back_populates="main_contract") 
