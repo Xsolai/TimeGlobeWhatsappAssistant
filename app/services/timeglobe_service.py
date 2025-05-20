@@ -496,7 +496,7 @@ class TimeGlobeService:
         )
         
         # Define the cutoff date (April 1st, 2025)
-        cutoff_date = datetime(2025, 4, 1, tzinfo=timezone(timedelta(hours=2)))
+        cutoff_date = datetime(2025, 4, 1)
         main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
         
         # Adjust order times based on the date
@@ -596,7 +596,7 @@ class TimeGlobeService:
                 mobileNumber = f"+{mobileNumber}"
             
             # Define the cutoff date for time adjustment
-            cutoff_date = datetime(2025, 4, 1, tzinfo=timezone(timedelta(hours=2)))
+            cutoff_date = datetime(2025, 4, 1)
             main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
 
             # Adjust beginTs in all positions by subtracting hours (reverse of what we do when displaying times)
