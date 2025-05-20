@@ -413,7 +413,7 @@ class TimeGlobeService:
         response = self.request("POST", "/browse/getSuggestions", mobile_number=mobile_number, data=payload)
         
         # Define the cutoff date (April 1st, 2025)
-        cutoff_date = datetime(2025, 4, 1, tzinfo=BERLIN_TZ)
+        cutoff_date = datetime(2025, 4, 1)
         main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
         
         # Increment beginTs based on the date
