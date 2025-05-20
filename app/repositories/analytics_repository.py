@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, and_, distinct, extract
+from sqlalchemy import func, desc, distinct, extract
 from datetime import datetime, timedelta
 from ..models.booked_appointment import BookModel
 from ..models.booking_detail import BookingDetail
@@ -289,17 +289,6 @@ class AnalyticsRepository:
             # Use provided start and end dates for filtering
             
             
-            # Appointments booked yesterday
-            yesterday = datetime.now() - timedelta(days=1)
-            yesterday_appointments = (
-                self.db.query(func.count(BookModel.id))
-                .filter(
-                    BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == yesterday.date()
-                )
-                .scalar() or 0
-            )
-            
             # Appointments booked in the specified date range
             thirty_day_appointments = (
                 self.db.query(func.count(BookModel.id))
@@ -353,13 +342,10 @@ class AnalyticsRepository:
             costs_today = round(appointments_today_count * cost_per_appointment, 2)
             costs_last_30_days = round(appointments_last_30_days_count * cost_per_appointment, 2)
 
-            # Customer statistics (these are not time-bound in the current implementation, keep as is)
-            customer_stats = self.get_customer_statistics(business_phone)
-            
             # Calculate growth rate based on the specified range and the previous period
             growth_rate = 0
             if previous_thirty_day_appointments > 0:
-                growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments) 
+                growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments)
                               / previous_thirty_day_appointments) * 100
             
             # Calculate today's services from BookingDetail table
@@ -375,31 +361,22 @@ class AnalyticsRepository:
                 
             return {
                 "today_appointments": appointments_today_count,
-                "yesterday_appointments": yesterday_appointments,
                 "thirty_day_appointments": appointments_last_30_days_count,
                 "thirty_day_growth_rate": round(growth_rate, 2),
-                "customer_stats": customer_stats,
                 "todays_services_count": today_services,
                 "costs_today_calculated": costs_today,
-                "costs_last_30_days_calculated": costs_last_30_days
+                "costs_last_30_days_calculated": costs_last_30_days,
             }
             
         except Exception as e:
             main_logger.error(f"Error getting dashboard summary: {str(e)}")
             return {
                 "today_appointments": 0,
-                "yesterday_appointments": 0,
                 "thirty_day_appointments": 0,
                 "thirty_day_growth_rate": 0,
-                "customer_stats": {
-                    "total_customers": 0,
-                    "new_customers_30d": 0,
-                    "returning_customers": 0,
-                    "retention_rate": 0
-                },
                 "todays_services_count": 0,
                 "costs_today_calculated": 0,
-                "costs_last_30_days_calculated": 0
+                "costs_last_30_days_calculated": 0,
             }
     
     def get_business_customers(self, business_phone: str, page: int = 1, page_size: int = 10):

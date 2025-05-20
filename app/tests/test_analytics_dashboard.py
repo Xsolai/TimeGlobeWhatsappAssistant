@@ -136,7 +136,16 @@ def test_dashboard_endpoint():
 
     dashboard = payload["data"]
     summary = dashboard["summary"]
-
+    expected_keys = {
+        "today_appointments",
+        "todays_services",
+        "costs_today",
+        "costs_last_30_days",
+        "monthly_appointments",
+        "monthly_services_booked",
+        "monthly_growth_rate",
+    }
+    assert expected_keys.issubset(summary.keys())
     assert summary["today_appointments"] == 1
     assert summary["todays_services"] == 1
     assert summary["costs_today"] == pytest.approx(0.99, rel=1e-2)
@@ -145,5 +154,12 @@ def test_dashboard_endpoint():
     assert summary["monthly_services_booked"] == 2
     assert summary["monthly_growth_rate"] == 0
 
-    assert len(dashboard["recent_appointments"]) == 2
-    assert len(dashboard["appointment_time_series"]) == 2
+    recent = dashboard["recent_appointments"]
+    assert len(recent) == 2
+    for appt in recent:
+        assert {"booking_id", "service_name", "appointment_date", "appointment_time", "customer_name", "customer_phone"}.issubset(appt.keys())
+
+    series = dashboard["appointment_time_series"]
+    assert len(series) == 2
+    for day in series:
+        assert {"date", "count"}.issubset(day.keys())

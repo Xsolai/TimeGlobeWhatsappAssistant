@@ -1,5 +1,7 @@
 from ..repositories.analytics_repository import AnalyticsRepository
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from ..models.booked_appointment import BookModel
 from ..logger import main_logger
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -100,14 +102,30 @@ class AnalyticsService:
             Dictionary with appointment analytics
         """
         try:
+            # Determine analysis range based on timeframe
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=timeframe)
+
             # Get daily appointment data
-            daily_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, timeframe)
-            
+            daily_data = self.analytics_repo.get_appointments_by_timeframe(business_phone, start_date, end_date)
+
             # Get busiest times
             busy_times = self.analytics_repo.get_busiest_times(business_phone)
-            
-            # Get summary data that includes appointment counts
-            summary = self.analytics_repo.get_dashboard_summary(business_phone)
+
+            # Get summary data for the timeframe
+            summary = self.analytics_repo.get_dashboard_summary(business_phone, start_date, end_date)
+
+            # Yesterday's appointment count for completeness
+            yesterday = end_date - timedelta(days=1)
+            yesterday_count = (
+                self.db.query(func.count(BookModel.id))
+                .filter(
+                    BookModel.business_phone_number == business_phone,
+                    func.date(BookModel.created_at) == yesterday.date(),
+                )
+                .scalar()
+                or 0
+            )
             
             return {
                 "status": "success",
@@ -116,10 +134,10 @@ class AnalyticsService:
                     "busiest_times": busy_times,
                     "appointment_counts": {
                         "today": summary["today_appointments"],
-                        "yesterday": summary["yesterday_appointments"],
+                        "yesterday": yesterday_count,
                         "last_30_days": summary["thirty_day_appointments"],
-                        "growth_rate": summary["thirty_day_growth_rate"]
-                    }
+                        "growth_rate": summary["thirty_day_growth_rate"],
+                    },
                 }
             }
             
