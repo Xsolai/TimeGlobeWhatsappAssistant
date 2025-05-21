@@ -347,6 +347,10 @@ def create_api_key(partner_id, channel_id):
             "url": "https://timeglobe-server.ecomtask.de/api/whatsapp/incoming-whatsapp",
             "headers": {}
         }
+
+        logging.info(f"Setting webhook for partner {partner_id} and channel {channel_id} with data: {data}")
+        logging.info(f"Headers: {headers}")
+        logging.info(f"URL: {url}") 
         response = requests.post(url, headers=headers, json=data)
         logging.info(f"Webhook set response: {response.json()}")    
         
