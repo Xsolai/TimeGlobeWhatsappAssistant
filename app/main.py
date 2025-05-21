@@ -204,7 +204,7 @@ async def process_webhook_payload(payload: dict):
             else:
                 logging.error(f"Missing required client information. Email: {client_email}, Name: {client_name}")
 
-        elif event_type == "channel_permission_granted" and status == "ready":
+        elif (event_type == "channel_permission_granted" or event_type == "channel_live") and status == "ready":
             # Extract client information from the payload
             client_info = data.get("client", {})
             client_name = client_info.get("name")
