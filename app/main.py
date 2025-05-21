@@ -273,7 +273,7 @@ async def process_webhook_payload(payload: dict):
             if api_key_data:
                 try:
                     from sqlalchemy.orm import Session
-                    import bcrypt
+                    logging.info("saving data for {}".format(api_key_data))
                     
                     with Session(engine) as db:
                         # Check if a business with this email already exists
@@ -341,10 +341,10 @@ def create_api_key(partner_id, channel_id):
         url = f"https://waba-v2.360dialog.io/v1/configs/webhook"
         headers = {
             "Content-Type": "application/json",
-            "D360-API-KEY": api_data["api_key"]
+            "d360-api-key": api_data["api_key"]
         }   
         data = {
-            "url": "https://solasolution.ecomtask.de/app3/api/whatsapp/incoming-whatsapp",
+            "url": "https://timeglobe-server.ecomtask.de/api/whatsapp/incoming-whatsapp",
             "headers": {}
         }
         response = requests.post(url, headers=headers, json=data)
