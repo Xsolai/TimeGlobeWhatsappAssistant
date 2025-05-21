@@ -56,41 +56,34 @@ class Dialog360Service:
         # No fall back, return None
         return None
 
-    def _get_api_header(self, phone_number: str = None):
-        """
-        Get the API header with proper API key, either from database or fallback to environment variables
-        """
-        if phone_number:
-            business = self._get_business_by_phone(phone_number)
-            if business and business.api_key:
-                self.logger.info(f"Using API key from database for number: {phone_number}")
-                return {
-                    "Content-Type": "application/json",
-                    "D360-API-KEY": business.api_key
-                }
-        
-        # Check if DIALOG360_API_KEY is available in environment variables
-        if settings.DIALOG360_API_KEY:
-            self.logger.info("Falling back to API key from environment variables")
+    def _get_api_header(self, phone_number: str):
+        """Return API headers for the business associated with ``phone_number``."""
+
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="Business phone is required")
+
+        business = self._get_business_by_phone(phone_number)
+        if business and business.api_key:
+            self.logger.info(f"Using API key from database for number: {phone_number}")
             return {
                 "Content-Type": "application/json",
-                "D360-API-KEY": settings.DIALOG360_API_KEY
+                "D360-API-KEY": business.api_key,
             }
-            
-        # No fallback available, raise error
+
+        # No API key found for this phone number
         raise HTTPException(status_code=400, detail="No API key found for the given phone number")
 
-    def _get_api_endpoint(self, phone_number: str = None):
-        """
-        Get the API endpoint, either from database or fallback to environment variables
-        """
-        if phone_number:
-            business = self._get_business_by_phone(phone_number)
-            if business and business.api_endpoint:
-                return business.api_endpoint
-        
-        # Fallback to environment variables
-        return settings.DIALOG360_API_URL
+    def _get_api_endpoint(self, phone_number: str):
+        """Return the API endpoint for the business associated with ``phone_number``."""
+
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="Business phone is required")
+
+        business = self._get_business_by_phone(phone_number)
+        if business and business.api_endpoint:
+            return business.api_endpoint
+
+        raise HTTPException(status_code=400, detail="No API endpoint found for the given phone number")
 
     def _make_request(
         self,
@@ -129,8 +122,8 @@ class Dialog360Service:
             self.logger.exception(f"Exception during request to {endpoint}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
 
-    def send_whatsapp(self, to: str, message: str):
-        """Send a WhatsApp message using 360dialog Cloud API"""
+    def send_whatsapp(self, to: str, message: str, business_phone: str):
+        """Send a WhatsApp message using 360dialog Cloud API for the specified business."""
         
         # Format recipient number without "whatsapp:" prefix
         if to.startswith("whatsapp:"):
@@ -139,28 +132,11 @@ class Dialog360Service:
         # Make sure the number includes country code and starts with +
         if not to.startswith("+"):
             to = f"+{to}"
-            
+
         try:
-            # Get sender phone number from database or fallback to environment
-            from_business = None
-            
-            # First try to find a business with the given API endpoint
-            businesses = self.db.query(Business).filter(
-                Business.api_key != None, 
-                Business.api_endpoint != None,
-                Business.whatsapp_number != None
-            ).all()
-            
-            # Log all available businesses for debugging
-            if businesses:
-                business_info = [f"{b.business_name} ({b.whatsapp_number})" for b in businesses]
-                self.logger.info(f"Available businesses with API keys: {business_info}")
-                
-                # Use first available business with api_key as default sender
-                from_business = businesses[0]
-                self.logger.info(f"Using business {from_business.business_name} as sender with WhatsApp number {from_business.whatsapp_number}")
-            else:
-                self.logger.warning("No businesses with API keys found in database")
+            from_business = self._get_business_by_phone(business_phone)
+            if not from_business:
+                raise HTTPException(status_code=400, detail="Invalid business phone number")
             
             # Construct payload using Cloud API format
             payload = {
@@ -173,11 +149,8 @@ class Dialog360Service:
                 }
             }
             
-            # Use the Cloud API endpoint from business or fallback to default
-            api_endpoint = settings.DIALOG360_API_URL
-            if from_business and from_business.api_endpoint:
-                base_url = from_business.api_endpoint
-                api_endpoint = base_url
+            # Use the Cloud API endpoint from the selected business
+            api_endpoint = self._get_api_endpoint(from_business.whatsapp_number)
             
             # Make sure we have the full URL for the messages endpoint
             if not api_endpoint.endswith("/messages"):
@@ -186,7 +159,7 @@ class Dialog360Service:
                 cloud_api_url = api_endpoint
             
             # Pass the sender's phone number to use the right credentials
-            sender_number = from_business.whatsapp_number if from_business else None
+            sender_number = from_business.whatsapp_number
             
             response = self._make_request(
                 "POST",
@@ -204,4 +177,3 @@ class Dialog360Service:
                 status_code=500, detail="Failed to send WhatsApp message"
             )
 
-    
