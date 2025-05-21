@@ -207,7 +207,11 @@ async def process_message(number: str, incoming_msg: str, message_id: str, dialo
         # Send the response
         send_start_time = time.time()
         logging.info(f"Sending response to {number}: '{response[:50]}...' (truncated)")
-        resp = dialog360_service.send_whatsapp(number, response)
+        # Retrieve the business phone number associated with this user
+        message_cache = MessageCache.get_instance()
+        business_phone = message_cache.get_business_phone(number)
+
+        resp = dialog360_service.send_whatsapp(number, response, business_phone)
         send_end_time = time.time()
         send_duration = (send_end_time - send_start_time) * 1000  # milliseconds
         
