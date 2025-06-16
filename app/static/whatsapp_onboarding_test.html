@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Business API Onboarding Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1877f2;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #65676b;
+        }
+        .onboarding-section {
+            margin-bottom: 30px;
+        }
+        .onboarding-section h2 {
+            color: #1c1e21;
+            margin-bottom: 15px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .fb-button {
+            background-color: #1877f2;
+            border: 0;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            height: 40px;
+            padding: 0 24px;
+            transition: background-color 0.3s;
+        }
+        .fb-button:hover {
+            background-color: #166fe5;
+        }
+        .response-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .response-container pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #e7f3ff;
+            color: #1877f2;
+        }
+        .status.error {
+            background-color: #ffebe9;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WhatsApp Business API Onboarding</h1>
+            <p>Test the WhatsApp Business API onboarding flow using Meta's Embedded Signup</p>
+        </div>
+
+        <div class="onboarding-section">
+            <h2>Start Onboarding</h2>
+            <p>Click the button below to begin the WhatsApp Business API onboarding process. This will open Meta's Embedded Signup flow.</p>
+            
+            <div class="button-container">
+                <button onclick="launchWhatsAppSignup()" class="fb-button">Login with Facebook</button>
+            </div>
+
+            <div class="response-container">
+                <h3>Response Data:</h3>
+                <pre id="responseData">No data yet...</pre>
+            </div>
+
+            <div id="statusMessage" class="status"></div>
+        </div>
+    </div>
+
+    <!-- Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
+    <script>
+        // SDK initialization
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId: '1278546197042106', // Your Facebook App ID
+                autoLogAppEvents: true,
+                xfbml: true,
+                version: 'v18.0'
+            });
+        };
+
+        // Session logging message event listener
+        window.addEventListener('message', (event) => {
+            if (!event.origin.endsWith('facebook.com')) return;
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'WA_EMBEDDED_SIGNUP') {
+                    console.log('WhatsApp Signup Event:', data);
+                    displayResponse(data);
+                    
+                    // Handle successful completion
+                    if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+                        showStatus('success', 'Onboarding completed successfully!');
+                    } else if (data.event === 'CANCEL') {
+                        showStatus('error', 'Onboarding was cancelled or encountered an error.');
+                    }
+                }
+            } catch (e) {
+                console.log('Raw message event:', event.data);
+                displayResponse(event.data);
+            }
+        });
+
+        // Response callback
+        const fbLoginCallback = (response) => {
+            if (response.authResponse) {
+                const code = response.authResponse.code;
+                console.log('Auth Response Code:', code);
+                showStatus('success', 'Received authorization code. Check console for details.');
+            } else {
+                console.log('Login Response:', response);
+                showStatus('error', 'Login was not completed successfully.');
+            }
+        };
+
+        // Launch method
+        const launchWhatsAppSignup = () => {
+            FB.login(fbLoginCallback, {
+                config_id: '966700112247031', // Your Configuration ID
+                response_type: 'code',
+                override_default_response_type: true,
+                extras: {
+                    setup: {},
+                    featureType: '', // Leave blank for default flow
+                    sessionInfoVersion: '3'
+                }
+            });
+        };
+
+        // Helper functions
+        function displayResponse(data) {
+            const responseElement = document.getElementById('responseData');
+            responseElement.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function showStatus(type, message) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+    </script>
+</body>
+</html> 

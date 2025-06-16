@@ -7,6 +7,7 @@ import asyncio
 from typing import Dict, Any, Callable
 from ..db.session import SessionLocal
 from ..services.dialog360_service import Dialog360Service
+from ..services.whatsapp_business_service import WhatsAppBusinessService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ class MessageQueue:
     """
     A message queue implementation using Python's Queue and threading.
     Uses a singleton pattern to maintain a single queue across the application.
+    Supports both Dialog360 and WhatsApp Business API services.
     """
     _instance = None
     
@@ -40,7 +42,7 @@ class MessageQueue:
         # Message processor function
         self.message_processor = None
         
-        logger.info("MessageQueue initialized")
+        logger.info("MessageQueue initialized with dual service support")
     
     def enqueue_message(self, message_data: Dict[str, Any]):
         """Add a message to the processing queue"""
@@ -85,9 +87,23 @@ class MessageQueue:
         self.worker_threads = []
         logger.info("All worker threads stopped")
     
+    def _determine_service_type(self, message_data: Dict[str, Any]) -> str:
+        """
+        Determine which service to use based on the message format.
+        Returns 'whatsapp_business' for new format, 'dialog360' for legacy format.
+        """
+        if message_data.get('object') == 'whatsapp_business_account':
+            return 'whatsapp_business'
+        elif 'entry' in message_data and message_data.get('entry', [{}])[0].get('changes'):
+            # Could be Dialog360 format
+            return 'dialog360'
+        else:
+            # Default to WhatsApp Business API for unknown formats
+            return 'whatsapp_business'
+    
     def _worker_loop(self, worker_id: int):
         """Worker thread loop to process messages from the queue"""
-        logger.info(f"Worker {worker_id} started")
+        logger.info(f"Worker {worker_id} started with dual service support")
         
         # Create an event loop for this thread to handle async functions
         loop = asyncio.new_event_loop()
@@ -108,22 +124,31 @@ class MessageQueue:
                 # Create database session
                 db = SessionLocal()
                 try:
-                    # Process the message
-                    dialog360_service = Dialog360Service(db)
+                    # Determine which service to use
+                    service_type = self._determine_service_type(message_data)
+                    logger.info(f"Worker {worker_id} using {service_type} service")
+                    
+                    # Create the appropriate service
+                    if service_type == 'whatsapp_business':
+                        service = WhatsAppBusinessService(db)
+                        logger.info(f"Worker {worker_id} created WhatsApp Business API service")
+                    else:
+                        service = Dialog360Service(db)
+                        logger.info(f"Worker {worker_id} created Dialog360 service (DEPRECATED)")
                     
                     # Check if processor is async or sync and call appropriately
                     if asyncio.iscoroutinefunction(self.message_processor):
                         # Run async function in the thread's event loop
                         loop.run_until_complete(
-                            self.message_processor(message_data, dialog360_service)
+                            self.message_processor(message_data, service)
                         )
                     else:
                         # Run synchronous function directly
-                        self.message_processor(message_data, dialog360_service)
+                        self.message_processor(message_data, service)
                     
                     # Mark task as done
                     self.message_queue.task_done()
-                    logger.info(f"Worker {worker_id} completed message processing")
+                    logger.info(f"Worker {worker_id} completed message processing using {service_type} service")
                     
                 except Exception as e:
                     # Log the exception

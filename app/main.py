@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes, contract_routes, auftragsverarbeitung_routes, lastschriftmandat_routes, whatsapp_status_routes
+from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes, contract_routes, auftragsverarbeitung_routes, lastschriftmandat_routes, whatsapp_status_routes, whatsapp_onboarding_routes
 from .core.config import settings
 from .logger import main_logger
 from .db.session import engine
@@ -42,7 +42,7 @@ import os
 app = FastAPI(
     title="TimeGlobe WhatsApp Assistant API",
     version="1.0.0",
-    description="TimeGlobe WhatsApp Assistant API powered by 360dialog",
+    description="TimeGlobe WhatsApp Assistant API powered by Meta WhatsApp Business API",
 )
 
 # Initialize database and ensure all tables are created
@@ -70,6 +70,7 @@ app.include_router(contract_routes.router, prefix="/api/contract", tags=["Contra
 app.include_router(auftragsverarbeitung_routes.router, prefix="/api/auftragsverarbeitung", tags=["Auftragsverarbeitung"])
 app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmandat", tags=["Lastschriftmandat"])
 app.include_router(whatsapp_status_routes.router, prefix="/api/whatsapp-status", tags=["WhatsApp Status"])
+app.include_router(whatsapp_onboarding_routes.router, prefix="/api/whatsapp", tags=["WhatsApp Onboarding"])
 
 # Application startup and shutdown events
 @app.on_event("startup")
@@ -78,7 +79,6 @@ async def startup_event():
     logging.info("Starting application...")
     
     # Initialize the message queue for WhatsApp message processing
-    # We import here to avoid circular imports
     from .utils.message_queue import MessageQueue
     from .routes.webhook_routes import process_webhook_data
     
@@ -87,7 +87,6 @@ async def startup_event():
     # Start worker threads for processing messages
     message_queue.start_workers(process_webhook_data)
     logging.info("Message queue workers started")
-
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -150,60 +149,9 @@ async def process_webhook_payload(payload: dict):
 
         # Handle client_created event
         if event_type == "client_created":
-            # Extract client information from the payload
-            client_info = data.get("client", {})
-            client_id = client_info.get("id")
-            client_name = client_info.get("name")
-            contact_info = client_info.get("contact_info", {})
-            client_email = contact_info.get("email")
+            # This is a legacy Dialog360 webhook event - log and ignore
+            logging.info("Received legacy Dialog360 client_created event - ignoring in new WhatsApp Business API integration")
             
-            if client_email and client_name:
-                try:
-                    from sqlalchemy.orm import Session
-                    from .utils.security_util import get_password_hash
-                    import uuid
-                    import string
-                    import random
-                    
-                    # Generate a random temporary password
-                    chars = string.ascii_letters + string.digits
-                    temp_password = ''.join(random.choice(chars) for _ in range(12))
-                    
-                    with Session(engine) as db:
-                        # Check if a business with this email already exists
-                        existing_business = db.query(Business).filter(Business.email == client_email).first()
-                        
-                        if not existing_business:
-                            # Create a new business record
-                            new_business = Business(
-                                id=str(uuid.uuid4()),
-                                business_name=client_name,
-                                email=client_email,
-                                password=get_password_hash(temp_password),
-                                client_id=client_id,
-                                waba_status=WABAStatus.pending
-                            )
-                            
-                            db.add(new_business)
-                            db.commit()
-                            logging.info(f"✅ Created new business record for client {client_name} with email {client_email}")
-                            
-                            # Here you could also send a welcome email with the temporary password
-                            # and instructions to connect their WhatsApp account
-                        else:
-                            # Update existing business with client_id if not already set
-                            if not existing_business.client_id:
-                                existing_business.client_id = client_id
-                                db.commit()
-                                logging.info(f"✅ Updated existing business with client_id for {client_email}")
-                            else:
-                                logging.info(f"Business with email {client_email} already has client_id set")
-                                
-                except Exception as e:
-                    logging.error(f"❌ Failed to create/update business record: {str(e)}")
-            else:
-                logging.error(f"Missing required client information. Email: {client_email}, Name: {client_name}")
-
         elif (event_type == "channel_permission_granted" or event_type == "channel_live") and status == "ready":
             # Extract client information from the payload
             client_info = data.get("client", {})
@@ -305,6 +253,18 @@ async def process_webhook_payload(payload: dict):
                     
                 except Exception as e:
                     logging.error(f"❌ Failed to save business information to database: {str(e)}")
+
+        # Handle other Dialog360 events (deprecated)
+        elif event_type in ["channel_created", "channel_updated", "channel_deleted"]:
+            logging.warning(f"Received deprecated Dialog360 event: {event_type} - consider migrating to WhatsApp Business API")
+        
+        # Handle new WhatsApp Business API events
+        elif event_type == "whatsapp_business_account_created":
+            logging.info("Handling WhatsApp Business Account created event")
+            # Add your WhatsApp Business Account handling logic here
+        elif event_type == "whatsapp_business_account_updated":
+            logging.info("Handling WhatsApp Business Account updated event")
+            # Add your WhatsApp Business Account handling logic here
 
         # Log the completion time for the event processing
         end_time = time.time()

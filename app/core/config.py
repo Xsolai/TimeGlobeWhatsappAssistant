@@ -15,14 +15,15 @@ class Settings(BaseSettings):
         "DATABASE_URL", "sqlite:///./timeglobewhatsappassistant.db"
     )
 
-    # Partner API Settings
-    PARTNER_API_KEY: str = env.get("PARTNER_API_KEY", "")
-    PARTNER_ID: str = env.get("PARTNER_ID", "")
-
-    # Dialog360 Settings
-    DIALOG360_API_KEY: str = env.get("DIALOG360_API_KEY", "")
-    DIALOG360_API_URL: str = env.get("DIALOG360_API_URL", "https://waba-v2.360dialog.io")
-    DIALOG360_PHONE_NUMBER: str = env.get("DIALOG360_PHONE_NUMBER", "")
+    # WhatsApp Business API Settings
+    WHATSAPP_ACCESS_TOKEN: str = env.get("WHATSAPP_ACCESS_TOKEN", "")
+    WHATSAPP_PHONE_NUMBER_ID: str = env.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = env.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "")
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str = env.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
+    WHATSAPP_APP_ID: str = env.get("WHATSAPP_APP_ID", "")
+    WHATSAPP_APP_SECRET: str = env.get("WHATSAPP_APP_SECRET", "")
+    WHATSAPP_API_VERSION: str = env.get("WHATSAPP_API_VERSION", "v18.0")
+    WHATSAPP_CONFIGURATION_ID: str = env.get("WHATSAPP_CONFIGURATION_ID", "")
 
     # TimeGlobe Settings
     TIMEGLOBE_BASE_URL: str = env.get("TIMEGLOBE_BASE_URL", "")
@@ -55,13 +56,11 @@ class Settings(BaseSettings):
     # App metadata
     PROJECT_NAME: str = env.get("PROJECT_NAME", "TimeGlobe WhatsApp Assistant API")
     VERSION: str = env.get("VERSION", "1.0.0")
-    DESCRIPTION: str = env.get("DESCRIPTION", "TimeGlobe WhatsApp Assistant API powered by 360dialog")
+    DESCRIPTION: str = env.get("DESCRIPTION", "TimeGlobe WhatsApp Assistant API powered by Meta WhatsApp Business API")
     ALLOWED_ORIGINS: str = env.get("ALLOWED_ORIGINS", "*")
     
     # Additional fields from your .env file
     from_whatsapp_number: str = env.get("from_whatsapp_number", "")
-    account_sid: str = env.get("account_sid", "")
-    auth_token: str = env.get("auth_token", "")
     SECRETE_KEY: str = env.get("SECRETE_KEY", "")
     API_BASE_URL: str = env.get("API_BASE_URL", "")
     EMAIL_SENDER: str = env.get("EMAIL_SENDER", "")
@@ -77,5 +76,9 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Log important settings to verify they're loaded correctly
-logger.info(f"DIALOG360_API_KEY loaded: {bool(settings.DIALOG360_API_KEY)}")
-logger.info(f"DIALOG360_API_URL: {settings.DIALOG360_API_URL}")
+logger.info(f"WHATSAPP_ACCESS_TOKEN loaded: {bool(settings.WHATSAPP_ACCESS_TOKEN)}")
+logger.info(f"WHATSAPP_PHONE_NUMBER_ID: {settings.WHATSAPP_PHONE_NUMBER_ID}")
+logger.info(f"WHATSAPP_WEBHOOK_VERIFY_TOKEN loaded: {bool(settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN)}")
+logger.info(f"WHATSAPP_BUSINESS_ACCOUNT_ID: {settings.WHATSAPP_BUSINESS_ACCOUNT_ID}")
+logger.info(f"WHATSAPP_APP_ID: {settings.WHATSAPP_APP_ID}")
+logger.info(f"WHATSAPP_CONFIGURATION_ID: {settings.WHATSAPP_CONFIGURATION_ID}")
