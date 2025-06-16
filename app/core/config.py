@@ -16,14 +16,14 @@ class Settings(BaseSettings):
     )
 
     # WhatsApp Business API Settings
+    WHATSAPP_APP_ID: str = "1278546197042106"
+    WHATSAPP_CONFIGURATION_ID: str = "966700112247031"
     WHATSAPP_ACCESS_TOKEN: str = env.get("WHATSAPP_ACCESS_TOKEN", "")
     WHATSAPP_PHONE_NUMBER_ID: str = env.get("WHATSAPP_PHONE_NUMBER_ID", "")
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = env.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "")
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = env.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
-    WHATSAPP_APP_ID: str = env.get("WHATSAPP_APP_ID", "")
     WHATSAPP_APP_SECRET: str = env.get("WHATSAPP_APP_SECRET", "")
     WHATSAPP_API_VERSION: str = env.get("WHATSAPP_API_VERSION", "v18.0")
-    WHATSAPP_CONFIGURATION_ID: str = env.get("WHATSAPP_CONFIGURATION_ID", "")
 
     # TimeGlobe Settings
     TIMEGLOBE_BASE_URL: str = env.get("TIMEGLOBE_BASE_URL", "")
@@ -76,9 +76,9 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Log important settings to verify they're loaded correctly
+logger.info(f"WHATSAPP_APP_ID: {settings.WHATSAPP_APP_ID}")
+logger.info(f"WHATSAPP_CONFIGURATION_ID: {settings.WHATSAPP_CONFIGURATION_ID}")
 logger.info(f"WHATSAPP_ACCESS_TOKEN loaded: {bool(settings.WHATSAPP_ACCESS_TOKEN)}")
 logger.info(f"WHATSAPP_PHONE_NUMBER_ID: {settings.WHATSAPP_PHONE_NUMBER_ID}")
 logger.info(f"WHATSAPP_WEBHOOK_VERIFY_TOKEN loaded: {bool(settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN)}")
 logger.info(f"WHATSAPP_BUSINESS_ACCOUNT_ID: {settings.WHATSAPP_BUSINESS_ACCOUNT_ID}")
-logger.info(f"WHATSAPP_APP_ID: {settings.WHATSAPP_APP_ID}")
-logger.info(f"WHATSAPP_CONFIGURATION_ID: {settings.WHATSAPP_CONFIGURATION_ID}")

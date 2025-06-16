@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status, BackgroundTasks
 from app.chat_agent import ChatAgent
-from ..services.dialog360_service import Dialog360Service
 from ..services.whatsapp_business_service import WhatsAppBusinessService
 from ..schemas.dialog360_sender import (
     SenderRequest,
@@ -17,7 +16,6 @@ import time
 from ..db.session import get_db, SessionLocal
 from ..repositories.conversation_repository import ConversationRepository
 from ..core.dependencies import (
-    get_dialog360_service,
     get_whatsapp_business_service,
     get_current_business,
 )
@@ -65,7 +63,6 @@ async def whatsapp_webhook(
 ):
     """
     Main webhook endpoint for receiving WhatsApp messages via Meta's WhatsApp Business API.
-    This replaces the old Dialog360 webhook.
     """
     start_time = time.time()
     
@@ -97,60 +94,13 @@ async def whatsapp_webhook(
         # Still return 200 to prevent WhatsApp from retrying
         return JSONResponse(content={"status": "success"}, status_code=200)
 
-@router.post("/incoming-whatsapp")
-async def whatsapp_dialog360_webhook(
-    request: Request,
-):
-    """
-    DEPRECATED: Legacy webhook for Dialog360 integration.
-    Maintained for backward compatibility during migration.
-    Use /webhook endpoint for new WhatsApp Business API integration.
-    """
-    start_time = time.time()
-    
-    try:
-        # Parse incoming JSON payload
-        data = await request.json()
-        
-        # Log webhook receipt time
-        receipt_time = time.time()
-        time_to_parse = (receipt_time - start_time) * 1000
-        logging.info(f"⏱️ [DEPRECATED] Dialog360 webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
-        
-        # Add message to the processing queue
-        message_queue = MessageQueue.get_instance()
-        message_queue.enqueue_message(data)
-        
-        # Calculate response time
-        response_time = time.time()
-        time_gap = (response_time - start_time) * 1000  # Convert to milliseconds
-        logging.info(f"⏱️ Dialog360 webhook response time: {time_gap:.2f}ms - Responded at {response_time:.3f}")
-        
-        # Return success immediately before any processing
-        return JSONResponse(content={"status": "success"}, status_code=200)
-    except Exception as e:
-        # Calculate error response time
-        error_time = time.time()
-        time_gap = (error_time - start_time) * 1000  # Convert to milliseconds
-        logging.error(f"Error in Dialog360 webhook handler: {str(e)} - Response time: {time_gap:.2f}ms")
-        # Still return 200 to prevent WhatsApp from retrying
-        return JSONResponse(content={"status": "success"}, status_code=200)
-
 async def process_webhook_data(data: dict, service):
-    """Process the webhook data in the background - supports both Dialog360 and WhatsApp Business API."""
+    """Process the webhook data in the background."""
     start_process_time = time.time()
     
     try:
-        # Detect webhook format and process accordingly
-        if data.get('object') == 'whatsapp_business_account':
-            # New WhatsApp Business API format
-            await process_whatsapp_business_webhook(data, service)
-        elif 'entry' in data and data.get('entry', [{}])[0].get('changes'):
-            # Could be Dialog360 format, try to process
-            await process_dialog360_webhook(data, service)
-        else:
-            logging.info("Unknown webhook format, attempting WhatsApp Business API processing")
-            await process_whatsapp_business_webhook(data, service)
+        # Process WhatsApp Business API webhook format
+        await process_whatsapp_business_webhook(data, service)
             
     except Exception as e:
         # Log error with timing information
@@ -198,13 +148,6 @@ async def process_whatsapp_business_webhook(data: dict, service):
                     
     except Exception as e:
         logging.error(f"Error processing WhatsApp Business API webhook: {str(e)}")
-
-async def process_dialog360_webhook(data: dict, service):
-    """Process Dialog360 webhook format (DEPRECATED)."""
-    logging.warning("Processing DEPRECATED Dialog360 webhook format")
-    
-    # Use the original processing logic for Dialog360
-    await process_webhook_data_original(data, service)
 
 async def process_whatsapp_message(message: dict, value: dict, business_phone_number: str, service):
     """Process individual WhatsApp message."""
@@ -262,7 +205,7 @@ async def process_whatsapp_message(message: dict, value: dict, business_phone_nu
         logging.error(f"Error processing WhatsApp message: {str(e)}")
 
 async def process_message_universal(number: str, incoming_msg: str, message_id: str, service):
-    """Universal message processor that works with both Dialog360 and WhatsApp Business API services."""
+    """Universal message processor for WhatsApp Business API."""
     start_process_time = time.time()
     try:
         # Process the message with your AI assistant
@@ -286,13 +229,8 @@ async def process_message_universal(number: str, incoming_msg: str, message_id: 
                 logging.error(f"No business phone number found for user {number}")
                 return
             
-            # Send the response using the appropriate service
-            if hasattr(service, 'send_message'):
-                # New WhatsApp Business API service
-                resp = service.send_message(number, formatted_response, business_phone)
-            else:
-                # Legacy Dialog360 service
-                resp = service.send_whatsapp(number, formatted_response, business_phone)
+            # Send the response using WhatsApp Business API service
+            resp = service.send_message(number, formatted_response, business_phone)
             
             # Total processing time
             end_time = time.time()
@@ -303,10 +241,6 @@ async def process_message_universal(number: str, incoming_msg: str, message_id: 
             
     except Exception as e:
         logging.error(f"Error in message processing for message ID {message_id}: {str(e)}")
-
-# Keep the original method for backward compatibility
-async def process_webhook_data_original(data: dict, dialog360_service: Dialog360Service):
-    """Original Dialog360 webhook processing logic (DEPRECATED)."""
 
 @router.delete("/clear-chat-history/{mobile_number}", status_code=status.HTTP_200_OK, response_class=JSONResponse)
 async def clear_chat_history(

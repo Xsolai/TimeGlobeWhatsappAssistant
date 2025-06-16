@@ -1,449 +1,92 @@
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from .routes import auth_route, subscription_route, webhook_routes, analytics_routes, download_routes, contract_routes, auftragsverarbeitung_routes, lastschriftmandat_routes, whatsapp_status_routes, whatsapp_onboarding_routes
 from .core.config import settings
-from .logger import main_logger
-from .db.session import engine
-from .models.base import Base
-from .models.business_model import Business, WABAStatus
-from .core.env import load_env
+from .db.session import engine, Base
+from .utils.message_queue import MessageQueue
 import logging
-import requests
-import json
-import urllib.parse
 import time
+from typing import Dict, Any
 
-# Configure logging first
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Load environment variables at startup
-main_logger.info("Loading environment variables...")
-env = load_env()
-main_logger.info("Environment variables loaded")
-
-# Import all models to ensure they are registered with SQLAlchemy
-from .models.all_models import (
-    Business, 
-    BusinessSubscription,
-    SubscriptionPlan,
-    BookingDetail,  
-    BookModel,
-    CustomerModel
-)
-# Import database setup function
-from .db.setup_db import setup_database
-import os
-
+# Create FastAPI app
 app = FastAPI(
-    title="TimeGlobe WhatsApp Assistant API",
-    version="1.0.0",
-    description="TimeGlobe WhatsApp Assistant API powered by Meta WhatsApp Business API",
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description=settings.DESCRIPTION,
 )
 
-# Initialize database and ensure all tables are created
-setup_database()
-
-# CORS middleware configuration
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Set up static files serving
+# Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include routers
 app.include_router(auth_route.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(webhook_routes.router, prefix="/api/whatsapp", tags=["WhatsApp"])
 app.include_router(subscription_route.router, prefix="/api/subscription", tags=["Subscription"])
+app.include_router(webhook_routes.router, prefix="/api/whatsapp", tags=["Webhooks"])
 app.include_router(analytics_routes.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(download_routes.router, prefix="/api/download", tags=["Downloads"])
-app.include_router(contract_routes.router, prefix="/api/contract", tags=["Contract"])
+app.include_router(contract_routes.router, prefix="/api/contract", tags=["Contracts"])
 app.include_router(auftragsverarbeitung_routes.router, prefix="/api/auftragsverarbeitung", tags=["Auftragsverarbeitung"])
 app.include_router(lastschriftmandat_routes.router, prefix="/api/lastschriftmandat", tags=["Lastschriftmandat"])
-app.include_router(whatsapp_status_routes.router, prefix="/api/whatsapp-status", tags=["WhatsApp Status"])
+app.include_router(whatsapp_status_routes.router, prefix="/api/whatsapp", tags=["WhatsApp Status"])
 app.include_router(whatsapp_onboarding_routes.router, prefix="/api/whatsapp", tags=["WhatsApp Onboarding"])
 
-# Application startup and shutdown events
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+# Initialize message queue
+message_queue = MessageQueue.get_instance()
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize resources when the application starts."""
-    logging.info("Starting application...")
-    
-    # Initialize the message queue for WhatsApp message processing
-    from .utils.message_queue import MessageQueue
-    from .routes.webhook_routes import process_webhook_data
-    
-    message_queue = MessageQueue.get_instance()
-    
-    # Start worker threads for processing messages
-    message_queue.start_workers(process_webhook_data)
-    logging.info("Message queue workers started")
+    """Initialize services on startup."""
+    try:
+        # Start message queue workers
+        await message_queue.start_workers()
+        logger.info("Message queue workers started")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Clean up resources when the application shuts down."""
-    logging.info("Shutting down application...")
-    
-    # Stop message queue workers
-    from .utils.message_queue import MessageQueue
-    
-    message_queue = MessageQueue.get_instance()
-    message_queue.stop_workers()
-    logging.info("Message queue workers stopped")
-
-@app.post("/webhook")
-async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
-    start_time = time.time()
-    
+    """Cleanup on shutdown."""
     try:
-        payload = await request.json()
-        
-        # Log webhook receipt time
-        receipt_time = time.time()
-        time_to_parse = (receipt_time - start_time) * 1000
-        logging.info(f"⏱️ System webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
-        logging.info(f"Received webhook: {payload}")
-
-        # Process the webhook data in the background
-        background_tasks.add_task(process_webhook_payload, payload)
-        
-        # Calculate response time
-        response_time = time.time()
-        time_gap = (response_time - start_time) * 1000  # Convert to milliseconds
-        logging.info(f"⏱️ System webhook response time: {time_gap:.2f}ms - Responded at {response_time:.3f}")
-        
-        # Return success immediately to prevent retries
-        return {"status": "success"}
-    
+        # Stop message queue workers
+        await message_queue.stop_workers()
+        logger.info("Message queue workers stopped")
     except Exception as e:
-        # Calculate error response time
-        error_time = time.time()
-        time_gap = (error_time - start_time) * 1000  # Convert to milliseconds
-        logging.error(f"Error processing webhook: {e} - Response time: {time_gap:.2f}ms")
-        # Still return success to prevent retries
-        return {"status": "success"}
-
-
-async def process_webhook_payload(payload: dict):
-    """Process the webhook payload in the background."""
-    start_process_time = time.time()
-    
-    try:
-        event_type = payload.get("event")
-        data = payload.get("data", {})
-        client_id = data.get("client_id")
-        channel_id = data.get("id")
-        status = data.get("status")
-
-        # Log basic event info with timing
-        logging.info(f"Processing system webhook event: {event_type} (started at {start_process_time:.3f})")
-
-        # Handle client_created event
-        if event_type == "client_created":
-            # This is a legacy Dialog360 webhook event - log and ignore
-            logging.info("Received legacy Dialog360 client_created event - ignoring in new WhatsApp Business API integration")
-            
-        elif (event_type == "channel_permission_granted" or event_type == "channel_live") and status == "ready":
-            # Extract client information from the payload
-            client_info = data.get("client", {})
-            client_name = client_info.get("name")
-            contact_info = client_info.get("contact_info", {})
-            client_email = contact_info.get("email")
-            
-            # If client email not found in webhook data, try to fetch it from 360dialog API
-            if not client_email and client_id:
-                try:
-                    # Make API call to get client info
-                    url = f"https://hub.360dialog.io/api/v2/partners/{settings.PARTNER_ID}/clients"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "D360-API-KEY": settings.PARTNER_API_KEY
-                    }
-                    
-                    logging.info(f"Fetching additional client info for client_id: {client_id}")
-                    filters_json = json.dumps({"id": client_id})
-                    encoded_filters = urllib.parse.quote(filters_json)
-                    response = requests.get(f"{url}?filters={encoded_filters}", headers=headers)
-                    
-                    if response.status_code == 200:
-                        api_client_data = response.json()
-                        
-                        if api_client_data.get("clients") and len(api_client_data["clients"]) > 0:
-                            api_client_info = api_client_data["clients"][0]
-                            api_contact_info = api_client_info.get("contact_info", {})
-                            
-                            # Update with API data if missing in webhook
-                            client_email = client_email or api_contact_info.get("email")
-                            client_name = client_name or api_client_info.get("name")
-                except Exception as e:
-                    logging.error(f"Error fetching additional client info: {str(e)}")
-            
-            # Extract setup info
-            setup_info = data.get("setup_info", {})
-            phone_number = setup_info.get("phone_number")
-            
-            # Ensure phone_number is correctly formatted (with or without + prefix)
-            # Save without + prefix for consistency
-            if phone_number and phone_number.startswith("+"):
-                phone_number = phone_number[1:]
-                
-            phone_name = setup_info.get("phone_name")
-            
-            # Extract WABA account info
-            waba_account = data.get("waba_account", {})
-            
-            # Prepare WhatsApp profile data
-            whatsapp_profile = {
-                "phone_number": phone_number,
-                "phone_name": phone_name,
-                "waba_id": waba_account.get("id"),
-                "namespace": waba_account.get("namespace"),
-                "fb_business_id": waba_account.get("fb_business_id"),
-                "account_mode": data.get("account_mode"),
-                "quality_rating": data.get("current_quality_rating"),
-                "current_limit": data.get("current_limit")
-            }
-            
-            # ✅ Channel is ready, now create an API key
-            api_key_data = create_api_key(settings.PARTNER_ID or "MalHtRPA", channel_id)
-            logging.info(f"🎯 API Key created for client {client_id}: {api_key_data}")
-
-            # Save all information to the database
-            if api_key_data:
-                try:
-                    from sqlalchemy.orm import Session
-                    logging.info("saving data for {}".format(api_key_data))
-                    
-                    with Session(engine) as db:
-                        # Check if a business with this email already exists
-                        existing_business = None
-                        if client_email:
-                            existing_business = db.query(Business).filter(Business.email == client_email).first()
-                        
-                        if existing_business:
-                            # Update existing business
-                            existing_business.client_id = client_id
-                            existing_business.channel_id = channel_id
-                            existing_business.api_key = api_key_data["api_key"]
-                            existing_business.api_endpoint = api_key_data["address"]
-                            existing_business.app_id = api_key_data["app_id"]
-                            existing_business.waba_status = WABAStatus.connected
-                            existing_business.whatsapp_profile = whatsapp_profile
-                            existing_business.business_name = client_name or existing_business.business_name
-                            
-                            # Store WhatsApp number in dedicated column (ensure it's without the + prefix)
-                            if phone_number:
-                                existing_business.whatsapp_number = phone_number
-                                logging.info(f"Saved WhatsApp number: {phone_number} for business {existing_business.business_name}")
-                            
-                            db.commit()
-                            logging.info(f"✅ Updated business information for {client_email}")
-                        else:
-                            # Log this case but don't create new business records at this stage
-                            logging.info(f"No existing business found for email {client_email}. Skipping creation at this stage.")
-                    
-                except Exception as e:
-                    logging.error(f"❌ Failed to save business information to database: {str(e)}")
-
-        # Handle other Dialog360 events (deprecated)
-        elif event_type in ["channel_created", "channel_updated", "channel_deleted"]:
-            logging.warning(f"Received deprecated Dialog360 event: {event_type} - consider migrating to WhatsApp Business API")
-        
-        # Handle new WhatsApp Business API events
-        elif event_type == "whatsapp_business_account_created":
-            logging.info("Handling WhatsApp Business Account created event")
-            # Add your WhatsApp Business Account handling logic here
-        elif event_type == "whatsapp_business_account_updated":
-            logging.info("Handling WhatsApp Business Account updated event")
-            # Add your WhatsApp Business Account handling logic here
-
-        # Log the completion time for the event processing
-        end_time = time.time()
-        total_duration = (end_time - start_process_time) * 1000  # milliseconds
-        logging.info(f"⏱️ System webhook event '{event_type}' processing completed in {total_duration:.2f}ms")
-        
-    except Exception as e:
-        # Log error with timing information
-        error_time = time.time()
-        total_duration = (error_time - start_process_time) * 1000  # milliseconds
-        logging.error(f"Error processing webhook payload in background after {total_duration:.2f}ms: {str(e)}")
-
-def create_api_key(partner_id, channel_id):
-    url = f"https://hub.360dialog.io/api/v2/partners/{partner_id}/channels/{channel_id}/api_keys"
-    headers = {
-        "Content-Type": "application/json",
-        "D360-API-KEY": "794c76fd-7b5c-49a2-ae32-e123fabcac74"  
-    }
-
-    logging.info(f"Creating API key for partner {partner_id} and channel {channel_id}")
-    logging.info(f"Headers: {headers}")
-    logging.info(f"URL: {url}") 
-    
-    response = requests.post(url, headers=headers)
-    if response.status_code == 201:
-        result = response.json()
-        api_data = {
-            "address": result.get("address"),
-            "api_key": result.get("api_key"),
-            "app_id": result.get("app_id"),
-            "id": result.get("id")
-        }
-        # Set webhook URL for this channel
-        url = f"https://waba-v2.360dialog.io/v1/configs/webhook"
-        headers = {
-            "Content-Type": "application/json",
-            "d360-api-key": api_data["api_key"]
-        }   
-        data = {
-            "url": "https://timeglobe-server.ecomtask.de/api/whatsapp/incoming-whatsapp",
-            "headers": {}
-        }
-
-        logging.info(f"Setting webhook for partner {partner_id} and channel {channel_id} with data: {data}")
-        logging.info(f"Headers: {headers}")
-        logging.info(f"URL: {url}") 
-        response = requests.post(url, headers=headers, json=data)
-        logging.info(f"Webhook set response: {response.json()}")    
-        
-        return api_data
-    else:
-        logging.error(f"❌ Failed to create API Key: {response.status_code} - {response.text}")
-        return None
-
-@app.get("/redirect", response_class=HTMLResponse)
-async def handle_redirect(request: Request):
-    # Get query parameters
-    params = dict(request.query_params)
-    client_id = params.get("client")
-    channels = params.get("channels")
-    revoked = params.get("revoked")
-    print(params)
-
-    # Log or save the data as needed
-    logging.info(f"✅ Received onboarding data: client_id={client_id}, channels={channels}, revoked={revoked}")
-
-    # Fetch client information from 360dialog API
-    if client_id:
-        try:
-            # Make API call to get client info
-            url = f"https://hub.360dialog.io/api/v2/partners/{settings.PARTNER_ID}/clients"
-            headers = {
-                "Content-Type": "application/json",
-                "D360-API-KEY": settings.PARTNER_API_KEY
-            }
-            
-            logging.info(f"Fetching client info for client_id: {client_id}")
-            # 360dialog API uses query parameters for filtering
-            filters_json = json.dumps({"id": client_id})
-            encoded_filters = urllib.parse.quote(filters_json)
-            response = requests.get(f"{url}?filters={encoded_filters}", headers=headers)
-            
-            if response.status_code == 200:
-                client_data = response.json()
-                logging.info(f"Client data received: {client_data}")
-                
-                if client_data.get("clients") and len(client_data["clients"]) > 0:
-                    client_info = client_data["clients"][0]
-                    client_email = client_info.get("contact_info", {}).get("email")
-                    client_name = client_info.get("name")
-                    
-                    if client_email:
-                        # Try to find a business with this email
-                        from sqlalchemy.orm import Session
-                        from .models.business_model import Business, WABAStatus
-                        
-                        with Session(engine) as db:
-                            business = db.query(Business).filter(Business.email == client_email).first()
-                            
-                            if business:
-                                # Update business with client_id and channel_id
-                                business.client_id = client_id
-                                if channels:
-                                    # Handle different formats of the channels parameter
-                                    channel_ids = []
-                                    if isinstance(channels, list):
-                                        channel_ids = channels
-                                    elif channels.startswith('[') and channels.endswith(']'):
-                                        # Parse string format "[id]" to extract the ID
-                                        try:
-                                            channel_content = channels[1:-1].strip()
-                                            if channel_content:
-                                                channel_ids = [id.strip() for id in channel_content.split(',')]
-                                        except Exception as e:
-                                            logging.error(f"Error parsing channel string: {str(e)}")
-                                    else:
-                                        # Assume it's a single channel ID
-                                        channel_ids = [channels]
-                              
-                                    if channel_ids:
-                                        business.channel_id = channel_ids[0]  # Use the first channel ID
-                                
-                                business.business_name = client_name or business.business_name
-                                business.waba_status = WABAStatus.connected
-                                
-                                # Fetch additional data if needed to populate whatsapp_number
-                                if not business.whatsapp_number and channel_ids and len(channel_ids) > 0:
-                                    try:
-                                        channel_id = channel_ids[0]
-                                        channel_url = f"https://hub.360dialog.io/api/v2/partners/{settings.PARTNER_ID}/channels/{channel_id}"
-                                        channel_response = requests.get(channel_url, headers=headers)
-                                        
-                                        if channel_response.status_code == 200:
-                                            channel_data = channel_response.json()
-                                            setup_info = channel_data.get("setup_info", {})
-                                            phone_number = setup_info.get("phone_number")
-                                            
-                                            # Format phone number consistently (without + prefix)
-                                            if phone_number:
-                                                if phone_number.startswith("+"):
-                                                    phone_number = phone_number[1:]
-                                                business.whatsapp_number = phone_number
-                                                logging.info(f"Added WhatsApp number {phone_number} to business")
-                                    except Exception as e:
-                                        logging.error(f"Error fetching channel data: {str(e)}")
-                                
-                                db.commit()
-                                logging.info(f"✅ Updated business record for email: {client_email} with client_id: {client_id}")
-                            else:
-                                logging.warning(f"❌ No matching business found for email: {client_email}")
-                    else:
-                        logging.warning("❌ No email found in client contact info")
-                else:
-                    logging.warning(f"❌ No client data found for client_id: {client_id}")
-            else:
-                logging.error(f"❌ Failed to fetch client info: {response.status_code} - {response.text}")
-                
-        except Exception as e:
-            logging.error(f"❌ Error processing client data: {str(e)}")
-
-    # Automatically close the tab without returning any content
-    html_content = """
-    <html>
-        <head>
-            <title>Closing...</title>
-            <script>
-                // Close the tab immediately
-                window.close();
-            </script>
-        </head>
-        <body>
-            <p>Closing...</p>
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content, status_code=200)
-
+        logger.error(f"Error during shutdown: {str(e)}")
 
 @app.get("/")
 async def root():
-    main_logger.info("Root endpoint accessed")
+    """Root endpoint."""
     return {"message": "Welcome to TimeGlobe WhatsApp Assistant API"}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler."""
+    logger.error(f"Unhandled exception: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )

@@ -1,177 +1,203 @@
-import queue
-import threading
-import time
-import logging
-import traceback
 import asyncio
-from typing import Dict, Any, Callable
-from ..db.session import SessionLocal
-from ..services.dialog360_service import Dialog360Service
+import logging
+from typing import Dict, Any, Optional
 from ..services.whatsapp_business_service import WhatsAppBusinessService
+from ..db.session import SessionLocal
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 class MessageQueue:
-    """
-    A message queue implementation using Python's Queue and threading.
-    Uses a singleton pattern to maintain a single queue across the application.
-    Supports both Dialog360 and WhatsApp Business API services.
-    """
     _instance = None
-    
+    _queue = asyncio.Queue()
+    _workers = []
+    _is_running = False
+    _num_workers = 3  # Number of worker tasks to process messages
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(MessageQueue, cls).__new__(cls)
+        return cls._instance
+
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
-            cls._instance = MessageQueue()
+            cls._instance = cls()
         return cls._instance
-    
-    def __init__(self):
-        # Create queue for incoming messages
-        self.message_queue = queue.Queue()
+
+    def enqueue_message(self, message: Dict[str, Any]):
+        """Add a message to the processing queue."""
+        self._queue.put_nowait(message)
+        logger.info(f"Message enqueued - Queue size: {self._queue.qsize()}")
+
+    async def start_workers(self):
+        """Start worker tasks to process messages."""
+        if not self._is_running:
+            self._is_running = True
+            for i in range(self._num_workers):
+                worker = asyncio.create_task(self._process_messages(i + 1))
+                self._workers.append(worker)
+            logger.info(f"Started {self._num_workers} message processing workers")
+
+    async def stop_workers(self):
+        """Stop all worker tasks."""
+        if self._is_running:
+            self._is_running = False
+            for worker in self._workers:
+                worker.cancel()
+            self._workers.clear()
+            logger.info("Stopped all message processing workers")
+
+    async def _process_messages(self, worker_id: int):
+        """Worker task to process messages from the queue."""
+        logger.info(f"Worker {worker_id} started")
         
-        # Flag to control worker threads
-        self.running = False
-        
-        # Worker threads
-        self.worker_threads = []
-        
-        # Number of worker threads to spawn
-        self.num_workers = 3
-        
-        # Message processor function
-        self.message_processor = None
-        
-        logger.info("MessageQueue initialized with dual service support")
-    
-    def enqueue_message(self, message_data: Dict[str, Any]):
-        """Add a message to the processing queue"""
         try:
-            self.message_queue.put(message_data)
-            logger.info(f"Message enqueued. Queue size: {self.message_queue.qsize()}")
-            return True
-        except Exception as e:
-            logger.error(f"Error enqueueing message: {str(e)}")
-            return False
-    
-    def start_workers(self, message_processor: Callable):
-        """Start worker threads to process messages from the queue"""
-        if self.running:
-            logger.warning("Workers already running")
-            return
-        
-        self.running = True
-        self.message_processor = message_processor
-        
-        # Create and start worker threads
-        for i in range(self.num_workers):
-            thread = threading.Thread(
-                target=self._worker_loop,
-                args=(i,),
-                daemon=True  # Make threads daemon so they exit when main thread exits
-            )
-            self.worker_threads.append(thread)
-            thread.start()
-            logger.info(f"Started worker thread {i}")
-    
-    def stop_workers(self):
-        """Stop all worker threads"""
-        self.running = False
-        
-        # Wait for all threads to finish
-        for i, thread in enumerate(self.worker_threads):
-            if thread.is_alive():
-                logger.info(f"Waiting for worker thread {i} to finish...")
-                thread.join(timeout=5)  # Give each thread 5 seconds to finish
-        
-        self.worker_threads = []
-        logger.info("All worker threads stopped")
-    
-    def _determine_service_type(self, message_data: Dict[str, Any]) -> str:
-        """
-        Determine which service to use based on the message format.
-        Returns 'whatsapp_business' for new format, 'dialog360' for legacy format.
-        """
-        if message_data.get('object') == 'whatsapp_business_account':
-            return 'whatsapp_business'
-        elif 'entry' in message_data and message_data.get('entry', [{}])[0].get('changes'):
-            # Could be Dialog360 format
-            return 'dialog360'
-        else:
-            # Default to WhatsApp Business API for unknown formats
-            return 'whatsapp_business'
-    
-    def _worker_loop(self, worker_id: int):
-        """Worker thread loop to process messages from the queue"""
-        logger.info(f"Worker {worker_id} started with dual service support")
-        
-        # Create an event loop for this thread to handle async functions
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        while self.running:
-            try:
-                # Get message with timeout to allow for worker stopping
+            # Create a database session for this worker
+            db = SessionLocal()
+            service = WhatsAppBusinessService(db)
+            logger.info(f"Worker {worker_id} created WhatsApp Business service")
+            
+            while self._is_running:
                 try:
-                    message_data = self.message_queue.get(timeout=1)
-                except queue.Empty:
-                    # No message in queue, continue loop
+                    # Get message from queue with timeout
+                    message = await asyncio.wait_for(self._queue.get(), timeout=1.0)
+                    
+                    try:
+                        # Process the message
+                        await self._handle_message(message, service, worker_id)
+                    finally:
+                        # Mark task as done
+                        self._queue.task_done()
+                        
+                except asyncio.TimeoutError:
+                    # No message in queue, continue waiting
                     continue
-                
-                # Log message receipt
-                logger.info(f"Worker {worker_id} processing message")
-                
-                # Create database session
-                db = SessionLocal()
-                try:
-                    # Determine which service to use
-                    service_type = self._determine_service_type(message_data)
-                    logger.info(f"Worker {worker_id} using {service_type} service")
-                    
-                    # Create the appropriate service
-                    if service_type == 'whatsapp_business':
-                        service = WhatsAppBusinessService(db)
-                        logger.info(f"Worker {worker_id} created WhatsApp Business API service")
-                    else:
-                        service = Dialog360Service(db)
-                        logger.info(f"Worker {worker_id} created Dialog360 service (DEPRECATED)")
-                    
-                    # Check if processor is async or sync and call appropriately
-                    if asyncio.iscoroutinefunction(self.message_processor):
-                        # Run async function in the thread's event loop
-                        loop.run_until_complete(
-                            self.message_processor(message_data, service)
-                        )
-                    else:
-                        # Run synchronous function directly
-                        self.message_processor(message_data, service)
-                    
-                    # Mark task as done
-                    self.message_queue.task_done()
-                    logger.info(f"Worker {worker_id} completed message processing using {service_type} service")
-                    
                 except Exception as e:
-                    # Log the exception
-                    logger.error(f"Worker {worker_id} error processing message: {str(e)}")
-                    logger.error(traceback.format_exc())
+                    logger.error(f"Error processing message in worker {worker_id}: {str(e)}")
+                    continue
                     
-                    # Still mark task as done even if it failed
-                    self.message_queue.task_done()
-                finally:
-                    # Always close the database session
-                    db.close()
+        except Exception as e:
+            logger.error(f"Worker {worker_id} error: {str(e)}")
+        finally:
+            # Clean up database session
+            db.close()
+            logger.info(f"Worker {worker_id} stopped")
+
+    async def _handle_message(self, message: Dict[str, Any], service: WhatsAppBusinessService, worker_id: int):
+        """Handle a single message from the queue."""
+        try:
+            # Process WhatsApp Business API webhook format
+            await self._process_whatsapp_business_webhook(message, service, worker_id)
                 
-            except Exception as e:
-                # Log any other exceptions in the worker loop
-                logger.error(f"Worker {worker_id} loop error: {str(e)}")
-                logger.error(traceback.format_exc())
+        except Exception as e:
+            logger.error(f"Error handling message in worker {worker_id}: {str(e)}")
+
+    async def _process_whatsapp_business_webhook(self, data: dict, service: WhatsAppBusinessService, worker_id: int):
+        """Process WhatsApp Business API webhook format."""
+        try:
+            logger.info(f"Worker {worker_id} processing WhatsApp Business API webhook")
+            
+            # Extract entry data
+            entries = data.get('entry', [])
+            if not entries:
+                logger.info("No entries found in webhook data")
+                return
+            
+            for entry in entries:
+                # Get changes
+                changes = entry.get('changes', [])
+                if not changes:
+                    continue
+                    
+                for change in changes:
+                    value = change.get('value', {})
+                    
+                    # Extract metadata
+                    metadata = value.get('metadata', {})
+                    business_phone_number = metadata.get('display_phone_number')
+                    phone_number_id = metadata.get('phone_number_id')
+                    
+                    logger.info(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
+                    
+                    # Process messages
+                    messages = value.get('messages', [])
+                    if not messages:
+                        logger.info("No messages in webhook data")
+                        continue
+                    
+                    for message in messages:
+                        await self._process_whatsapp_message(message, value, business_phone_number, service, worker_id)
+                        
+        except Exception as e:
+            logger.error(f"Error processing WhatsApp Business API webhook: {str(e)}")
+
+    async def _process_whatsapp_message(self, message: dict, value: dict, business_phone_number: str, service: WhatsAppBusinessService, worker_id: int):
+        """Process individual WhatsApp message."""
+        try:
+            message_type = message.get('type')
+            message_id = message.get('id', '')
+            timestamp = message.get('timestamp', '')
+            sender_number = message.get('from')
+            
+            logger.info(f"Worker {worker_id} processing message - ID: {message_id}, Type: {message_type}, From: {sender_number}")
+            
+            # Only process text messages
+            if message_type != 'text':
+                logger.info(f"Ignoring non-text message of type: {message_type}")
+                return
+            
+            # Get message text
+            text_content = message.get('text', {})
+            message_body = text_content.get('body', '')
+            
+            if not message_body:
+                logger.error("No message text found")
+                return
+            
+            # Get contact info
+            contacts = value.get('contacts', [])
+            profile_name = ''
+            if contacts:
+                profile = contacts[0].get('profile', {})
+                profile_name = profile.get('name', '')
+            
+            # Format phone number
+            if not sender_number:
+                logger.error("No sender number found")
+                return
                 
-                # Brief sleep to prevent CPU spinning on repeated errors
-                time.sleep(0.5)
-        
-        # Close the event loop when thread is stopping
-        loop.close()
-        logger.info(f"Worker {worker_id} stopped")
+            formatted_number = "".join(filter(str.isdigit, sender_number))
+            
+            logger.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
+            
+            # Process the message
+            await self._process_message_universal(formatted_number, message_body.lower(), message_id, service, worker_id)
+            
+        except Exception as e:
+            logger.error(f"Error processing WhatsApp message: {str(e)}")
+
+    async def _process_message_universal(self, number: str, incoming_msg: str, message_id: str, service: WhatsAppBusinessService, worker_id: int):
+        """Universal message processor for WhatsApp Business API."""
+        try:
+            # Process the message with your AI assistant
+            logger.info(f"Worker {worker_id} generating response for message ID: {message_id} from user: {number}")
+            from ..utils.tools_wrapper_util import get_response_from_gpt, format_response
+            
+            response = get_response_from_gpt(incoming_msg, number)
+            
+            if response:
+                # Format the response
+                formatted_response = format_response(response)
+                
+                # Send the response using WhatsApp Business API service
+                resp = service.send_message(number, formatted_response, business_phone)
+                
+                logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
+            else:
+                logger.error(f"No response generated for message ID: {message_id}")
+                
+        except Exception as e:
+            logger.error(f"Error in message processing for message ID {message_id}: {str(e)}")
 
 def clean_last_tool_messages(history, window=5):
     """
