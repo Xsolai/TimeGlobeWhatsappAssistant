@@ -7,7 +7,7 @@ from openai import OpenAI
 import os
 import logging
 from sqlalchemy.orm import Session
-from .schemas.thread import ThreadCreate
+
 from .repositories.conversation_repository import ConversationRepository
 from .system_prompt import System_prompt
 from .tools_schema import Tools

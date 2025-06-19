@@ -10,12 +10,13 @@ from ..models.all_models import (
     WABAStatus,
     BusinessSubscription,
     SubscriptionPlan,
-    SenderModel,
-    ThreadModel,
-    ActiveRunModel,
     BookingDetail,
     BookModel,
-    CustomerModel
+    CustomerModel,
+    ConversationHistory,
+    MainContract,
+    AuftragsverarbeitungContract,
+    Lastschriftmandat
 )
 import logging
 

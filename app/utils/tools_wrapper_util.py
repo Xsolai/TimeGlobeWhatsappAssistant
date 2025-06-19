@@ -314,21 +314,7 @@ def get_orders(mobile_number: str):
         return {"status": "error", "message": str(e)}
 
 
-def get_old_orders(customer_code="demo"):
-    """Get a list of past appointments"""
-    logger.info(f"Tool called: get_old_orders(customer_code={customer_code})")
-    start_time = time.time()
-    try:
-        old_orders = _get_timeglobe_service().get_old_orders(customer_code)
-        execution_time = time.time() - start_time
-        logger.info(f"get_old_orders() completed successfully in {execution_time:.2f}s")
-        return {"status": "success", "old_orders": old_orders}
-    except Exception as e:
-        execution_time = time.time() - start_time
-        logger.error(
-            f"Error in get_old_orders(): {str(e)} - took {execution_time:.2f}s"
-        )
-        return {"status": "error", "message": str(e)}
+
 
 
 def store_profile(

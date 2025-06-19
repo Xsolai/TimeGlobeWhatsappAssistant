@@ -199,18 +199,4 @@ class MessageQueue:
         except Exception as e:
             logger.error(f"Error in message processing for message ID {message_id}: {str(e)}")
 
-def clean_last_tool_messages(history, window=5):
-    """
-    Check the last `window` messages and remove any 'tool' message
-    that is not immediately after a 'tool_calls' message.
-    """
-    start = max(0, len(history) - window)
-    i = start
-    while i < len(history):
-        if history[i]['role'] == 'tool':
-            if i == 0 or history[i-1]['role'] != 'tool_calls':
-                history.pop(i)
-                # After popping, don't increment i, as the next item shifts into this index
-                continue
-        i += 1
-    return history 
+ 

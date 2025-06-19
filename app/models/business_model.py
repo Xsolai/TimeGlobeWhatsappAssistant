@@ -6,6 +6,9 @@ from ..utils.timezone_util import BERLIN_TZ
 from .base import Base
 from sqlalchemy.orm import relationship
 
+# Forward reference to avoid circular imports
+# BusinessSubscription will be imported in all_models.py
+
 class WABAStatus(PyEnum):
     pending = "pending"
     connected = "connected"

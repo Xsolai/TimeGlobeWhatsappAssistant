@@ -114,40 +114,57 @@ async def process_whatsapp_business_webhook(data: dict, service):
     
     try:
         logging.info(f"Processing WhatsApp Business API webhook")
+        logging.info(f"Webhook payload: {data}")
         
-        # Extract entry data
-        entries = data.get('entry', [])
-        if not entries:
-            logging.info("No entries found in webhook data")
-            return
-        
-        for entry in entries:
-            # Get changes
-            changes = entry.get('changes', [])
-            if not changes:
-                continue
-                
-            for change in changes:
-                value = change.get('value', {})
-                
-                # Extract metadata
-                metadata = value.get('metadata', {})
-                business_phone_number = metadata.get('display_phone_number')
-                phone_number_id = metadata.get('phone_number_id')
-                
-                logging.info(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
-                
-                # Process messages
-                messages = value.get('messages', [])
-                if not messages:
-                    logging.info("No messages in webhook data")
+        # Handle both entry-based format and direct field format
+        if 'entry' in data:
+            # Standard webhook format with entry array
+            entries = data.get('entry', [])
+            if not entries:
+                logging.info("No entries found in webhook data")
+                return
+            
+            for entry in entries:
+                # Get changes
+                changes = entry.get('changes', [])
+                if not changes:
                     continue
-                
-                for message in messages:
-                    await process_whatsapp_message(message, value, business_phone_number, service)
+                    
+                for change in changes:
+                    value = change.get('value', {})
+                    await process_webhook_value(value, service)
+                    
+        elif 'field' in data and data.get('field') == 'messages':
+            # Direct field format (like your example)
+            value = data.get('value', {})
+            await process_webhook_value(value, service)
+        else:
+            logging.warning(f"Unknown webhook format: {data}")
                     
     except Exception as e:
         logging.error(f"Error processing WhatsApp Business API webhook: {str(e)}")
+
+async def process_webhook_value(value: dict, service):
+    """Process the value part of webhook data."""
+    try:
+        # Extract metadata
+        metadata = value.get('metadata', {})
+        business_phone_number = metadata.get('display_phone_number')
+        phone_number_id = metadata.get('phone_number_id')
+        
+        logging.info(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
+        
+        # Process messages
+        messages = value.get('messages', [])
+        if not messages:
+            logging.info("No messages in webhook data")
+            return
+        
+        for message in messages:
+            await process_whatsapp_message(message, value, business_phone_number, service)
+            
+    except Exception as e:
+        logging.error(f"Error processing webhook value: {str(e)}")
 
 async def process_whatsapp_message(message: dict, value: dict, business_phone_number: str, service):
     """Process individual WhatsApp message."""
@@ -198,13 +215,13 @@ async def process_whatsapp_message(message: dict, value: dict, business_phone_nu
         
         logging.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
         
-        # Process the message
-        await process_message_universal(formatted_number, message_body.lower(), message_id, service)
+        # Process the message with business phone number
+        await process_message_universal(formatted_number, message_body.lower(), message_id, service, business_phone_number)
         
     except Exception as e:
         logging.error(f"Error processing WhatsApp message: {str(e)}")
 
-async def process_message_universal(number: str, incoming_msg: str, message_id: str, service):
+async def process_message_universal(number: str, incoming_msg: str, message_id: str, service, business_phone_number: str = None):
     """Universal message processor for WhatsApp Business API."""
     start_process_time = time.time()
     try:
@@ -221,13 +238,17 @@ async def process_message_universal(number: str, incoming_msg: str, message_id: 
             # Format the response
             formatted_response = format_response(response)
             
-            # Get the business phone number for this user
-            message_cache = MessageCache.get_instance()
-            business_phone = message_cache.get_business_phone(number)
+            # Use provided business phone or get from cache
+            business_phone = business_phone_number
+            if not business_phone:
+                message_cache = MessageCache.get_instance()
+                business_phone = message_cache.get_business_phone(number)
             
             if not business_phone:
                 logging.error(f"No business phone number found for user {number}")
                 return
+            
+            logging.info(f"Sending response to {number} via business phone {business_phone}")
             
             # Send the response using WhatsApp Business API service
             resp = service.send_message(number, formatted_response, business_phone)

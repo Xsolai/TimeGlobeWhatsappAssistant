@@ -1,19 +1,96 @@
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 .env
-project_venv/
+.venv
 env/
-venv
-app.log
-/app.log
+venv/
+ENV/
+env.bak/
+venv.bak/
+project_venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
 *.log
-./app.log
+logs/
+app.log
+
+# Database
 *.db
-node_modules
+*.sqlite
+*.sqlite3
+
+# Node.js
 node_modules/
-alembic
-*.ini
-*.pyc
-*.pyo
-*.pyd
-*.pyw
-*.pyz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Alembic (if using)
+alembic/versions/*.py
+!alembic/versions/
+alembic.ini
+
+# Ngrok
+ngrok
+ngrok.exe
+
+# Local configuration
+config.local.py
+settings.local.py
