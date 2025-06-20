@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description=settings.DESCRIPTION,
+    description="TimeGlobe WhatsApp Assistant API - Appointment booking and management system",
 )
 
 # Add CORS middleware
