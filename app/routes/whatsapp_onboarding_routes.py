@@ -44,6 +44,7 @@ class WhatsAppOnboardingResponse(BaseModel):
     phone_number_id: Optional[str] = None
     waba_id: Optional[str] = None
     access_token: Optional[str] = None
+    facebook_permissions_url: Optional[str] = None
 
 class WebhookConfigRequest(BaseModel):
     """Schema for webhook configuration request"""
@@ -371,13 +372,17 @@ async def complete_whatsapp_onboarding(
         
         complete_message = f"WhatsApp Business API onboarding completed successfully.{phone_reg_message} {webhook_message}"
         
+        # Generate Facebook Business Manager permissions URL
+        facebook_permissions_url = f"https://business.facebook.com/latest/settings/partners?business_id={signup_data.business_id}&selected_partner_id={settings.FACEBOOK_PARTNER_ID}"
+        
         return WhatsAppOnboardingResponse(
             success=True,
             message=complete_message,
             business_id=signup_data.business_id,
             phone_number_id=signup_data.phone_number_id,
             waba_id=signup_data.waba_id,
-            access_token=access_token[:20] + "..." if access_token else None  # Truncated for security
+            access_token=access_token[:20] + "..." if access_token else None,  # Truncated for security
+            facebook_permissions_url=facebook_permissions_url
         )
         
     except Exception as e:
@@ -629,13 +634,17 @@ async def complete_whatsapp_onboarding_public(
         
         complete_message = f"WhatsApp Business API onboarding completed successfully.{phone_reg_message} {waba_message} {webhook_message}"
         
+        # Generate Facebook Business Manager permissions URL
+        facebook_permissions_url = f"https://business.facebook.com/latest/settings/partners?business_id={signup_data.business_id}&selected_partner_id={settings.FACEBOOK_PARTNER_ID}"
+        
         return WhatsAppOnboardingResponse(
             success=True,
             message=complete_message,
             business_id=signup_data.business_id,
             phone_number_id=signup_data.phone_number_id,
             waba_id=signup_data.waba_id,
-            access_token=access_token[:20] + "..." if access_token else None  # Truncated for security
+            access_token=access_token[:20] + "..." if access_token else None,  # Truncated for security
+            facebook_permissions_url=facebook_permissions_url
         )
         
     except Exception as e:

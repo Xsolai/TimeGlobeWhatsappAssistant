@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # Frontend URLs
     FRONTEND_RESET_PASSWORD_URL: str = env.get("FRONTEND_RESET_PASSWORD_URL", "https://timeglobe.ecomtask.de/reset-password")
 
+    # Facebook Business Manager Partner ID (EcomTask)
+    FACEBOOK_PARTNER_ID: str = env.get("FACEBOOK_PARTNER_ID", "878298803995527")
+
     # This is the important part - allows extra fields
     model_config = {
         "extra": "ignore"  # Allows extra fields from env file that aren't defined in the class

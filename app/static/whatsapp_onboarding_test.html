@@ -268,6 +268,34 @@
             buttonContainer.appendChild(completeBtn);
         }
 
+        function showFacebookPermissionsButton(permissionsUrl) {
+            const buttonContainer = document.querySelector('.button-container');
+            
+            // Remove existing permissions button if any
+            const existingPermissionsBtn = document.getElementById('facebookPermissionsBtn');
+            if (existingPermissionsBtn) {
+                existingPermissionsBtn.remove();
+            }
+            
+            // Create Facebook permissions button
+            const permissionsBtn = document.createElement('button');
+            permissionsBtn.id = 'facebookPermissionsBtn';
+            permissionsBtn.className = 'fb-button';
+            permissionsBtn.textContent = 'Grant Messaging Permissions';
+            permissionsBtn.style.marginLeft = '10px';
+            permissionsBtn.style.backgroundColor = '#1877f2';
+            permissionsBtn.onclick = function() {
+                window.open(permissionsUrl, '_blank');
+            };
+            
+            buttonContainer.appendChild(permissionsBtn);
+            
+            // Update status message to include instructions
+            showStatus('success', 
+                'Onboarding completed! Please click "Grant Messaging Permissions" to allow EcomTask to send messages on your behalf.'
+            );
+        }
+
         async function completeOnboarding() {
             if (!signupData || !authCode) {
                 showStatus('error', 'Missing signup data or auth code. Please complete the Facebook login and WhatsApp signup first.');
@@ -311,6 +339,11 @@
                     displayResponse(result);
                     completeBtn.textContent = 'Completed ✓';
                     completeBtn.style.backgroundColor = '#28a745';
+                    
+                    // Show Facebook permissions button if URL is provided
+                    if (result.facebook_permissions_url) {
+                        showFacebookPermissionsButton(result.facebook_permissions_url);
+                    }
                 } else {
                     showStatus('error', `Failed to complete onboarding: ${result.detail || result.message}`);
                     completeBtn.disabled = false;
