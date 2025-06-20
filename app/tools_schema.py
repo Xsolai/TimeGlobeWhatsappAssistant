@@ -15,7 +15,7 @@ Tools=[
         "type": "function",
         "function": {
             "name": "getProducts",
-            "description": "Listet alle verfügbaren Dienstleistungen eines Salons auf mit jeweiligem Namen 'onlineNm' und Beschreibung 'onlineHint'",
+            "description": "Listet alle verfügbaren Dienstleistungen eines Salons auf mit jeweiligem Namen 'onlineNm', Beschreibung 'onlineHint' und Dauer 'durationTime'",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -114,14 +114,6 @@ Tools=[
                         "type": "string",
                         "description": "Der 'siteCd' des jeweiligen Salons aus *getSites*"
                     },
-                    "reminderSms": {
-                        "type": "boolean",
-                        "description": "Ob eine SMS-Erinnerung gesendet werden soll."
-                    },
-                    "reminderEmail": {
-                        "type": "boolean",
-                        "description": "Ob eine E-Mail-Erinnerung gesendet werden soll."
-                    },
                     "positions": {
                         "type": "array",
                         "description": "Ein Array der Buchungspositionen aus *AppointmentSuggestion*. Jede Position entspricht einer Dienstleistung und enthält die folgenden Felder:",
@@ -155,9 +147,19 @@ Tools=[
                             },
                             "required": ["ordinalPosition", "beginTs", "durationMillis", "employeeId", "itemNo", "itemNm"]
                         }
+                    },
+                    "reminderSms": {
+                        "type": "boolean",
+                        "description": "Ob eine SMS-Erinnerung gesendet werden soll. Standard: true.",
+                        "default": True
+                    },
+                    "reminderEmail": {
+                        "type": "boolean", 
+                        "description": "Ob eine E-Mail-Erinnerung gesendet werden soll. Standard: true.",
+                        "default": True
                     }
                 },
-                "required": ["siteCd", "reminderSms", "reminderEmail", "positions"]
+                "required": ["siteCd", "positions"]
             }
         }
     },
@@ -209,42 +211,140 @@ Tools=[
     {
         "type": "function",
         "function": {
+            "name": "getBookableCustomers",
+            "description": "Ruft eine Liste der buchbaren Kunden für einen bestimmten Salon ab.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "siteCd": {
+                        "type": "string",
+                        "description": "Der 'siteCd' des jeweiligen Salons aus *getSites*"
+                    }
+                },
+                "required": ["siteCd"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "store_profile",
-            "description": "Legt ein neues Profil an oder aktualisiert bestehende Felder (z. B. 'Name', 'Geschlecht', 'E-Mail'). Das einzige Pflichtfeld bei der Erstellung ist 'fullNm', aber du kannst aus dem 'fullNm' auch 'firstNm', 'lastNm' und 'gender' auffüllen.",
+            "description": "Erstellt ein neues Nutzerprofil bei der ersten Anmeldung. Nur für Neukunden verwenden - für Updates bestehender Profile die spezifischen update-Funktionen nutzen.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "fullNm": {
                         "type": "string",
-                        "description": "Vor- und Nachname (Pflichtfeld). Beispiel: 'Max Mustermann', kann aber auch einfach nur der Vor- oder Nachname sein."
+                        "description": "Vollständiger Name des Nutzers (Pflichtfeld). Beispiel: 'Max Mustermann'."
+                    },
+                    "lastNm": {
+                        "type": "string",
+                        "description": "Nachname des Nutzers (Optional)."
+                    },
+                    "firstNm": {
+                        "type": "string",
+                        "description": "Vorname des Nutzers (Optional)."
+                    },
+                    "salutationCd": {
+                        "type": "string",
+                        "enum": ["na", "male", "female", "diverse"],
+                        "description": "Anrede/Geschlecht: 'na' (keine Angabe), 'male' (männlich), 'female' (weiblich), 'diverse' (divers). Standard: 'na'."
                     },
                     "email": {
                         "type": "string",
-                        "description": "E-Mail-Adresse des Nutzers."
+                        "description": "E-Mail-Adresse des Nutzers (Optional)."
                     },
-                    "title": {
-                        "type": "string",
-                        "description": "Titel des Nutzers."
-                    },
-                    "gender": {
-                        "type": "string",
-                        "enum": ["M", "F", "D"],
-                        "description": "Geschlecht des Nutzers (M, F oder D)."
-                    },
-                    "first_name": {
-                        "type": "string",
-                        "description": "Vorname des Nutzers."
-                    },
-                    "last_name": {
-                        "type": "string",
-                        "description": "Nachname des Nutzers."
+                    "newContact": {
+                        "type": "boolean",
+                        "description": "Kennzeichnet einen Neukunden. Standard: false."
                     },
                     "dplAccepted": {
-                        "type": "integer",
-                        "description": "DSGVO Zustimmung - 0 = nein ; 1 = Ja"
+                        "type": "boolean",
+                        "description": "DSGVO-Zustimmung: true = Zustimmung erteilt, false = keine Zustimmung. Standard: false."
+                    },
+                    "marketingAccepted": {
+                        "type": "boolean",
+                        "description": "Marketing-Zustimmung: true = Zustimmung erteilt, false = keine Zustimmung. Standard: false."
                     }
                 },
                 "required": ["fullNm"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "updateProfileName",
+            "description": "Aktualisiert nur den Namen im bestehenden Profil des Nutzers. Ermöglicht granulare Updates ohne komplette Profil-Neuerstellung.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fullNm": {
+                        "type": "string",
+                        "description": "Vollständiger Name des Nutzers (Pflichtfeld). Beispiel: 'Max Mustermann'."
+                    },
+                    "lastNm": {
+                        "type": "string",
+                        "description": "Nachname des Nutzers (Optional)."
+                    },
+                    "firstNm": {
+                        "type": "string",
+                        "description": "Vorname des Nutzers (Optional)."
+                    }
+                },
+                "required": ["fullNm"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "updateProfileEmail",
+            "description": "Aktualisiert nur die E-Mail-Adresse im bestehenden Profil des Nutzers. Ermöglicht granulare Updates ohne komplette Profil-Neuerstellung.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "description": "E-Mail-Adresse des Nutzers."
+                    }
+                },
+                "required": ["email"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "updateProfileSalutation",
+            "description": "Aktualisiert nur die Anrede/das Geschlecht im bestehenden Profil des Nutzers. Ermöglicht granulare Updates ohne komplette Profil-Neuerstellung.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "salutationCd": {
+                        "type": "string",
+                        "enum": ["na", "male", "female", "diverse"],
+                        "description": "Anrede/Geschlecht des Nutzers: 'na' (keine Angabe), 'male' (männlich), 'female' (weiblich), 'diverse' (divers)."
+                    }
+                },
+                "required": ["salutationCd"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "updateDataProtection",
+            "description": "Aktualisiert nur die DSGVO-Zustimmung im bestehenden Profil des Nutzers. Ermöglicht nachträgliche DSGVO-Zustimmung ohne komplette Profil-Neuerstellung.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "dplAccepted": {
+                        "type": "boolean",
+                        "description": "DSGVO-Zustimmung: true = Zustimmung erteilt, false = keine Zustimmung."
+                    }
+                },
+                "required": ["dplAccepted"]
             }
         }
     }

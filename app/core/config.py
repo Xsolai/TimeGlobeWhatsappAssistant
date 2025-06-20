@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     WHATSAPP_API_VERSION: str = env.get("WHATSAPP_API_VERSION", "v18.0")
 
     # TimeGlobe Settings
-    TIMEGLOBE_BASE_URL: str = env.get("TIMEGLOBE_BASE_URL", "https://online.time-globe-crs.de/")
+    TIMEGLOBE_BASE_URL: str = env.get("TIMEGLOBE_BASE_URL", "https://timeglobe.app/api")
     TIMEGLOBE_LOGIN_USERNAME: str = env.get("TIMEGLOBE_LOGIN_USERNAME", "termin@timeglobe.de")
     TIMEGLOBE_LOGIN_PASSWORD: str = env.get("TIMEGLOBE_LOGIN_PASSWORD", "123")
     TIMEGLOBE_API_KEY: str = env.get("TIMEGLOBE_API_KEY", "96f1f820d19b7d5fe3de0d6a3aefcb2848109d507a3ddf0f95fcda285cff2b33")

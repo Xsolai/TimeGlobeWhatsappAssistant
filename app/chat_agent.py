@@ -60,7 +60,12 @@ class ChatAgent:
                 cancelAppointment,
                 getProfile,
                 getOrders,
+                getBookableCustomers,
                 store_profile_wrapper,
+                updateProfileName,
+                updateProfileEmail,
+                updateProfileSalutation,
+                updateDataProtection,
             )
             
             self._function_mapping = {
@@ -72,7 +77,12 @@ class ChatAgent:
                 "cancelAppointment": cancelAppointment,
                 "getProfile": getProfile,
                 "getOrders": getOrders,
+                "getBookableCustomers": getBookableCustomers,
                 "store_profile": store_profile_wrapper,
+                "updateProfileName": updateProfileName,
+                "updateProfileEmail": updateProfileEmail,
+                "updateProfileSalutation": updateProfileSalutation,
+                "updateDataProtection": updateDataProtection,
             }
         
         return self._function_mapping
@@ -140,10 +150,20 @@ class ChatAgent:
                         function_args = {}
                     function_args["mobile_number"] = user_id
                     logger.info(f"Adding mobile_number={user_id} to {function_name} call")
+                elif function_name == "getBookableCustomers":
+                    # This function has a mobile_number parameter
+                    if "mobile_number" not in function_args:
+                        function_args["mobile_number"] = user_id
+                        logger.info(f"Adding mobile_number={user_id} to {function_name} call")
                 elif function_name == "store_profile":
                     # For store_profile, ensure mobile_number is set
                     if "mobile_number" not in function_args:
                         function_args["mobile_number"] = user_id
+                elif function_name in ["updateProfileName", "updateProfileEmail", "updateProfileSalutation", "updateDataProtection"]:
+                    # For update profile functions, ensure mobile_number is set
+                    if "mobile_number" not in function_args:
+                        function_args["mobile_number"] = user_id
+                        logger.info(f"Adding mobile_number={user_id} to {function_name} call")
                 
                 # Debug logging
                 logger.info(f"Calling function {function_name} with args: {function_args}")

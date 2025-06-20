@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from .timezone_util import BERLIN_TZ
 from ..core.config import settings
 from typing import List, Dict, Optional
+from .validation_util import validate_function_parameters, ValidationError
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -96,25 +97,48 @@ def get_employee(items, siteCd,week):
         return {"status": "error", "message": str(e)}
 
 
-def AppointmentSuggestion(week, employeeid, itemno, siteCd: str, dateSearchString: Optional[List[str]] = None):
-    """Get available appointment slots for a selected employee,service and salon"""
+def AppointmentSuggestion(siteCd: str, week: int, positions: List[Dict], dateSearchString: Optional[List[str]] = None):
+    """Get available appointment slots for selected services and salon
+    
+    Args:
+        siteCd: Site code from getSites
+        week: Week number (0 = current week, 1 = next week, etc.)
+        positions: List of position objects with itemNo and optional employeeId
+        dateSearchString: Optional list of date strings to filter suggestions
+    """
     logger.info(
-        f"Tool called: AppointmentSuggestion(week={week}, employeeid={employeeid}, itemno={itemno}, siteCd={siteCd},dateSearchString {dateSearchString})"
+        f"Tool called: AppointmentSuggestion(siteCd={siteCd}, week={week}, positions={positions}, dateSearchString={dateSearchString})"
     )
     start_time = time.time()
     try:
-        suggestions = _get_timeglobe_service().AppointmentSuggestion(
-            week=week,
-            employee_id=employeeid,
-            item_no=itemno,
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "AppointmentSuggestion",
             siteCd=siteCd,
+            week=week,
+            positions=positions,
+            dateSearchString=dateSearchString
+        )
+        
+        # Call the service with the validated parameters
+        suggestions = _get_timeglobe_service().AppointmentSuggestion(
+            week=validated_params["week"],
+            siteCd=validated_params["siteCd"],
+            positions=validated_params["positions"],
             date_search_string=dateSearchString,
         )
+        
         execution_time = time.time() - start_time
         logger.info(
             f"AppointmentSuggestion() completed successfully in {execution_time:.2f}s"
         )
         return {"status": "success", "suggestions": suggestions}
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(
+            f"Validation error in AppointmentSuggestion(): {str(e)} - took {execution_time:.2f}s"
+        )
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
     except Exception as e:
         execution_time = time.time() - start_time
         logger.error(
@@ -314,94 +338,67 @@ def get_orders(mobile_number: str):
         return {"status": "error", "message": str(e)}
 
 
-
-
-
-def store_profile(
-    mobile_number: str,
-    email: str,
-    gender: str,
-    title: str,
-    full_name: str,
-    first_name: str,
-    last_name: str,
-    dplAccepted: bool = False
-):
-    """Store user profile"""
-    # Handle missing parameters
-    if not mobile_number:
-        logger.error("store_profile() called without mobile_number")
-        return {"status": "error", "message": "Mobile number is required"}
-
-    # Normalize mobile number format - remove spaces and any special chars except +
-    if mobile_number:
-        mobile_number = "".join(c for c in mobile_number if c.isdigit() or c == "+")
-
-        # Ensure proper international formatting
-        if mobile_number.startswith("00"):  # Common format for international numbers
-            mobile_number = "+" + mobile_number[2:]
-        elif not mobile_number.startswith("+"):
-            # Add + if doesn't have country code indicator
-            mobile_number = "+" + mobile_number
-
-    # Provide default values for optional parameters
-    if not email:
-        logger.warning("store_profile() called without email, using default")
-        email = None
-
-    if not gender:
-        logger.warning("store_profile() called without gender, using default")
-        gender = None  # Default to Male
-
-    if not first_name:
-        logger.warning("store_profile() called without first_name, using default")
-        first_name = None
-
-    if not last_name:
-        logger.warning("store_profile() called without last_name, using default")
-        last_name = None
-
-    if not full_name:
-        logger.warning("store_profile() called without full_name, using default")
-        full_name = None
-    
-    if not dplAccepted:
-        logger.warning("store_profile() called without dplAccepted, using default")
-        dplAccepted = None
-
-    if not title:
-        logger.warning("store_profile() called without title, using default")
-        title = None
-
-    logger.info(
-        f"Tool called: store_profile(mobile_number={mobile_number}, email={email}, gender={gender}, title={title}, first_name={first_name}, last_name={last_name}, dplAccepted={dplAccepted})"
-    )
+def store_profile_wrapper(fullNm=None, lastNm=None, firstNm=None, salutationCd=None, email=None, newContact=None, dplAccepted=None, marketingAccepted=None, mobile_number=None):
+    """Wrapper for store_profile that accepts German schema parameters"""
+    logger.info(f"Tool called: store_profile_wrapper with salutationCd={salutationCd}, email={email}")
     start_time = time.time()
     try:
-        response = _get_timeglobe_service().store_profile(
-            mobile_number, email, gender, title, full_name, first_name, last_name, dplAccepted
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "store_profile_wrapper",
+            fullNm=fullNm,
+            lastNm=lastNm,
+            firstNm=firstNm,
+            salutationCd=salutationCd,
+            email=email,
+            dplAccepted=dplAccepted,
+            mobile_number=mobile_number
         )
+        
+        # Map the German parameters to the existing function
+        # Map salutationCd to gender
+        gender_mapping = {
+            "male": "M",
+            "female": "F", 
+            "diverse": "D",
+            "na": "M"  # Default to male if not specified
+        }
+        
+        salutation_cd = validated_params.get("salutationCd", salutationCd)
+        gender = gender_mapping.get(salutation_cd, "M") if salutation_cd else "M"
+        
         execution_time = time.time() - start_time
-
-        if response.get("code") == 0:
-            logger.info(
-                f"store_profile() - profile created successfully - took {execution_time:.2f}s"
-            )
-            return {"status": "success", "message": "profile created successfully"}
+        logger.info(f"store_profile_wrapper validation completed in {execution_time:.2f}s")
+        
+        # Call the TimeGlobe service directly with the correct parameters
+        service = _get_timeglobe_service()
+        result = service.store_profile(
+            mobile_number=validated_params.get("mobile_number", mobile_number or ""),
+            email=validated_params.get("email", email or ""),
+            gender=salutation_cd,  # Use the original salutationCd value, not the mapped gender
+            title="",  # Not provided in schema
+            full_name=validated_params.get("fullNm", fullNm or ""),
+            first_name=firstNm or "",
+            last_name=lastNm or "",
+            dplAccepted=validated_params.get("dplAccepted", dplAccepted or False)
+        )
+        
+        execution_time = time.time() - start_time
+        
+        if result.get("code") == 0:
+            logger.info(f"store_profile_wrapper() completed successfully in {execution_time:.2f}s")
+            return {"status": "success", "message": result.get("message", "Profile created successfully")}
         else:
-            error_code = response.get("code", "unknown")
-            error_msg = response.get("message", "Unknown error")
-            logger.warning(
-                f"store_profile() - error creating profile, code: {error_code}, message: {error_msg} - took {execution_time:.2f}s"
-            )
-            return {
-                "status": "error",
-                "message": f"Error creating profile: {error_msg}",
-            }
-
+            logger.warning(f"store_profile_wrapper() returned error code {result.get('code')} in {execution_time:.2f}s")
+            return {"status": "error", "message": result.get("message", "Failed to create profile")}
+        
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in store_profile_wrapper: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in store_profile(): {str(e)} - took {execution_time:.2f}s")
+        logger.error(f"Error in store_profile_wrapper: {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
 
 
@@ -650,14 +647,72 @@ def getSites():
     return get_sites()
 
 def getProducts(siteCd: str):
-    return get_products(siteCd)
+    """Wrapper for get_products that validates siteCd"""
+    logger.info(f"Tool called: getProducts(siteCd={siteCd})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "getProducts",
+            siteCd=siteCd
+        )
+        
+        execution_time = time.time() - start_time
+        logger.info(f"getProducts validation completed in {execution_time:.2f}s")
+        
+        return get_products(validated_params["siteCd"])
+        
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in getProducts: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in getProducts: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
 
 def getEmployees(siteCd: str, week: int, items: List[str]):
-    # Convert to match the original get_employee format
-    if len(items) > 0:
-        # Currently our implementation takes a single item, so use the first one
-        return get_employee(items, siteCd, week)
-    return {"status": "error", "message": "No items specified"}
+    """Get available employees for selected services
+    
+    Args:
+        siteCd: Site code from getSites
+        week: Week number (0 = current week, 1 = next week, etc.)
+        items: Array of itemNo strings from getProducts
+    """
+    logger.info(f"Tool called: getEmployees(siteCd={siteCd}, week={week}, items={items})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "getEmployees",
+            siteCd=siteCd,
+            week=week
+        )
+        
+        # Validate parameters
+        if not items or not isinstance(items, list):
+            return {"status": "error", "message": "items parameter must be a non-empty list"}
+        
+        # Convert string items to integers if needed
+        try:
+            items_int = [int(item) for item in items]
+        except (ValueError, TypeError):
+            return {"status": "error", "message": "All items must be valid integers"}
+        
+        execution_time = time.time() - start_time
+        logger.info(f"getEmployees validation completed in {execution_time:.2f}s")
+        
+        # Call the existing get_employee function
+        return get_employee(items_int, validated_params["siteCd"], validated_params["week"])
+        
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in getEmployees: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in getEmployees: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
 
 def getProfile(mobile_number:str=None):
     """Wrapper for get_profile that accepts mobile_number"""
@@ -714,6 +769,30 @@ def getOrders(mobile_number:str=None):
         logger.error(f"Error in getOrders wrapper: {str(e)}")
         return {"status": "error", "message": f"Error retrieving orders: {str(e)}"}
 
+def getBookableCustomers(siteCd: str, mobile_number: str = None):
+    """Get bookable customers for a site"""
+    logger.info(f"Tool called: getBookableCustomers(siteCd={siteCd}, mobile_number={mobile_number})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "getBookableCustomers",
+            siteCd=siteCd
+        )
+        
+        response = _get_timeglobe_service().get_bookable_customers(validated_params["siteCd"], mobile_number)
+        execution_time = time.time() - start_time
+        logger.info(f"getBookableCustomers() completed in {execution_time:.2f}s")
+        return response
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in getBookableCustomers: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in getBookableCustomers(): {str(e)} - took {execution_time:.2f}s")
+        return {"error": str(e)}
+
 def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict], dateSearchString: Optional[List[str]] = None):
     """Wrapper for AppointmentSuggestion to match the new schema.
 
@@ -729,56 +808,224 @@ def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict],
         Optional list of date strings used to filter suggestions.
     """
     logger.info(
-        f"Tool called: AppointmentSuggestion_wrapper(week={week},siteCd={siteCd},dateSearchString {dateSearchString})"
+        f"Tool called: AppointmentSuggestion_wrapper(siteCd={siteCd}, week={week}, positions={positions}, dateSearchString={dateSearchString})"
     )
-    # Check if positions are provided
-    if not positions or len(positions) == 0:
-        return {"status": "error", "message": "No positions specified"}
     
-    # Process all positions
-    try:
-        service = _get_timeglobe_service()
-        # Call the service method directly with all positions
-        suggestions = service.AppointmentSuggestion(
-            week=week,
+    # Call the updated AppointmentSuggestion function directly
+    return AppointmentSuggestion(
             siteCd=siteCd,
+        week=week,
             positions=positions,
-            date_search_string=dateSearchString,
+        dateSearchString=dateSearchString
         )
-        return {"status": "success", "suggestions": suggestions}
+
+def bookAppointment(siteCd: str, positions: List[Dict], reminderSms: bool = True, reminderEmail: bool = True, customerId: str = None, business_phone_number: str = None):
+    """Wrapper for book_appointment that handles multiple positions"""
+    logger.info(f"Tool called: bookAppointment(siteCd={siteCd}, reminderSms={reminderSms}, reminderEmail={reminderEmail})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "bookAppointment",
+            siteCd=siteCd,
+            reminderSms=reminderSms,
+            reminderEmail=reminderEmail,
+            positions=positions
+        )
+        
+        if not positions or len(positions) == 0:
+            return {"status": "error", "message": "No positions specified"}
+        
+        execution_time = time.time() - start_time
+        logger.info(f"bookAppointment validation completed in {execution_time:.2f}s")
+        
+        # Pass all positions to the booking function
+        return book_appointment(
+            mobileNumber=customerId,
+            siteCd=validated_params["siteCd"],
+            positions=positions,
+            reminderSms=validated_params["reminderSms"],
+            reminderEmail=validated_params["reminderEmail"],
+            business_phone_number=business_phone_number
+        )
+        
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in bookAppointment: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
     except Exception as e:
-        logger.error(f"Error in AppointmentSuggestion_wrapper: {str(e)}")
+        execution_time = time.time() - start_time
+        logger.error(f"Error in bookAppointment: {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
 
-def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positions: List[Dict], customerId: str = None, business_phone_number: str = None):
-    """Wrapper for book_appointment that handles multiple positions"""
-    if not positions or len(positions) == 0:
-        return {"status": "error", "message": "No positions specified"}
-    
-    # Pass all positions to the booking function
-    return book_appointment(
-        mobileNumber=customerId,
-        siteCd=siteCd,
-        positions=positions,
-        reminderSms=reminderSms,
-        reminderEmail=reminderEmail,
-        business_phone_number=business_phone_number
-    )
-
 def cancelAppointment(siteCd: str, orderId: int, mobileNumber: str = ""):
-    # The mobileNumber will be provided by the handler
-    return cancel_appointment(orderId=str(orderId), mobileNumber=mobileNumber, siteCd=siteCd)
+    """Cancel an appointment with validation"""
+    logger.info(f"Tool called: cancelAppointment(siteCd={siteCd}, orderId={orderId})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "cancelAppointment",
+            siteCd=siteCd,
+            orderId=orderId
+        )
+        
+        execution_time = time.time() - start_time
+        logger.info(f"cancelAppointment validation completed in {execution_time:.2f}s")
+        
+        # The mobileNumber will be provided by the handler
+        return cancel_appointment(
+            orderId=str(validated_params["orderId"]), 
+            mobileNumber=mobileNumber, 
+            siteCd=validated_params["siteCd"]
+        )
+        
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in cancelAppointment: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in cancelAppointment: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
 
-def store_profile_wrapper(fullNm=None, email=None, gender=None, title=None, first_name=None, last_name=None, dplAccepted=None, mobile_number=None):
-    """Wrapper for store_profile that accepts German schema parameters"""
-    # Map the German parameters to the existing function
-    return store_profile(
+def updateProfileName(fullNm: str, firstNm: str = None, lastNm: str = None, mobile_number: str = None):
+    """Update only the name in the existing user profile"""
+    logger.info(f"Tool called: updateProfileName(fullNm={fullNm}, firstNm={firstNm}, lastNm={lastNm})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "updateProfileName",
+            fullNm=fullNm,
+            firstNm=firstNm,
+            lastNm=lastNm,
+            mobile_number=mobile_number
+        )
+        
+        # Call the TimeGlobe service to update profile name
+        service = _get_timeglobe_service()
+        result = service.update_profile_name(
+            mobile_number=validated_params.get("mobile_number", ""),
+            full_name=validated_params.get("fullNm", fullNm),
+            first_name=firstNm,
+            last_name=lastNm
+        )
+        
+        execution_time = time.time() - start_time
+        
+        if result.get("code") == 0:
+            logger.info(f"updateProfileName() completed successfully in {execution_time:.2f}s")
+            return {"status": "success", "message": result.get("message", "Profile name updated successfully")}
+        else:
+            logger.warning(f"updateProfileName() returned error code {result.get('code')} in {execution_time:.2f}s")
+            return {"status": "error", "message": result.get("message", "Failed to update profile name")}
+            
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in updateProfileName: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in updateProfileName: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
+
+def updateProfileEmail(email: str, mobile_number: str = None):
+    """Update only the email in the existing user profile"""
+    logger.info(f"Tool called: updateProfileEmail(email={email})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "updateProfileEmail",
+            email=email,
+            mobile_number=mobile_number
+        )
+        
+        # Call the TimeGlobe service to update profile email
+        service = _get_timeglobe_service()
+        result = service.update_profile_email(
+            mobile_number=validated_params.get("mobile_number", ""),
+            email=validated_params["email"]
+        )
+        
+        execution_time = time.time() - start_time
+        
+        if result.get("code") == 0:
+            logger.info(f"updateProfileEmail() completed successfully in {execution_time:.2f}s")
+            return {"status": "success", "message": result.get("message", "Profile email updated successfully")}
+        else:
+            logger.warning(f"updateProfileEmail() returned error code {result.get('code')} in {execution_time:.2f}s")
+            return {"status": "error", "message": result.get("message", "Failed to update profile email")}
+            
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in updateProfileEmail: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in updateProfileEmail: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
+
+def updateProfileSalutation(salutationCd: str, mobile_number: str = None):
+    """Update only the salutation/gender in the existing user profile"""
+    logger.info(f"Tool called: updateProfileSalutation(salutationCd={salutationCd})")
+    start_time = time.time()
+    try:
+        # Validate parameters using centralized validation
+        validated_params = validate_function_parameters(
+            "updateProfileSalutation",
+            salutationCd=salutationCd,
+            mobile_number=mobile_number
+        )
+        
+        # Call the TimeGlobe service to update profile salutation
+        service = _get_timeglobe_service()
+        result = service.update_profile_salutation(
+            mobile_number=validated_params.get("mobile_number", ""),
+            salutation_cd=validated_params["salutationCd"]
+        )
+        
+        execution_time = time.time() - start_time
+        
+        if result.get("code") == 0:
+            logger.info(f"updateProfileSalutation() completed successfully in {execution_time:.2f}s")
+            return {"status": "success", "message": result.get("message", "Profile salutation updated successfully")}
+        else:
+            logger.warning(f"updateProfileSalutation() returned error code {result.get('code')} in {execution_time:.2f}s")
+            return {"status": "error", "message": result.get("message", "Failed to update profile salutation")}
+            
+    except ValidationError as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Validation error in updateProfileSalutation: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": f"Validation error: {str(e)}"}
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in updateProfileSalutation: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
+
+def updateDataProtection(dplAccepted: bool, mobile_number: str = None):
+    """Update only the GDPR consent in the existing user profile"""
+    logger.info(f"Tool called: updateDataProtection(dplAccepted={dplAccepted})")
+    start_time = time.time()
+    try:
+        # Call the TimeGlobe service to update data protection consent
+        service = _get_timeglobe_service()
+        result = service.update_data_protection(
         mobile_number=mobile_number or "",
-        email=email or "",
-        gender=gender or "M",
-        title=title or "",
-        full_name=fullNm or "",
-        first_name=first_name or "",
-        last_name=last_name or "",
-        dplAccepted=dplAccepted or False
-    )
+            dpl_accepted=dplAccepted
+        )
+        
+        execution_time = time.time() - start_time
+        
+        if result.get("code") == 0:
+            logger.info(f"updateDataProtection() completed successfully in {execution_time:.2f}s")
+            return {"status": "success", "message": result.get("message", "Data protection updated successfully")}
+        else:
+            logger.warning(f"updateDataProtection() returned error code {result.get('code')} in {execution_time:.2f}s")
+            return {"status": "error", "message": result.get("message", "Failed to update data protection")}
+            
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Error in updateDataProtection: {str(e)} - took {execution_time:.2f}s")
+        return {"status": "error", "message": str(e)}
