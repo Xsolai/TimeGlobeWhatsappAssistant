@@ -100,7 +100,7 @@ async def oauth_callback(
     3. Returns detailed response with token and next steps
     """
     main_logger.info(f"OAuth callback received - Code: {code[:30] if code else 'None'}...")
-    main_logger.info(f"Callback URL that was called: https://9b9f-2a09-bac5-503c-18be-00-277-5.ngrok-free.app/api/whatsapp/oauth/callback")
+    main_logger.info(f"Callback URL that was called: https://timeglobe-server.ecomtask.de/api/whatsapp/oauth/callback")
     
     try:
         # Check for errors from Facebook
