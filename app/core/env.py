@@ -40,11 +40,7 @@ def load_env() -> Dict[str, str]:
     whatsapp_settings = {
         'WHATSAPP_APP_ID': env_vars.get('WHATSAPP_APP_ID', ''),
         'WHATSAPP_APP_SECRET': env_vars.get('WHATSAPP_APP_SECRET', ''),
-        'WHATSAPP_ACCESS_TOKEN': env_vars.get('WHATSAPP_ACCESS_TOKEN', ''),
-        'WHATSAPP_PHONE_NUMBER_ID': env_vars.get('WHATSAPP_PHONE_NUMBER_ID', ''),
         'WHATSAPP_WEBHOOK_VERIFY_TOKEN': env_vars.get('WHATSAPP_WEBHOOK_VERIFY_TOKEN', ''),
-        'WHATSAPP_BUSINESS_ACCOUNT_ID': env_vars.get('WHATSAPP_BUSINESS_ACCOUNT_ID', ''),
-        'WHATSAPP_CONFIGURATION_ID': env_vars.get('WHATSAPP_CONFIGURATION_ID', ''),
     }
     
     for key, value in whatsapp_settings.items():
