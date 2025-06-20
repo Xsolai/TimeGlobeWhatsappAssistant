@@ -370,6 +370,7 @@ class AnalyticsRepository:
     def get_business_customers(self, business_phone: str, page: int = 1, page_size: int = 10):
         """
         Get all customers for a business with pagination
+        OPTIMIZED: Eliminates N+1 queries using JOINs and subqueries
         
         Args:
             business_phone: The business phone number
@@ -402,43 +403,55 @@ class AnalyticsRepository:
                 .scalar() or 0
             )
             
-            # Get customers for the current page
+            # OPTIMIZATION: Use a single query with JOINs and subqueries to get all data at once
+            # Subquery for booking counts
+            booking_count_subq = (
+                self.db.query(
+                    BookModel.customer_id,
+                    func.count(BookModel.id).label('booking_count')
+                )
+                .group_by(BookModel.customer_id)
+                .subquery()
+            )
+            
+            # Subquery for latest booking dates
+            latest_booking_subq = (
+                self.db.query(
+                    BookModel.customer_id,
+                    func.max(BookingDetail.created_at).label('latest_booking')
+                )
+                .join(BookingDetail, BookModel.id == BookingDetail.book_id)
+                .group_by(BookModel.customer_id)
+                .subquery()
+            )
+            
+            # Main query with LEFT JOINs to get all customer data in one query
             customers_query = (
-                self.db.query(CustomerModel)
+                self.db.query(
+                    CustomerModel,
+                    func.coalesce(booking_count_subq.c.booking_count, 0).label('booking_count'),
+                    latest_booking_subq.c.latest_booking
+                )
+                .outerjoin(booking_count_subq, CustomerModel.id == booking_count_subq.c.customer_id)
+                .outerjoin(latest_booking_subq, CustomerModel.id == latest_booking_subq.c.customer_id)
                 .filter(CustomerModel.business_id == business_id)
                 .order_by(CustomerModel.created_at.desc())
                 .offset(offset)
                 .limit(page_size)
             )
             
-            customers = customers_query.all()
+            results = customers_query.all()
             
-            # Format customer data
+            # Format customer data - now O(1) per customer instead of O(n) queries
             customer_list = []
-            for customer in customers:
-                # Count bookings for this customer
-                booking_count = (
-                    self.db.query(func.count(BookModel.id))
-                    .filter(BookModel.customer_id == customer.id)
-                    .scalar() or 0
-                )
-                
-                # Get most recent booking date
-                latest_booking = (
-                    self.db.query(BookingDetail.created_at)
-                    .join(BookModel, BookModel.id == BookingDetail.book_id)
-                    .filter(BookModel.customer_id == customer.id)
-                    .order_by(BookingDetail.created_at.desc())
-                    .first()
-                )
-                
+            for customer, booking_count, latest_booking in results:
                 customer_data = {
                     "id": customer.id,
                     "name": f"{customer.first_name} {customer.last_name}".strip(),
                     "mobile_number": customer.mobile_number,
                     "email": customer.email,
-                    "booking_count": booking_count,
-                    "latest_booking": str(latest_booking.created_at) if latest_booking else None,
+                    "booking_count": booking_count or 0,
+                    "latest_booking": str(latest_booking) if latest_booking else None,
                     "created_at": str(customer.created_at)
                 }
                 

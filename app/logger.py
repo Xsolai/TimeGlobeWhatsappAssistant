@@ -1,9 +1,16 @@
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 
 
-def setup_logger(name, log_file="app.log", level=logging.DEBUG):
+def setup_logger(name, log_file="app.log", level=None):
     """Configure and return a logger instance"""
+    
+    # Determine log level from environment or default to INFO
+    if level is None:
+        log_level_str = os.getenv('LOG_LEVEL', 'INFO').upper()
+        level = getattr(logging, log_level_str, logging.INFO)
+    
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )

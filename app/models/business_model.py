@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Enum, Boolean, DateTime, JSON
+from sqlalchemy import Column, String, Enum, Boolean, DateTime, JSON, Index
 import uuid
 from enum import Enum as PyEnum
 from datetime import datetime
@@ -19,10 +19,10 @@ class Business(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     business_name = Column(String, nullable=False)
-    email = Column(String, nullable=False, unique=True)
+    email = Column(String, nullable=False, unique=True, index=True)  # OPTIMIZATION: Add index for login queries
     password = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)  # OPTIMIZATION: Add index for active business queries
     created_at = Column(DateTime, default=lambda: datetime.now(BERLIN_TZ))
     
     # Business information fields
@@ -41,7 +41,7 @@ class Business(Base):
     app_id = Column(String, nullable=True)
     waba_status = Column(Enum(WABAStatus), default=WABAStatus.pending)
     whatsapp_profile = Column(JSON, nullable=True)
-    whatsapp_number = Column(String, nullable=True)  # Store the WhatsApp number
+    whatsapp_number = Column(String, nullable=True, index=True)  # OPTIMIZATION: Add index for phone lookup
     
     # TimeGlobe-specific fields
     timeglobe_auth_key = Column(String, nullable=True)
@@ -52,3 +52,9 @@ class Business(Base):
     main_contract = relationship("MainContract", back_populates="business", uselist=False)
     auftragsverarbeitung_contract = relationship("AuftragsverarbeitungContract", back_populates="business", uselist=False)
     lastschriftmandat = relationship("Lastschriftmandat", back_populates="business", uselist=False)
+
+# OPTIMIZATION: Add composite indexes for common query patterns
+__table_args__ = (
+    Index('idx_business_whatsapp_active', 'whatsapp_number', 'is_active'),
+    Index('idx_business_email_active', 'email', 'is_active'),
+)

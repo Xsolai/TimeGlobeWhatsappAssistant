@@ -27,7 +27,7 @@ class MessageQueue:
     def enqueue_message(self, message: Dict[str, Any]):
         """Add a message to the processing queue."""
         self._queue.put_nowait(message)
-        logger.info(f"Message enqueued - Queue size: {self._queue.qsize()}")
+        logger.debug(f"Message enqueued - Queue size: {self._queue.qsize()}")
 
     async def start_workers(self):
         """Start worker tasks to process messages."""
@@ -97,6 +97,9 @@ class MessageQueue:
         try:
             logger.info(f"Worker {worker_id} processing WhatsApp Business API webhook")
             
+            # Log payload processing in debug mode only
+            logger.debug(f"Worker {worker_id} processing payload: {data}")
+            
             # Extract entry data
             entries = data.get('entry', [])
             if not entries:
@@ -117,12 +120,12 @@ class MessageQueue:
                     business_phone_number = metadata.get('display_phone_number')
                     phone_number_id = metadata.get('phone_number_id')
                     
-                    logger.info(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
+                    logger.debug(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
                     
                     # Process messages
                     messages = value.get('messages', [])
                     if not messages:
-                        logger.info("No messages in webhook data")
+                        logger.debug("No messages in webhook data - likely status update")
                         continue
                     
                     for message in messages:
@@ -171,12 +174,12 @@ class MessageQueue:
             logger.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
             
             # Process the message
-            await self._process_message_universal(formatted_number, message_body.lower(), message_id, service, worker_id)
+            await self._process_message_universal(formatted_number, message_body.lower(), message_id, business_phone_number, service, worker_id)
             
         except Exception as e:
             logger.error(f"Error processing WhatsApp message: {str(e)}")
 
-    async def _process_message_universal(self, number: str, incoming_msg: str, message_id: str, service: WhatsAppBusinessService, worker_id: int):
+    async def _process_message_universal(self, number: str, incoming_msg: str, message_id: str, business_phone_number: str, service: WhatsAppBusinessService, worker_id: int):
         """Universal message processor for WhatsApp Business API."""
         try:
             # Process the message with your AI assistant
@@ -190,9 +193,16 @@ class MessageQueue:
                 formatted_response = format_response(response)
                 
                 # Send the response using WhatsApp Business API service
-                resp = service.send_message(number, formatted_response, business_phone)
+                if not business_phone_number:
+                    logger.error(f"No business phone number available for message ID: {message_id}")
+                    return
                 
-                logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
+                resp = service.send_message(number, formatted_response, business_phone_number)
+                
+                if resp.get('success'):
+                    logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
+                else:
+                    logger.error(f"Worker {worker_id} failed to send response for message ID: {message_id}: {resp.get('error', 'Unknown error')}")
             else:
                 logger.error(f"No response generated for message ID: {message_id}")
                 

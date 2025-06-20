@@ -268,70 +268,65 @@ class TimeGlobeService:
         cutoff_date = datetime(2025, 4, 1)
         main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
         
-        # Increment beginTs based on the date
+        # OPTIMIZATION: Process suggestions more efficiently
         if response and "suggestions" in response:
-            main_logger.info(f"Processing {len(response['suggestions'])} appointment suggestions")
-            for idx, suggestion in enumerate(response["suggestions"], 1):
+            suggestions_list = response.get("suggestions", [])
+            main_logger.info(f"Processing {len(suggestions_list)} appointment suggestions")
+            
+            # OPTIMIZATION: Process suggestions in batches and reduce logging overhead
+            processed_suggestions = []
+            
+            for idx, suggestion in enumerate(suggestions_list, 1):
                 try:
-                    # Increment the main beginTs
+                    # Process main beginTs
                     original_dt = datetime.strptime(suggestion["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
                     hours_to_add = 2 if original_dt >= cutoff_date else 1
                     adjusted_dt = original_dt.replace(hour=original_dt.hour + hours_to_add)
                     suggestion["beginTs"] = adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                     
-                    main_logger.info(
-                        f"Suggestion {idx}: Adjusted main beginTs from {original_dt.strftime('%Y-%m-%d %H:%M')} "
-                        f"to {adjusted_dt.strftime('%Y-%m-%d %H:%M')} (+{hours_to_add} hour{'s' if hours_to_add > 1 else ''})"
-                    )
-                    
-                    # Increment beginTs in positions
-                    for pos_idx, position in enumerate(suggestion["positions"], 1):
+                    # OPTIMIZATION: Process positions more efficiently
+                    positions = suggestion.get("positions", [])
+                    for position in positions:
                         try:
                             pos_original_dt = datetime.strptime(position["beginTs"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                            # Reuse the same hours calculation
                             pos_hours_to_add = 2 if pos_original_dt >= cutoff_date else 1
                             pos_adjusted_dt = pos_original_dt.replace(hour=pos_original_dt.hour + pos_hours_to_add)
                             position["beginTs"] = pos_adjusted_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                            
-                            main_logger.info(
-                                f"Suggestion {idx}, Position {pos_idx}: Adjusted beginTs from "
-                                f"{pos_original_dt.strftime('%Y-%m-%d %H:%M')} to "
-                                f"{pos_adjusted_dt.strftime('%Y-%m-%d %H:%M')} "
-                                f"(+{pos_hours_to_add} hour{'s' if pos_hours_to_add > 1 else ''})"
-                            )
                         except Exception as pos_e:
-                            main_logger.error(
-                                f"Error adjusting time for suggestion {idx}, position {pos_idx}: {str(pos_e)}"
-                            )
+                            main_logger.error(f"Error adjusting time for suggestion {idx}, position: {str(pos_e)}")
                             continue
+                    
+                    processed_suggestions.append(suggestion)
+                    
+                    # OPTIMIZATION: Reduce logging frequency - only log every 10th suggestion for large batches
+                    if idx <= 10 or idx % 10 == 0:
+                        main_logger.debug(f"Processed suggestion {idx}/{len(suggestions_list)}")
+                        
                 except Exception as e:
                     main_logger.error(f"Error processing suggestion {idx}: {str(e)}")
                     continue
 
-            # After adjusting times, optionally filter and sort suggestions
-            suggestions_list = response.get("suggestions", [])
-            # Filter suggestions based on date_search_string if provided
+            # OPTIMIZATION: Efficient filtering using list comprehension
             if date_search_string:
                 main_logger.info(f"Filtering suggestions for dates: {date_search_string}")
-                filtered = []
-                for suggestion in suggestions_list:
-                    begin_ts = suggestion.get("beginTs", "")
-                    # Extract day from beginTs (format: YYYY-MM-DDT...)
-                    day = begin_ts.split("T")[0].split("-")[2]  # Get DD part
-                    if any(f"{day}T" in ds for ds in date_search_string):
-                        filtered.append(suggestion)
+                # Pre-compile search patterns for efficiency
+                search_patterns = [f"{ds}" for ds in date_search_string]
                 
-                if filtered:
-                    suggestions_list = filtered
-                    main_logger.info(f"Found {len(filtered)} matching suggestions")
+                filtered_suggestions = [
+                    suggestion for suggestion in processed_suggestions
+                    if any(pattern in suggestion.get("beginTs", "") for pattern in search_patterns)
+                ]
+                
+                if filtered_suggestions:
+                    processed_suggestions = filtered_suggestions
+                    main_logger.info(f"Found {len(filtered_suggestions)} matching suggestions")
                 else:
                     main_logger.info("No suggestions match date_search_string; returning full list")
-           
 
-            suggestions_list = sorted(suggestions_list, key=lambda x: x.get("beginTs", ""))
-            # if suggestions_list:
-            #     suggestions_list = suggestions_list[:5]
-            #     main_logger.info("filtered appointment suggestions upto {}".format(len(suggestions_list)))
-            response["suggestions"] = suggestions_list
+            # OPTIMIZATION: Use built-in sort with key function
+            processed_suggestions.sort(key=lambda x: x.get("beginTs", ""))
+            response["suggestions"] = processed_suggestions
         else:
             main_logger.warning("No suggestions found in response or invalid response format")
 

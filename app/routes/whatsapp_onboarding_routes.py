@@ -12,6 +12,7 @@ from ..core.dependencies import get_current_business
 from ..models.business_model import Business, WABAStatus
 from ..core.config import settings
 from ..logger import main_logger
+from ..utils.phone_util import normalize_phone_number, format_phone_number_variants
 
 router = APIRouter()
 
@@ -265,7 +266,7 @@ async def complete_whatsapp_onboarding(
         current_business.api_key = access_token
         current_business.channel_id = signup_data.phone_number_id
         current_business.app_id = settings.WHATSAPP_APP_ID
-        current_business.whatsapp_number = whatsapp_number
+        current_business.whatsapp_number = normalize_phone_number(whatsapp_number)
         current_business.waba_status = WABAStatus.connected
         
         # Generate webhook URL and verify token
@@ -299,7 +300,7 @@ async def complete_whatsapp_onboarding(
             
             # Update business with phone details from Embedded Signup
             current_business.channel_id = signup_data.phone_number_id
-            current_business.whatsapp_number = phone_details.get("display_phone_number", "")
+            current_business.whatsapp_number = normalize_phone_number(phone_details.get("display_phone_number", ""))
             
             # Store phone status in profile
             current_business.whatsapp_profile["phone_status"] = phone_status
@@ -452,7 +453,7 @@ async def complete_whatsapp_onboarding_public(
         business.api_key = access_token
         business.channel_id = signup_data.phone_number_id
         business.app_id = settings.WHATSAPP_APP_ID
-        business.whatsapp_number = whatsapp_number
+        business.whatsapp_number = normalize_phone_number(whatsapp_number)
         business.waba_status = WABAStatus.connected
         
         # Generate webhook URL and verify token
@@ -486,7 +487,7 @@ async def complete_whatsapp_onboarding_public(
             
             # Update business with phone details from Embedded Signup
             business.channel_id = signup_data.phone_number_id
-            business.whatsapp_number = phone_details.get("display_phone_number", "")
+            business.whatsapp_number = normalize_phone_number(phone_details.get("display_phone_number", ""))
             
             # Store phone status in profile
             business.whatsapp_profile["phone_status"] = phone_status
@@ -1335,7 +1336,7 @@ async def complete_phone_registration(
             primary_phone = registration_result.get("primary_phone_number")
             if primary_phone:
                 business.channel_id = primary_phone["phone_number_id"]
-                business.whatsapp_number = primary_phone["display_phone_number"]
+                business.whatsapp_number = normalize_phone_number(primary_phone["display_phone_number"])
                 main_logger.info(f"Updated primary phone: {primary_phone['display_phone_number']}")
         
         db.commit()
@@ -1653,3 +1654,97 @@ async def test_whatsapp_messaging(
     except Exception as e:
         main_logger.error(f"Error testing messaging: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to test messaging: {str(e)}")
+
+@router.get("/debug-permissions")
+async def debug_whatsapp_permissions(
+    business_email: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Debug endpoint to check WhatsApp permissions and phone number status.
+    Helps diagnose Error #33 permission issues.
+    """
+    try:
+        # Find business by email
+        business = db.query(Business).filter(Business.email == business_email).first()
+        
+        if not business:
+            raise HTTPException(status_code=404, detail="Business not found")
+        
+        if not business.api_key:
+            raise HTTPException(status_code=400, detail="No access token found")
+        
+        main_logger.info(f"Debugging permissions for business: {business.email}")
+        
+        from ..services.whatsapp_business_service import WhatsAppBusinessService
+        whatsapp_service = WhatsAppBusinessService(db)
+        
+        debug_info = {
+            "business_info": {
+                "email": business.email,
+                "whatsapp_number": business.whatsapp_number,
+                "phone_number_id": business.channel_id,
+                "waba_status": business.waba_status.value if business.waba_status else None,
+                "has_access_token": bool(business.api_key),
+                "access_token_prefix": business.api_key[:20] + "..." if business.api_key else None
+            }
+        }
+        
+        # Check phone number details
+        if business.channel_id and business.api_key:
+            try:
+                phone_details = await get_phone_number_details(business.channel_id, business.api_key)
+                debug_info["phone_number_details"] = phone_details
+            except Exception as e:
+                debug_info["phone_number_error"] = str(e)
+        
+        # Check WABA details if available
+        if business.whatsapp_profile and business.whatsapp_profile.get("waba_id"):
+            waba_id = business.whatsapp_profile["waba_id"]
+            try:
+                waba_phones = whatsapp_service.get_whatsapp_business_phone_numbers(waba_id, business.api_key)
+                debug_info["waba_phone_numbers"] = waba_phones
+            except Exception as e:
+                debug_info["waba_error"] = str(e)
+        
+        # Test basic API access
+        try:
+            test_url = f"https://graph.facebook.com/v18.0/{business.channel_id}"
+            headers = {"Authorization": f"Bearer {business.api_key}"}
+            
+            response = requests.get(test_url, headers=headers)
+            
+            if response.status_code == 200:
+                debug_info["api_access_test"] = {
+                    "status": "success",
+                    "data": response.json()
+                }
+            else:
+                debug_info["api_access_test"] = {
+                    "status": "failed",
+                    "status_code": response.status_code,
+                    "error": response.json() if response.content else "No response content"
+                }
+        except Exception as e:
+            debug_info["api_access_test"] = {
+                "status": "error",
+                "error": str(e)
+            }
+        
+        # Add troubleshooting recommendations
+        debug_info["troubleshooting_steps"] = {
+            "1_check_system_user": "Verify System User has Admin role in Business Manager",
+            "2_check_waba_assignment": "Ensure System User is assigned to the correct WABA",
+            "3_regenerate_token": "Try regenerating the System User access token",
+            "4_verify_phone_status": "Check if phone number is fully registered and verified",
+            "5_business_manager_url": f"https://business.facebook.com/settings/system-users",
+            "6_whatsapp_manager_url": "https://business.facebook.com/wa/manage/"
+        }
+        
+        return debug_info
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error in debug permissions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")

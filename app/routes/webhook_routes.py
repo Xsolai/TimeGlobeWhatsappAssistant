@@ -1,19 +1,9 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, status, BackgroundTasks
-from app.chat_agent import ChatAgent
+from fastapi import APIRouter, Request, Depends, HTTPException, status
 from ..services.whatsapp_business_service import WhatsAppBusinessService
-from ..schemas.dialog360_sender import (
-    SenderRequest,
-    VerificationRequest,
-    SenderId,
-    UpdateSenderRequest,
-)
-from ..core.config import settings
 from ..models.business_model import Business
-from ..utils.tools_wrapper_util import get_response_from_gpt
-from ..utils.tools_wrapper_util import format_response
 import logging
 import time
-from ..db.session import get_db, SessionLocal
+from ..db.session import get_db
 from ..repositories.conversation_repository import ConversationRepository
 from ..core.dependencies import (
     get_whatsapp_business_service,
@@ -21,7 +11,6 @@ from ..core.dependencies import (
 )
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from app.utils.message_cache import MessageCache
 from app.utils.message_queue import MessageQueue
 
 router = APIRouter()
@@ -73,7 +62,10 @@ async def whatsapp_webhook(
         # Log webhook receipt time
         receipt_time = time.time()
         time_to_parse = (receipt_time - start_time) * 1000
-        logging.info(f"⏱️ WhatsApp Business API webhook received at {receipt_time:.3f} - JSON parsing took {time_to_parse:.2f}ms")
+        logging.info(f"Webhook received - parsing took {time_to_parse:.2f}ms")
+        
+        # Only log payload in debug mode
+        logging.debug(f"Webhook payload: {data}")
         
         # Add message to the processing queue
         message_queue = MessageQueue.get_instance()
@@ -82,7 +74,7 @@ async def whatsapp_webhook(
         # Calculate response time
         response_time = time.time()
         time_gap = (response_time - start_time) * 1000  # Convert to milliseconds
-        logging.info(f"⏱️ Webhook response time: {time_gap:.2f}ms - Responded at {response_time:.3f}")
+        logging.debug(f"Webhook response time: {time_gap:.2f}ms")
         
         # Return success immediately before any processing
         return JSONResponse(content={"status": "success"}, status_code=200)

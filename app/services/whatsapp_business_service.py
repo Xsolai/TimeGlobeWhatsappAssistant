@@ -6,6 +6,7 @@ from ..models.business_model import Business
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from ..logger import main_logger
+from ..utils.phone_util import format_phone_number_variants
 
 
 class WhatsAppBusinessService:
@@ -22,6 +23,7 @@ class WhatsAppBusinessService:
     def _get_business_by_phone(self, phone_number: str) -> Optional[Business]:
         """
         Get the business information based on the phone number.
+        OPTIMIZED: Uses single SQL query with IN clause instead of sequential lookups
         Used to retrieve API credentials from DB.
         """
         # Normalize phone number for comparison
@@ -29,34 +31,29 @@ class WhatsAppBusinessService:
         if phone_number.startswith("whatsapp:"):
             normalized_phone = phone_number.replace("whatsapp:", "")
         
-        self.logger.info(f"Looking for business with number: {normalized_phone}")
+        self.logger.debug(f"Looking for business with number: {normalized_phone}")
         
         try:
-            # Create multiple formats to try matching
-            formats_to_try = []
+            # OPTIMIZATION: Use the phone utility to generate all possible variants
+            formats_to_try = format_phone_number_variants(normalized_phone)
             
-            # If number already has +, try both with and without
-            if normalized_phone.startswith("+"):
-                formats_to_try.append(normalized_phone)                  # +923463109994
-                formats_to_try.append(normalized_phone[1:])              # 923463109994
-            else:
-                formats_to_try.append(normalized_phone)                  # 923463109994
-                formats_to_try.append(f"+{normalized_phone}")            # +923463109994
+            # OPTIMIZATION: Use a single query with IN clause instead of sequential queries
+            # This reduces database round trips from O(n) to O(1)
+            business = (
+                self.db.query(Business)
+                .filter(Business.whatsapp_number.in_(formats_to_try))
+                .first()
+            )
             
-            self.logger.info(f"Trying to match against formats: {formats_to_try}")
-            
-            # Try each format
-            for phone_format in formats_to_try:
-                business = self.db.query(Business).filter(Business.whatsapp_number == phone_format).first()
-                if business:
-                    self.logger.info(f"Found business with number format: {phone_format}")
-                    return business
+            if business:
+                self.logger.debug(f"Found business with number format: {business.whatsapp_number}")
+                return business
             
             # If we got here, no match was found
-            self.logger.warning(f"No business found with any of these WhatsApp number formats: {formats_to_try}")
+            self.logger.warning(f"No business found for WhatsApp number: {normalized_phone}")
             
         except Exception as e:
-            self.logger.exception(f"Error finding business by whatsapp_number: {str(e)}")
+            self.logger.error(f"Error finding business by whatsapp_number: {str(e)}")
             return None
         
         return None
@@ -99,7 +96,7 @@ class WhatsAppBusinessService:
         if not to.startswith("+"):
             to = f"+{to}"
         
-        self.logger.info(f"Sending WhatsApp message to {to}: {message}")
+        self.logger.info(f"Sending WhatsApp message to {to}")
         
         try:
             # Get the business record
@@ -124,7 +121,7 @@ class WhatsAppBusinessService:
             # WhatsApp Business API endpoint
             url = f"{self.base_url}/{phone_number_id}/messages"
             
-            self.logger.info(f"Making request to: {url}")
+            self.logger.debug(f"Making request to: {url}")
             self.logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
             
             # Make the API request
@@ -132,7 +129,8 @@ class WhatsAppBusinessService:
             
             if response.status_code in [200, 201]:
                 response_data = response.json()
-                self.logger.info(f"WhatsApp message sent successfully: {response_data}")
+                self.logger.info("WhatsApp message sent successfully")
+                self.logger.debug(f"Response data: {response_data}")
                 return {
                     "success": True,
                     "message": "Message sent successfully",
