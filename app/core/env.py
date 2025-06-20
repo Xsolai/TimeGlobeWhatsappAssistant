@@ -15,11 +15,14 @@ def load_env() -> Dict[str, str]:
     try:
         # Try to load from .env file
         with open('.env', 'r') as f:
-            for line in f:
+            for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    key, value = line.split('=', 1)
-                    env_vars[key.strip()] = value.strip()
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        env_vars[key.strip()] = value.strip()
+                    else:
+                        logger.warning(f"Invalid line {line_num} in .env file: {line}")
                     
         logger.info("Environment variables loaded from .env file")
         
