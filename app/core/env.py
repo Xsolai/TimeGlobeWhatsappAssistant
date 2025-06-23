@@ -50,4 +50,4 @@ def load_env() -> Dict[str, str]:
         else:
             logger.warning(f"{key} not found in environment variables")
             
-    return env_vars 
+    return env_vars
