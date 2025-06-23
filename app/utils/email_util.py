@@ -100,7 +100,7 @@ TimeGlobe Team
 ---
 This is an automated email. Please do not reply to this message.
 """
-    
+    logger.info(f"Sending OTP email to {recipient_email} with OTP: {otp}")
     return send_email(recipient_email, subject, body)
 
 
