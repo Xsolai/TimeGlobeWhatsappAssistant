@@ -13,6 +13,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import WhatsApp from '@mui/icons-material/WhatsApp';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
 import whatsappService from '../../services/whatsappService';
+import Facebook from '@mui/icons-material/Facebook';
 
 // Inline contract service if import fails
 const API_URL = 'https://timeglobe-server.ecomtask.de';
@@ -147,6 +148,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'success' | 'error' | 'disconnected'>('idle');
   const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [responseData, setResponseData] = useState<any>(null);
+  const [signupData, setSignupData] = useState<any>(null);
+  const [authCode, setAuthCode] = useState<string | null>(null);
   const popupWindowRef = useRef<Window | null>(null);
   const popupCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -164,6 +168,161 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ formData, onBack })
   // Final onboarding URL
   const onboarding_url = `${base_url}?${query_params.toString()}`;
   
+  // Facebook SDK initialization
+  useEffect(() => {
+    window.fbAsyncInit = function() {
+      FB.init({
+        appId: '1278546197042106',
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: 'v23.0'
+      });
+    };
+  }, []);
+
+  // Session logging message event listener
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.origin.endsWith('facebook.com')) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          console.log('WhatsApp Signup Event:', data);
+          setResponseData(data);
+          
+          // Store signup data for later use
+          setSignupData(data);
+          
+          // Handle successful completion
+          if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+            setConnectionStatus('success');
+            setOpenSuccessDialog(true);
+          } else if (data.event === 'CANCEL') {
+            setConnectionStatus('error');
+          }
+        }
+      } catch (e) {
+        console.log('Raw message event:', event.data);
+        setResponseData(event.data);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Facebook login callback
+  const fbLoginCallback = (response: any) => {
+    console.log('=== FACEBOOK LOGIN CALLBACK DEBUG ===');
+    console.log('Full Facebook Response Object:', response);
+    
+    if (response.authResponse) {
+      const code = response.authResponse.code;
+      setAuthCode(code);
+      setConnectionStatus('success');
+    } else {
+      console.log('Login failed:', response);
+      setConnectionStatus('error');
+    }
+  };
+
+  // Launch WhatsApp signup
+  const handleWhatsAppConnect = () => {
+    console.log('🚀 Starting Facebook Login with Embedded Signup...');
+    
+    // @ts-ignore - FB is added by the SDK
+    FB.login(fbLoginCallback, {
+      config_id: '966700112247031',
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3'
+      }
+    });
+  };
+
+  // Check onboarding status
+  const handleCheckStatus = async () => {
+    if (!formData.email) {
+      setConnectionStatus('error');
+      return;
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      const response = await fetch(`/api/whatsapp/status-public?business_email=${encodeURIComponent(formData.email)}`);
+      
+      if (response.ok) {
+        const status = await response.json();
+        setResponseData(status);
+        
+        if (status.is_connected) {
+          setWhatsappConnected(true);
+          setConnectionStatus('success');
+          if (status.whatsapp_number) {
+            setWhatsappNumber(status.whatsapp_number);
+          }
+        } else {
+          setWhatsappConnected(false);
+          setConnectionStatus('disconnected');
+        }
+      } else {
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+      setConnectionStatus('error');
+    }
+  };
+
+  // Complete onboarding
+  const handleCompleteOnboarding = async () => {
+    if (!signupData || !authCode || !formData.email) {
+      setConnectionStatus('error');
+      return;
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      const response = await fetch('/api/whatsapp/complete-onboarding-public', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          auth_code: authCode,
+          business_email: formData.email,
+          signup_data: {
+            business_id: signupData.business_id || signupData.data?.business_id,
+            phone_number_id: signupData.phone_number_id || signupData.data?.phone_number_id,
+            waba_id: signupData.waba_id || signupData.data?.waba_id,
+            event: signupData.event,
+            type: signupData.type,
+            version: signupData.version
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setWhatsappConnected(true);
+        setConnectionStatus('success');
+        if (result.phone_number_id) {
+          setWhatsappNumber(result.phone_number_id);
+        }
+        setOpenSuccessDialog(true);
+      } else {
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setConnectionStatus('error');
+    }
+  };
+
   // Fetch WhatsApp status on component mount
   useEffect(() => {
     const fetchWhatsAppStatus = async () => {
@@ -334,99 +493,6 @@ Die monatliche Vergütung beträgt EUR ____.
 Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X Monaten gekündigt werden.`;
   };
 
-  // Handle popup window for WhatsApp connection
-  const handleWhatsAppConnect = async () => {
-    console.log('WhatsApp connect button clicked');
-    console.log('Form data:', {
-      ...formData,
-      signature: formData.signature ? `[Signature data length: ${formData.signature.length}]` : null
-    });
-    
-    setConnectionStatus('connecting');
-    
-    try {
-      // First submit the contract with signature
-      if (formData.signature) {
-        // Get full contract text
-        const fullContractText = getFullContractText();
-        
-        console.log('Sending contract to backend API:', {
-          contract_text_length: fullContractText.length,
-          signature_length: formData.signature.length
-        });
-        
-        // Check token before making the API call
-        const token = localStorage.getItem('token');
-        console.log('Auth token available:', !!token);
-        
-        // Submit the contract to the backend
-        try {
-          await inlineContractService.createContract({
-            contract_text: fullContractText,
-            signature_image: formData.signature
-          });
-          
-          console.log('Contract successfully sent to backend');
-        } catch (contractError) {
-          console.error('Error sending contract:', contractError);
-          // Continue with WhatsApp connection even if contract submission fails
-        }
-      } else {
-        console.log('No signature found, skipping contract submission');
-      }
-      
-      // Open the 360dialog onboarding URL in a new tab or popup window
-      const popupWindow = window.open(onboarding_url, 'WhatsAppConnection', 
-        'width=1000,height=800,left=100,top=100');
-      
-      // Check if popup was blocked
-      if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
-        alert('Popup wurde blockiert. Bitte erlauben Sie Popups für diese Website.');
-        setConnectionStatus('idle');
-        return;
-      }
-
-      // Store the popup reference
-      popupWindowRef.current = popupWindow;
-      
-      // Set up an interval to check if the popup window was closed
-      popupCheckIntervalRef.current = setInterval(() => {
-        if (popupWindow.closed) {
-          // If popup closed, consider it a successful connection
-          clearInterval(popupCheckIntervalRef.current!);
-          setConnectionStatus('success');
-        }
-      }, 1000);
-      
-      // Alternative method: Check for redirect in the current tab
-      // This assumes the redirect happens in the same tab
-      // and you can detect it by checking URL parameters
-      const checkRedirectInterval = setInterval(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('whatsapp_status');
-        
-        if (status === 'success') {
-          clearInterval(checkRedirectInterval);
-          setConnectionStatus('success');
-        } else if (status === 'error') {
-          clearInterval(checkRedirectInterval);
-          setConnectionStatus('error');
-        }
-      }, 1000);
-      
-      // Clear interval after 5 minutes (300000 ms) to prevent memory leaks
-      setTimeout(() => {
-        clearInterval(checkRedirectInterval);
-        if (popupCheckIntervalRef.current) {
-          clearInterval(popupCheckIntervalRef.current);
-        }
-      }, 300000);
-    } catch (error) {
-      console.error('Error connecting WhatsApp:', error);
-      setConnectionStatus('error');
-    }
-  };
-  
   // Handle closing the success dialog
   const handleCloseSuccessDialog = () => {
     setOpenSuccessDialog(false);
@@ -702,10 +768,7 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
             borderRadius: 2, 
             backgroundColor: whatsappConnected ? 'rgba(76, 175, 80, 0.05)' : 'rgba(25, 103, 210, 0.05)',
             border: whatsappConnected ? '1px solid rgba(76, 175, 80, 0.2)' : '1px solid rgba(25, 103, 210, 0.2)',
-            mb: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2
+            mb: 2
           }}
         >
           {whatsappConnected ? (
@@ -723,10 +786,69 @@ Der Vertrag wird auf unbestimmte Zeit geschlossen und kann mit einer Frist von X
               </Box>
             </>
           ) : (
-            <Typography color="#1967D2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
-              Der nächste Schritt ist die Verknüpfung Ihres WhatsApp Business-Kontos. 
-              Klicken Sie auf "WhatsApp verknüpfen", um den Prozess zu starten.
-            </Typography>
+            <>
+              <Typography color="#1967D2" sx={{ fontWeight: 'medium', fontSize: '0.95rem', mb: 2 }}>
+                Der nächste Schritt ist die Verknüpfung Ihres WhatsApp Business-Kontos.
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleWhatsAppConnect}
+                  disabled={connectionStatus === 'connecting'}
+                  startIcon={<Facebook />}
+                  sx={{
+                    bgcolor: '#1877f2',
+                    '&:hover': {
+                      bgcolor: '#166fe5',
+                    }
+                  }}
+                >
+                  {connectionStatus === 'connecting' ? 'Verbinde...' : 'Mit Facebook verbinden'}
+                </Button>
+
+                <Button
+                  variant="contained"
+                  onClick={handleCheckStatus}
+                  disabled={connectionStatus === 'connecting'}
+                  sx={{
+                    bgcolor: '#6c757d',
+                    '&:hover': {
+                      bgcolor: '#5a6268',
+                    }
+                  }}
+                >
+                  Status prüfen
+                </Button>
+
+                {signupData && authCode && (
+                  <Button
+                    variant="contained"
+                    onClick={handleCompleteOnboarding}
+                    disabled={connectionStatus === 'connecting'}
+                    sx={{
+                      bgcolor: '#42a942',
+                      '&:hover': {
+                        bgcolor: '#3a963a',
+                      }
+                    }}
+                  >
+                    Onboarding abschließen
+                  </Button>
+                )}
+              </Box>
+
+              {responseData && (
+                <Paper sx={{ mt: 3, p: 2, bgcolor: '#f8f9fa' }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Response Data:
+                  </Typography>
+                  <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', margin: 0 }}>
+                    {JSON.stringify(responseData, null, 2)}
+                  </pre>
+                </Paper>
+              )}
+            </>
           )}
         </Box>
 
