@@ -100,7 +100,9 @@
             </div>
             
             <div class="button-container">
-                <button onclick="launchWhatsAppSignup()" class="fb-button" id="facebookLoginBtn">Connect with Facebook</button>
+                <button onclick="launchWhatsAppSignup()" class="fb-button">Login with Facebook</button>
+                <button onclick="checkOnboardingStatus()" class="fb-button" style="margin-left: 10px; background-color: #6c757d;">Check Status</button>
+                <button onclick="printDebugInfo()" class="fb-button" style="margin-left: 10px; background-color: #17a2b8;">Debug Console</button>
             </div>
 
             <div class="response-container">
@@ -121,8 +123,6 @@
           xfbml            : true,
           version          : 'v23.0'
         });
-        // Check status automatically when page loads
-        checkOnboardingStatus();
       };
     </script>
     <script async defer crossorigin="anonymous"
@@ -160,6 +160,7 @@
                 displayResponse(event.data);
             }
         });
+
         // Response callback
         const fbLoginCallback = (response) => {
             console.log('=== FACEBOOK LOGIN CALLBACK DEBUG ===');
@@ -218,23 +219,17 @@
 
         // Launch method
         const launchWhatsAppSignup = () => {
-            const businessEmail = document.getElementById('businessEmail').value;
-            if (!businessEmail) {
-                showStatus('error', 'Please enter your business email address.');
-                return;
-            }
-            
             printDebugInfo(); // Print debug info before starting
             
             console.log('🚀 Starting Facebook Login with Embedded Signup...');
             
             FB.login(fbLoginCallback, {
-                config_id: '966700112247031',
+                config_id: '966700112247031', // 🔧 UPDATE THIS if you create a new configuration
                 response_type: 'code',
                 override_default_response_type: true,
                 extras: {
                     setup: {},
-                    featureType: '',
+                    featureType: '', // Leave blank for default flow
                     sessionInfoVersion: '3'
                 }
             });
@@ -366,11 +361,13 @@
         async function checkOnboardingStatus() {
             const businessEmail = document.getElementById('businessEmail').value;
             if (!businessEmail) {
-                // Don't show any error if email is not present during initial load
+                showStatus('error', 'Please enter your business email address to check status.');
                 return;
             }
 
             try {
+                showStatus('info', 'Checking status...');
+                
                 const response = await fetch(`/api/whatsapp/status-public?business_email=${encodeURIComponent(businessEmail)}`);
                 
                 if (response.ok) {
@@ -380,26 +377,24 @@
                     if (status.is_connected) {
                         const webhookStatus = status.whatsapp_profile?.webhook_configured ? '✅ Configured' : '⚠️ Manual setup required';
                         showStatus('success', `✅ WhatsApp is connected! Number: ${status.whatsapp_number || 'N/A'} | Webhook: ${webhookStatus}`);
-                        // Hide the connect button if already connected
-                        document.getElementById('facebookLoginBtn').style.display = 'none';
                     } else {
                         showStatus('info', `📋 Status: ${status.waba_status} | Connected: ${status.is_connected ? 'Yes' : 'No'}`);
                     }
                 } else if (response.status === 404) {
-                    // Don't show error for 404 during initial load
-                    if (businessEmail) {
-                        showStatus('error', 'Business not found with the provided email address.');
-                    }
+                    showStatus('error', 'Business not found with the provided email address.');
+                    displayResponse({
+                        error: "Business not found",
+                        message: "Please check your email address or register first"
+                    });
                 } else {
                     const errorData = await response.json();
                     showStatus('error', `Failed to check status: ${errorData.detail || 'Unknown error'}`);
+                    displayResponse(errorData);
                 }
                 
             } catch (error) {
                 console.error('Error checking status:', error);
-                if (businessEmail) {
-                    showStatus('error', `Error checking status: ${error.message}`);
-                }
+                showStatus('error', `Error checking status: ${error.message}`);
             }
         }
     </script>

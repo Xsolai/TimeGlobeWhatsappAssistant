@@ -789,3 +789,238 @@ class TimeGlobeService:
         except Exception as e:
             main_logger.error(f"Error storing profile: {str(e)}")
             return {"code": -1, "message": f"Error: {str(e)}"}
+
+    def update_profile_email(self, mobile_number: str, email: str):
+        """
+        Update only the email in an existing user profile.
+        
+        Args:
+            mobile_number: The user's mobile number
+            email: The new email address
+            
+        Returns:
+            dict: Response containing success/error status and message
+        """
+        main_logger.debug(f"Updating email for mobile number: {mobile_number}")
+
+        # Ensure mobile number is properly formatted
+        if mobile_number.startswith("0"):
+            mobile_number = mobile_number[1:]  # Remove leading zero
+        if not mobile_number.startswith("+"):
+            mobile_number = "+" + mobile_number
+
+        # Create the payload with just the email field
+        payload = {
+            "email": email
+        }
+
+        main_logger.debug(f"Sending email update to API: {payload}")
+
+        try:
+            response = self.request(
+                "POST",
+                "/bot/updateProfileEmail",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
+            )
+
+            main_logger.debug(f"API response for update_profile_email: {response}")
+
+            if response and isinstance(response, dict):
+                code = response.get("code")
+                main_logger.info(f"Email update API response code: {code}")
+
+                if code == 0:
+                    main_logger.info(f"Email updated successfully for: {mobile_number}")
+                    # Update email in local database
+                    self.timeglobe_repo.update_customer_email(mobile_number, email)
+                    return {"code": 0, "message": "Email updated successfully"}
+                else:
+                    main_logger.error(f"API returned error code: {code}")
+                    return response
+            else:
+                main_logger.error(f"Invalid response from API: {response}")
+                return {"code": -1, "message": "Invalid response from API"}
+        except Exception as e:
+            main_logger.error(f"Error updating email: {str(e)}")
+            return {"code": -1, "message": f"Error: {str(e)}"}
+
+    def update_profile_name(self, mobile_number: str, full_name: str, first_name: str = None, last_name: str = None):
+        """
+        Update only the name fields in an existing user profile.
+        
+        Args:
+            mobile_number: The user's mobile number
+            full_name: Full name of the user (Required)
+            first_name: First name of the user (Optional)
+            last_name: Last name of the user (Optional)
+            
+        Returns:
+            dict: Response containing success/error status and message
+        """
+        main_logger.debug(f"Updating name for mobile number: {mobile_number}")
+
+        # Ensure mobile number is properly formatted
+        if mobile_number.startswith("0"):
+            mobile_number = mobile_number[1:]
+        if not mobile_number.startswith("+"):
+            mobile_number = "+" + mobile_number
+
+        # Create the payload with name fields
+        payload = {
+            "fullNm": full_name
+        }
+        if first_name:
+            payload["firstNm"] = first_name
+        if last_name:
+            payload["lastNm"] = last_name
+
+        main_logger.debug(f"Sending name update to API: {payload}")
+
+        try:
+            response = self.request(
+                "POST",
+                "/bot/updateProfileName",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
+            )
+
+            main_logger.debug(f"API response for update_profile_name: {response}")
+
+            if response and isinstance(response, dict):
+                code = response.get("code")
+                main_logger.info(f"Name update API response code: {code}")
+
+                if code == 0:
+                    main_logger.info(f"Name updated successfully for: {mobile_number}")
+                    # Update name in local database
+                    self.timeglobe_repo.update_customer_name(mobile_number, full_name, first_name, last_name)
+                    return {"code": 0, "message": "Name updated successfully"}
+                else:
+                    main_logger.error(f"API returned error code: {code}")
+                    return response
+            else:
+                main_logger.error(f"Invalid response from API: {response}")
+                return {"code": -1, "message": "Invalid response from API"}
+        except Exception as e:
+            main_logger.error(f"Error updating name: {str(e)}")
+            return {"code": -1, "message": f"Error: {str(e)}"}
+
+    def update_profile_salutation(self, mobile_number: str, salutation_cd: str):
+        """
+        Update only the salutation in an existing user profile.
+        
+        Args:
+            mobile_number: The user's mobile number
+            salutation_cd: The salutation code ("na", "male", "female", "diverse")
+            
+        Returns:
+            dict: Response containing success/error status and message
+        """
+        main_logger.debug(f"Updating salutation for mobile number: {mobile_number}")
+
+        # Validate salutation code
+        valid_salutations = ["na", "male", "female", "diverse"]
+        if salutation_cd not in valid_salutations:
+            return {"code": -1, "message": f"Invalid salutation code. Must be one of: {', '.join(valid_salutations)}"}
+
+        # Ensure mobile number is properly formatted
+        if mobile_number.startswith("0"):
+            mobile_number = mobile_number[1:]
+        if not mobile_number.startswith("+"):
+            mobile_number = "+" + mobile_number
+
+        # Create the payload
+        payload = {
+            "salutationCd": salutation_cd
+        }
+
+        main_logger.debug(f"Sending salutation update to API: {payload}")
+
+        try:
+            response = self.request(
+                "POST",
+                "/bot/updateProfileSalutation",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
+            )
+
+            main_logger.debug(f"API response for update_profile_salutation: {response}")
+
+            if response and isinstance(response, dict):
+                code = response.get("code")
+                main_logger.info(f"Salutation update API response code: {code}")
+
+                if code == 0:
+                    main_logger.info(f"Salutation updated successfully for: {mobile_number}")
+                    # Update salutation in local database
+                    self.timeglobe_repo.update_customer_salutation(mobile_number, salutation_cd)
+                    return {"code": 0, "message": "Salutation updated successfully"}
+                else:
+                    main_logger.error(f"API returned error code: {code}")
+                    return response
+            else:
+                main_logger.error(f"Invalid response from API: {response}")
+                return {"code": -1, "message": "Invalid response from API"}
+        except Exception as e:
+            main_logger.error(f"Error updating salutation: {str(e)}")
+            return {"code": -1, "message": f"Error: {str(e)}"}
+
+    def update_data_protection(self, mobile_number: str, dpl_accepted: bool):
+        """
+        Update only the data protection acceptance status in an existing user profile.
+        
+        Args:
+            mobile_number: The user's mobile number
+            dpl_accepted: Whether data protection is accepted
+            
+        Returns:
+            dict: Response containing success/error status and message
+        """
+        main_logger.debug(f"Updating data protection for mobile number: {mobile_number}")
+
+        # Ensure mobile number is properly formatted
+        if mobile_number.startswith("0"):
+            mobile_number = mobile_number[1:]
+        if not mobile_number.startswith("+"):
+            mobile_number = "+" + mobile_number
+
+        # Create the payload
+        payload = {
+            "dplAccepted": dpl_accepted
+        }
+
+        main_logger.debug(f"Sending data protection update to API: {payload}")
+
+        try:
+            response = self.request(
+                "POST",
+                "/bot/updateDataProtection",
+                data=payload,
+                is_header=True,
+                mobile_number=mobile_number,
+            )
+
+            main_logger.debug(f"API response for update_data_protection: {response}")
+
+            if response and isinstance(response, dict):
+                code = response.get("code")
+                main_logger.info(f"Data protection update API response code: {code}")
+
+                if code == 0:
+                    main_logger.info(f"Data protection updated successfully for: {mobile_number}")
+                    # Update data protection in local database
+                    self.timeglobe_repo.update_customer_data_protection(mobile_number, dpl_accepted)
+                    return {"code": 0, "message": "Data protection updated successfully"}
+                else:
+                    main_logger.error(f"API returned error code: {code}")
+                    return response
+            else:
+                main_logger.error(f"Invalid response from API: {response}")
+                return {"code": -1, "message": "Invalid response from API"}
+        except Exception as e:
+            main_logger.error(f"Error updating data protection: {str(e)}")
+            return {"code": -1, "message": f"Error: {str(e)}"}

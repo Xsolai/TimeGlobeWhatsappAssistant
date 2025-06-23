@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     API_BASE_URL: str = env.get("API_BASE_URL", "")
-
+    
     # Frontend URLs
     FRONTEND_RESET_PASSWORD_URL: str = env.get("FRONTEND_RESET_PASSWORD_URL", "https://timeglobe.ecomtask.de/reset-password")
 

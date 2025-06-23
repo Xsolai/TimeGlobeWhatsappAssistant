@@ -833,21 +833,21 @@ def bookAppointment(siteCd: str, positions: List[Dict], reminderSms: bool = True
             positions=positions
         )
         
-        if not positions or len(positions) == 0:
-            return {"status": "error", "message": "No positions specified"}
+    if not positions or len(positions) == 0:
+        return {"status": "error", "message": "No positions specified"}
         
         execution_time = time.time() - start_time
         logger.info(f"bookAppointment validation completed in {execution_time:.2f}s")
-            
-        # Pass all positions to the booking function
-        return book_appointment(
-            mobileNumber=customerId,
+    
+    # Pass all positions to the booking function
+    return book_appointment(
+        mobileNumber=customerId,
             siteCd=validated_params["siteCd"],
-            positions=positions,
+        positions=positions,
             reminderSms=validated_params["reminderSms"],
             reminderEmail=validated_params["reminderEmail"],
-            business_phone_number=business_phone_number
-        )
+        business_phone_number=business_phone_number
+    )
         
     except ValidationError as e:
         execution_time = time.time() - start_time
@@ -873,7 +873,7 @@ def cancelAppointment(siteCd: str, orderId: int, mobileNumber: str = ""):
         execution_time = time.time() - start_time
         logger.info(f"cancelAppointment validation completed in {execution_time:.2f}s")
         
-        # The mobileNumber will be provided by the handler
+    # The mobileNumber will be provided by the handler
         return cancel_appointment(
             orderId=str(validated_params["orderId"]), 
             mobileNumber=mobileNumber, 

@@ -153,8 +153,8 @@ class ChatAgent:
                 elif function_name == "getBookableCustomers":
                     # This function has a mobile_number parameter
                     if "mobile_number" not in function_args:
-                        function_args["mobile_number"] = user_id
-                        logger.info(f"Adding mobile_number={user_id} to {function_name} call")
+                    function_args["mobile_number"] = user_id
+                    logger.info(f"Adding mobile_number={user_id} to {function_name} call")
                 elif function_name == "store_profile":
                     # For store_profile, ensure mobile_number is set
                     if "mobile_number" not in function_args:

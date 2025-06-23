@@ -45,9 +45,9 @@ class WhatsAppBusinessService:
                 .first()
             )
             
-            if business:
+                if business:
                 self.logger.debug(f"Found business with number format: {business.whatsapp_number}")
-                return business
+                    return business
             
             # If we got here, no match was found
             self.logger.warning(f"No business found for WhatsApp number: {normalized_phone}")

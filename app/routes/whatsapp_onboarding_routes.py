@@ -296,7 +296,7 @@ async def get_onboarding_production_page():
         </body>
         </html>
         """
-        return HTMLResponse(content=content)
+    return HTMLResponse(content=content)
 
 @router.get("/oauth/callback")
 async def oauth_callback(
@@ -554,19 +554,19 @@ async def complete_whatsapp_onboarding(
         # Only attempt manual webhook configuration if not already configured
         if not webhook_configured:
             main_logger.info("Attempting manual webhook configuration...")
-            webhook_configured = await auto_configure_webhook(
-                phone_number_id=signup_data.phone_number_id,
-                access_token=access_token,
-                webhook_url=webhook_url,
-                verify_token=verify_token
-            )
-            
-            if webhook_configured:
-                current_business.whatsapp_profile["webhook_configured"] = True
+        webhook_configured = await auto_configure_webhook(
+            phone_number_id=signup_data.phone_number_id,
+            access_token=access_token,
+            webhook_url=webhook_url,
+            verify_token=verify_token
+        )
+        
+        if webhook_configured:
+            current_business.whatsapp_profile["webhook_configured"] = True
                 current_business.whatsapp_profile["webhook_source"] = "manual_configuration"
                 main_logger.info(f"Webhook configured manually for {current_business.email}")
-            else:
-                current_business.whatsapp_profile["webhook_configured"] = False
+        else:
+            current_business.whatsapp_profile["webhook_configured"] = False
                 current_business.whatsapp_profile["webhook_source"] = "configuration_failed"
                 main_logger.warning(f"Manual webhook configuration failed for {current_business.email}")
         
@@ -762,7 +762,7 @@ async def complete_whatsapp_onboarding_public(
         if should_register:
             registration_result = whatsapp_service.register_phone_number_on_cloud_api(
                 phone_number_id=signup_data.phone_number_id,
-                access_token=access_token,
+            access_token=access_token,
                 pin="000000"  # Default PIN for new registrations
             )
             
@@ -795,25 +795,25 @@ async def complete_whatsapp_onboarding_public(
                 business.whatsapp_profile["webhook_configured"] = True
                 business.whatsapp_profile["webhook_url"] = existing_webhook
                 business.whatsapp_profile["webhook_source"] = "embedded_signup_automatic"
-            else:
+        else:
                 main_logger.info("No webhook configured by Embedded Signup, attempting manual configuration...")
         
         # Only attempt manual webhook configuration if not already configured
         if not webhook_configured:
             main_logger.info("Attempting manual webhook configuration...")
-            webhook_configured = await auto_configure_webhook(
-                phone_number_id=signup_data.phone_number_id,
-                access_token=access_token,
-                webhook_url=webhook_url,
-                verify_token=verify_token
-            )
-            
-            if webhook_configured:
-                business.whatsapp_profile["webhook_configured"] = True
+        webhook_configured = await auto_configure_webhook(
+            phone_number_id=signup_data.phone_number_id,
+            access_token=access_token,
+            webhook_url=webhook_url,
+            verify_token=verify_token
+        )
+        
+        if webhook_configured:
+            business.whatsapp_profile["webhook_configured"] = True
                 business.whatsapp_profile["webhook_source"] = "manual_configuration"
                 main_logger.info(f"Webhook configured manually for {business.email}")
-            else:
-                business.whatsapp_profile["webhook_configured"] = False
+        else:
+            business.whatsapp_profile["webhook_configured"] = False
                 business.whatsapp_profile["webhook_source"] = "configuration_failed"
                 main_logger.warning(f"Manual webhook configuration failed for {business.email}")
         

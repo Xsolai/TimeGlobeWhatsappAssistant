@@ -222,3 +222,157 @@ class TimeGlobeRepository:
             self.db.rollback()
             main_logger.error(f"Database error while deleting booking: {str(e)}")
             # raise Exception(f"Database error: {str(e)}")
+
+    def update_customer_email(self, mobile_number: str, email: str):
+        """
+        Update the email address for a customer.
+        
+        Args:
+            mobile_number: The customer's mobile number
+            email: The new email address
+            
+        Returns:
+            CustomerModel: The updated customer record
+        """
+        try:
+            main_logger.info(f"Updating email for customer with mobile number: {mobile_number}")
+            
+            # Normalize mobile number
+            if not mobile_number.startswith("+"):
+                mobile_number = f"+{mobile_number}"
+                
+            # Get the customer
+            customer = self.get_customer(mobile_number)
+            if not customer:
+                main_logger.error(f"No customer found with mobile number: {mobile_number}")
+                raise Exception("Customer not found")
+                
+            # Update the email
+            customer.email = email
+            self.db.commit()
+            self.db.refresh(customer)
+            
+            main_logger.info(f"Successfully updated email for customer: {mobile_number}")
+            return customer
+            
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Database error while updating customer email: {str(e)}")
+            raise Exception(f"Database error: {str(e)}")
+
+    def update_customer_name(self, mobile_number: str, full_name: str, first_name: str = None, last_name: str = None):
+        """
+        Update the name fields for a customer.
+        
+        Args:
+            mobile_number: The customer's mobile number
+            full_name: The full name of the customer
+            first_name: Optional first name
+            last_name: Optional last name
+            
+        Returns:
+            CustomerModel: The updated customer record
+        """
+        try:
+            main_logger.info(f"Updating name for customer with mobile number: {mobile_number}")
+            
+            # Normalize mobile number
+            if not mobile_number.startswith("+"):
+                mobile_number = f"+{mobile_number}"
+                
+            # Get the customer
+            customer = self.get_customer(mobile_number)
+            if not customer:
+                main_logger.error(f"No customer found with mobile number: {mobile_number}")
+                raise Exception("Customer not found")
+                
+            # Update name fields
+            if first_name:
+                customer.first_name = first_name
+            if last_name:
+                customer.last_name = last_name
+            
+            self.db.commit()
+            self.db.refresh(customer)
+            
+            main_logger.info(f"Successfully updated name for customer: {mobile_number}")
+            return customer
+            
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Database error while updating customer name: {str(e)}")
+            raise Exception(f"Database error: {str(e)}")
+
+    def update_customer_salutation(self, mobile_number: str, salutation_cd: str):
+        """
+        Update the salutation code for a customer.
+        
+        Args:
+            mobile_number: The customer's mobile number
+            salutation_cd: The salutation code ("na", "male", "female", "diverse")
+            
+        Returns:
+            CustomerModel: The updated customer record
+        """
+        try:
+            main_logger.info(f"Updating salutation for customer with mobile number: {mobile_number}")
+            
+            # Normalize mobile number
+            if not mobile_number.startswith("+"):
+                mobile_number = f"+{mobile_number}"
+                
+            # Get the customer
+            customer = self.get_customer(mobile_number)
+            if not customer:
+                main_logger.error(f"No customer found with mobile number: {mobile_number}")
+                raise Exception("Customer not found")
+                
+            # Update salutation
+            customer.gender = salutation_cd
+            self.db.commit()
+            self.db.refresh(customer)
+            
+            main_logger.info(f"Successfully updated salutation for customer: {mobile_number}")
+            return customer
+            
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Database error while updating customer salutation: {str(e)}")
+            raise Exception(f"Database error: {str(e)}")
+
+    def update_customer_data_protection(self, mobile_number: str, dpl_accepted: bool):
+        """
+        Update the data protection acceptance status for a customer.
+        
+        Args:
+            mobile_number: The customer's mobile number
+            dpl_accepted: Whether data protection is accepted
+            
+        Returns:
+            CustomerModel: The updated customer record
+        """
+        try:
+            main_logger.info(f"Updating data protection for customer with mobile number: {mobile_number}")
+            
+            # Normalize mobile number
+            if not mobile_number.startswith("+"):
+                mobile_number = f"+{mobile_number}"
+                
+            # Get the customer
+            customer = self.get_customer(mobile_number)
+            if not customer:
+                main_logger.error(f"No customer found with mobile number: {mobile_number}")
+                raise Exception("Customer not found")
+                
+            # Update data protection status
+            customer.dplAccepted = dpl_accepted
+            self.db.commit()
+            self.db.refresh(customer)
+            
+            main_logger.info(f"Successfully updated data protection for customer: {mobile_number}")
+            return customer
+            
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Database error while updating customer data protection: {str(e)}")
+            raise Exception(f"Database error: {str(e)}")
