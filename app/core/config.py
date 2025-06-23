@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     # Email Settings
     SMTP_SERVER: str = env.get("SMTP_SERVER", "smtp.ionos.de")
     SMTP_PORT: int = int(env.get("SMTP_PORT", "587"))
-    SMTP_USERNAME: str = env.get("SMTP_USERNAME", "no-reply@timeglobe.ecomtask.de")
-    SMTP_PASSWORD: str = env.get("SMTP_PASSWORD", "dTnsAJb2mSpinVA")
+    SMTP_USERNAME: str = env.get("SMTP_USERNAME", "timeglobe@ecomtask.de")
+    SMTP_PASSWORD: str = env.get("SMTP_PASSWORD", "23f45g568ughswgjz86!!!")
     SMTP_USE_TLS: bool = env.get("SMTP_USE_TLS", "true").lower() == "true"
-    EMAIL_FROM: str = env.get("EMAIL_FROM", "no-reply@timeglobe.ecomtask.de")
+    EMAIL_FROM: str = env.get("EMAIL_FROM", "timeglobe@ecomtask.de")
     EMAIL_FROM_NAME: str = env.get("EMAIL_FROM_NAME", "TimeGlobe")
 
     # TimeGlobe Settings
