@@ -820,9 +820,10 @@ def AppointmentSuggestion_wrapper(siteCd: str, week: int, positions: List[Dict],
         )
 
 def bookAppointment(siteCd: str, positions: List[Dict], reminderSms: bool = True, reminderEmail: bool = True, customerId: str = None, business_phone_number: str = None):
-    """Wrapper for book_appointment that handles multiple positions"""
-    logger.info(f"Tool called: bookAppointment(siteCd={siteCd}, reminderSms={reminderSms}, reminderEmail={reminderEmail})")
+    """Book an appointment with validation"""
+    logger.info(f"Tool called: bookAppointment(siteCd={siteCd}, positions={positions})")
     start_time = time.time()
+    
     try:
         # Validate parameters using centralized validation
         validated_params = validate_function_parameters(
@@ -833,21 +834,21 @@ def bookAppointment(siteCd: str, positions: List[Dict], reminderSms: bool = True
             positions=positions
         )
         
-    if not positions or len(positions) == 0:
-        return {"status": "error", "message": "No positions specified"}
+        if not positions or len(positions) == 0:
+            return {"status": "error", "message": "No positions specified"}
         
         execution_time = time.time() - start_time
         logger.info(f"bookAppointment validation completed in {execution_time:.2f}s")
-    
-    # Pass all positions to the booking function
-    return book_appointment(
-        mobileNumber=customerId,
+        
+        # Pass all positions to the booking function
+        return book_appointment(
+            mobileNumber=customerId,
             siteCd=validated_params["siteCd"],
-        positions=positions,
+            positions=positions,
             reminderSms=validated_params["reminderSms"],
             reminderEmail=validated_params["reminderEmail"],
-        business_phone_number=business_phone_number
-    )
+            business_phone_number=business_phone_number
+        )
         
     except ValidationError as e:
         execution_time = time.time() - start_time
