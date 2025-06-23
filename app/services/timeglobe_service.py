@@ -145,8 +145,8 @@ class TimeGlobeService:
             "x-book-login-nm": mobile_number,
         }
         url = f"{self.base_url}{endpoint}"
-        main_logger.debug(f"Request payload: {data}")
-        main_logger.debug(f"Request headers: {headers}")
+        main_logger.info(f"Request payload: {data}")
+        main_logger.info(f"Request headers: {headers}")
 
         if data:
             response = requests.request(
