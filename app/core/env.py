@@ -19,8 +19,8 @@ def load_env() -> Dict[str, str]:
                 line = line.strip()
                 if line and not line.startswith('#'):
                     if '=' in line:
-                    key, value = line.split('=', 1)
-                    env_vars[key.strip()] = value.strip()
+                        key, value = line.split('=', 1)
+                        env_vars[key.strip()] = value.strip()
                     else:
                         logger.warning(f"Invalid line {line_num} in .env file: {line}")
                     
