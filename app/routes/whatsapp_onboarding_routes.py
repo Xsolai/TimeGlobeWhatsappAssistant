@@ -563,12 +563,12 @@ async def complete_whatsapp_onboarding(
         
         if webhook_configured:
             current_business.whatsapp_profile["webhook_configured"] = True
-                current_business.whatsapp_profile["webhook_source"] = "manual_configuration"
-                main_logger.info(f"Webhook configured manually for {current_business.email}")
+            current_business.whatsapp_profile["webhook_source"] = "manual_configuration"
+            main_logger.info(f"Webhook configured manually for {current_business.email}")
         else:
             current_business.whatsapp_profile["webhook_configured"] = False
-                current_business.whatsapp_profile["webhook_source"] = "configuration_failed"
-                main_logger.warning(f"Manual webhook configuration failed for {current_business.email}")
+            current_business.whatsapp_profile["webhook_source"] = "configuration_failed"
+            main_logger.warning(f"Manual webhook configuration failed for {current_business.email}")
         
         db.commit()
         
@@ -810,12 +810,12 @@ async def complete_whatsapp_onboarding_public(
         
         if webhook_configured:
             business.whatsapp_profile["webhook_configured"] = True
-                business.whatsapp_profile["webhook_source"] = "manual_configuration"
-                main_logger.info(f"Webhook configured manually for {business.email}")
+            business.whatsapp_profile["webhook_source"] = "manual_configuration"
+            main_logger.info(f"Webhook configured manually for {business.email}")
         else:
             business.whatsapp_profile["webhook_configured"] = False
-                business.whatsapp_profile["webhook_source"] = "configuration_failed"
-                main_logger.warning(f"Manual webhook configuration failed for {business.email}")
+            business.whatsapp_profile["webhook_source"] = "configuration_failed"
+            main_logger.warning(f"Manual webhook configuration failed for {business.email}")
         
         db.commit()
         

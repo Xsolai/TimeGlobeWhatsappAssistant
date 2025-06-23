@@ -200,7 +200,7 @@ class MessageQueue:
                 resp = service.send_message(number, formatted_response, business_phone_number)
                 
                 if resp.get('success'):
-                logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
+                    logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
                 else:
                     logger.error(f"Worker {worker_id} failed to send response for message ID: {message_id}: {resp.get('error', 'Unknown error')}")
             else:
