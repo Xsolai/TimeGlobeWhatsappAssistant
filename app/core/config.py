@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = env.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "")
     WHATSAPP_API_VERSION: str = env.get("WHATSAPP_API_VERSION", "v18.0")
 
+    # Email Settings
+    SMTP_SERVER: str = env.get("SMTP_SERVER", "smtp.ionos.de")
+    SMTP_PORT: int = int(env.get("SMTP_PORT", "587"))
+    SMTP_USERNAME: str = env.get("SMTP_USERNAME", "no-reply@timeglobe.ecomtask.de")
+    SMTP_PASSWORD: str = env.get("SMTP_PASSWORD", "dTnsAJb2mSpinVA")
+    SMTP_USE_TLS: bool = env.get("SMTP_USE_TLS", "true").lower() == "true"
+    EMAIL_FROM: str = env.get("EMAIL_FROM", "no-reply@timeglobe.ecomtask.de")
+    EMAIL_FROM_NAME: str = env.get("EMAIL_FROM_NAME", "TimeGlobe")
+
     # TimeGlobe Settings
     TIMEGLOBE_BASE_URL: str = env.get("TIMEGLOBE_BASE_URL", "https://timeglobe.app/api")
     TIMEGLOBE_LOGIN_USERNAME: str = env.get("TIMEGLOBE_LOGIN_USERNAME", "")

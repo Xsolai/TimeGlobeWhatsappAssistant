@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 import requests
 import os
+import time
 
 from ..db.session import get_db
 from ..core.dependencies import get_current_business
@@ -81,6 +82,221 @@ async def get_onboarding_test_page():
     with open("app/static/whatsapp_onboarding_test.html", "r", encoding="utf-8") as f:
         content = f.read()
     return HTMLResponse(content=content)
+
+@router.get("/onboarding-production", response_class=HTMLResponse)
+async def get_onboarding_production_page():
+    """Serve the WhatsApp onboarding production page (requires authentication)."""
+    try:
+        with open("app/static/whatsapp_onboarding_production.html", "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        # If production file doesn't exist, return a basic page
+        content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>WhatsApp Business API - Production Onboarding</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+                .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; }
+                .header { background: #25D366; color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; }
+                .auth-section { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+                .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+                .form-group { margin: 15px 0; }
+                .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+                .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+                .hidden { display: none; }
+                .status-card { padding: 15px; margin: 15px 0; border-radius: 5px; }
+                .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+                .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🚀 WhatsApp Business API - Production Onboarding</h1>
+                    <p>Secure & Authenticated Setup</p>
+                </div>
+                
+                <div class="auth-section">
+                    <h2>🔐 Authentication Required</h2>
+                    <p>You must be logged in to access the WhatsApp Business API onboarding.</p>
+                    
+                    <div id="authStatus" style="padding: 10px; margin: 10px 0; background: #f8d7da; color: #721c24; border-radius: 5px;">
+                        ❌ Not authenticated - Please log in first
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Your password" required>
+                    </div>
+                    <button class="btn" onclick="login()">Login</button>
+                    <button class="btn" onclick="logout()" style="background: #6c757d; margin-left: 10px;">Logout</button>
+                </div>
+                
+                <div id="onboardingSection" class="hidden">
+                    <h2>📋 WhatsApp Business API Setup</h2>
+                    <p>Use the authenticated endpoints for secure onboarding:</p>
+                    <ul>
+                        <li><strong>Check Status:</strong> GET /api/whatsapp/status-auth</li>
+                        <li><strong>Complete Onboarding:</strong> POST /api/whatsapp/complete-onboarding-auth</li>
+                        <li><strong>Configure Webhook:</strong> POST /api/whatsapp/configure-webhook-auth</li>
+                        <li><strong>Test Messaging:</strong> POST /api/whatsapp/test-messaging-auth</li>
+                    </ul>
+                    
+                    <div id="statusResult" class="status-card hidden"></div>
+                    <button class="btn" onclick="checkStatus()">Check Current Status</button>
+                </div>
+            </div>
+            
+            <script>
+                let authToken = localStorage.getItem('authToken');
+                
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (authToken) {
+                        validateToken();
+                    }
+                });
+                
+                async function login() {
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    
+                    if (!email || !password) {
+                        alert('Please enter both email and password');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            authToken = data.access_token;
+                            localStorage.setItem('authToken', authToken);
+                            updateAuthStatus(true, email);
+                            showOnboardingSection();
+                        } else {
+                            alert('Login failed: ' + (data.detail || 'Invalid credentials'));
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        alert('Login failed: ' + error.message);
+                    }
+                }
+                
+                function logout() {
+                    authToken = null;
+                    localStorage.removeItem('authToken');
+                    updateAuthStatus(false);
+                    hideOnboardingSection();
+                }
+                
+                async function validateToken() {
+                    if (!authToken) {
+                        updateAuthStatus(false);
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/whatsapp/status-auth', {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            updateAuthStatus(true, data.business_email);
+                            showOnboardingSection();
+                        } else {
+                            logout();
+                        }
+                    } catch (error) {
+                        console.error('Token validation error:', error);
+                        logout();
+                    }
+                }
+                
+                function updateAuthStatus(authenticated, email = null) {
+                    const statusDiv = document.getElementById('authStatus');
+                    if (authenticated) {
+                        statusDiv.style.background = '#d4edda';
+                        statusDiv.style.color = '#155724';
+                        statusDiv.innerHTML = `✅ Authenticated as: ${email}`;
+                    } else {
+                        statusDiv.style.background = '#f8d7da';
+                        statusDiv.style.color = '#721c24';
+                        statusDiv.innerHTML = '❌ Not authenticated - Please log in first';
+                    }
+                }
+                
+                function showOnboardingSection() {
+                    document.getElementById('onboardingSection').classList.remove('hidden');
+                }
+                
+                function hideOnboardingSection() {
+                    document.getElementById('onboardingSection').classList.add('hidden');
+                }
+                
+                async function checkStatus() {
+                    if (!authToken) {
+                        alert('Please log in first');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/whatsapp/status-auth', {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        const resultDiv = document.getElementById('statusResult');
+                        
+                        if (response.ok) {
+                            resultDiv.className = 'status-card success';
+                            resultDiv.innerHTML = `
+                                <h3>✅ Current Status</h3>
+                                <p><strong>Business:</strong> ${data.business_name}</p>
+                                <p><strong>Email:</strong> ${data.business_email}</p>
+                                <p><strong>API Key:</strong> ${data.has_api_key ? '✅ Available' : '❌ Missing'}</p>
+                                <p><strong>WhatsApp Profile:</strong> ${data.has_whatsapp_profile ? '✅ Available' : '❌ Missing'}</p>
+                                <p><strong>WABA Status:</strong> ${data.waba_status}</p>
+                                <p><strong>Onboarding Complete:</strong> ${data.onboarding_complete ? '✅ Yes' : '❌ No'}</p>
+                            `;
+                        } else {
+                            resultDiv.className = 'status-card error';
+                            resultDiv.innerHTML = `<h3>❌ Error</h3><p>${data.detail || 'Failed to get status'}</p>`;
+                        }
+                        
+                        resultDiv.classList.remove('hidden');
+                    } catch (error) {
+                        console.error('Status check error:', error);
+                        const resultDiv = document.getElementById('statusResult');
+                        resultDiv.className = 'status-card error';
+                        resultDiv.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                        resultDiv.classList.remove('hidden');
+                    }
+                }
+            </script>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=content)
 
 @router.get("/oauth/callback")
 async def oauth_callback(
@@ -1757,3 +1973,426 @@ async def debug_whatsapp_permissions(
     except Exception as e:
         main_logger.error(f"Error in debug permissions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+
+# =============================================================================
+# AUTHENTICATED ENDPOINTS FOR PRODUCTION USE
+# =============================================================================
+
+@router.post("/complete-onboarding-auth", response_model=WhatsAppOnboardingResponse)
+async def complete_whatsapp_onboarding_authenticated(
+    request: AuthCodeExchangeRequest,
+    current_business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db)
+):
+    """
+    AUTHENTICATED VERSION: Complete WhatsApp Business API onboarding for authenticated users.
+    This endpoint requires a valid JWT token and completes onboarding for the authenticated business.
+    
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Authenticated onboarding request for business: {current_business.business_name} ({current_business.email})")
+    
+    try:
+        # Exchange auth code for access token
+        main_logger.info("Exchanging authorization code for access token...")
+        access_token = await exchange_auth_code_for_token(request.auth_code)
+        
+        if not access_token:
+            main_logger.error("Failed to exchange authorization code for access token")
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to exchange authorization code for access token. Please try again."
+            )
+        
+        main_logger.info("Successfully obtained access token")
+        
+        # Get phone number details
+        phone_details = await get_phone_number_details(
+            request.signup_data.phone_number_id, 
+            access_token
+        )
+        
+        # Update the authenticated business with WhatsApp details
+        current_business.api_key = access_token
+        current_business.whatsapp_profile = {
+            "business_id": request.signup_data.business_id,
+            "phone_number_id": request.signup_data.phone_number_id,
+            "waba_id": request.signup_data.waba_id,
+            "phone_details": phone_details,
+            "onboarding_completed_at": str(time.time()),
+            "event": request.signup_data.event,
+            "type": request.signup_data.type,
+            "version": request.signup_data.version
+        }
+        current_business.waba_status = WABAStatus.CONNECTED
+        
+        db.commit()
+        
+        main_logger.info(f"WhatsApp onboarding completed successfully for {current_business.business_name}")
+        
+        return WhatsAppOnboardingResponse(
+            success=True,
+            message="WhatsApp Business API onboarding completed successfully!",
+            business_id=request.signup_data.business_id,
+            phone_number_id=request.signup_data.phone_number_id,
+            waba_id=request.signup_data.waba_id,
+            access_token=access_token[:30] + "..." if access_token else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error during authenticated WhatsApp onboarding: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error during onboarding: {str(e)}"
+        )
+
+@router.get("/status-auth")
+async def get_onboarding_status_authenticated(
+    current_business: Business = Depends(get_current_business)
+):
+    """
+    AUTHENTICATED VERSION: Get WhatsApp onboarding status for authenticated user.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Getting onboarding status for authenticated business: {current_business.email}")
+    
+    has_api_key = bool(current_business.api_key)
+    has_whatsapp_profile = bool(current_business.whatsapp_profile)
+    
+    status_info = {
+        "business_name": current_business.business_name,
+        "business_email": current_business.email,
+        "has_api_key": has_api_key,
+        "has_whatsapp_profile": has_whatsapp_profile,
+        "waba_status": current_business.waba_status.value if current_business.waba_status else "not_started",
+        "onboarding_complete": has_api_key and has_whatsapp_profile,
+    }
+    
+    if has_whatsapp_profile and current_business.whatsapp_profile:
+        profile = current_business.whatsapp_profile
+        status_info.update({
+            "business_id": profile.get("business_id"),
+            "phone_number_id": profile.get("phone_number_id"),
+            "waba_id": profile.get("waba_id"),
+            "phone_details": profile.get("phone_details", {}),
+            "onboarding_completed_at": profile.get("onboarding_completed_at")
+        })
+    
+    return status_info
+
+@router.post("/configure-webhook-auth", response_model=WebhookConfigResponse)
+async def configure_webhook_authenticated(
+    request: WebhookConfigRequest,
+    current_business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db)
+):
+    """
+    AUTHENTICATED VERSION: Configure webhook for authenticated business.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Configuring webhook for authenticated business: {current_business.business_name}")
+    
+    if not current_business.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp Business API not configured. Complete onboarding first."
+        )
+    
+    if not current_business.whatsapp_profile:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp profile not found. Complete onboarding first."
+        )
+    
+    phone_number_id = current_business.whatsapp_profile.get("phone_number_id")
+    if not phone_number_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number ID not found in WhatsApp profile."
+        )
+    
+    try:
+        # Configure webhook using the WhatsApp API
+        success = await configure_webhook_api(
+            phone_number_id=phone_number_id,
+            access_token=current_business.api_key,
+            webhook_url=request.webhook_url,
+            verify_token=request.verify_token
+        )
+        
+        if success:
+            # Update business profile with webhook info
+            if not current_business.whatsapp_profile:
+                current_business.whatsapp_profile = {}
+            
+            current_business.whatsapp_profile["webhook_url"] = request.webhook_url
+            current_business.whatsapp_profile["webhook_verify_token"] = request.verify_token
+            current_business.whatsapp_profile["webhook_configured_at"] = str(time.time())
+            
+            db.commit()
+            
+            main_logger.info(f"Webhook configured successfully for business: {current_business.business_name}")
+            
+            return WebhookConfigResponse(
+                success=True,
+                message="Webhook configured successfully!",
+                webhook_url=request.webhook_url,
+                phone_number_id=phone_number_id,
+                instructions={
+                    "next_step": "Test webhook by sending a message to your WhatsApp Business number",
+                    "verify_token": "Make sure your webhook endpoint validates the verify_token",
+                    "webhook_events": "messages, message_status, messaging_optins, messaging_postbacks"
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to configure webhook. Please check your webhook URL and try again."
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error configuring webhook: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error configuring webhook: {str(e)}"
+        )
+
+@router.get("/webhook-status-auth")
+async def get_webhook_status_authenticated(
+    current_business: Business = Depends(get_current_business)
+):
+    """
+    AUTHENTICATED VERSION: Get webhook configuration status for authenticated business.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Getting webhook status for authenticated business: {current_business.email}")
+    
+    if not current_business.whatsapp_profile:
+        return {
+            "webhook_configured": False,
+            "message": "WhatsApp profile not found. Complete onboarding first."
+        }
+    
+    profile = current_business.whatsapp_profile
+    webhook_url = profile.get("webhook_url")
+    webhook_configured = bool(webhook_url)
+    
+    status = {
+        "business_name": current_business.business_name,
+        "webhook_configured": webhook_configured,
+        "webhook_url": webhook_url if webhook_configured else None,
+        "phone_number_id": profile.get("phone_number_id"),
+        "webhook_configured_at": profile.get("webhook_configured_at")
+    }
+    
+    if webhook_configured:
+        status["message"] = "Webhook is configured and ready to receive messages"
+    else:
+        status["message"] = "Webhook not configured. Use /configure-webhook-auth to set it up."
+    
+    return status
+
+@router.post("/phone/request-code-auth")
+async def request_phone_code_authenticated(
+    phone_number_id: str,
+    current_business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db)
+):
+    """
+    AUTHENTICATED VERSION: Request phone verification code for authenticated business.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Requesting phone code for authenticated business: {current_business.business_name}")
+    
+    if not current_business.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp Business API not configured. Complete onboarding first."
+        )
+    
+    try:
+        url = f"https://graph.facebook.com/v22.0/{phone_number_id}/request_code"
+        headers = {
+            "Authorization": f"Bearer {current_business.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {"code_method": "SMS"}
+        
+        response = requests.post(url, headers=headers, json=data)
+        result = response.json()
+        
+        if response.status_code == 200 and result.get("success"):
+            main_logger.info(f"Phone verification code requested successfully for business: {current_business.business_name}")
+            return {
+                "success": True,
+                "message": "Verification code sent to your phone number via SMS",
+                "phone_number_id": phone_number_id
+            }
+        else:
+            main_logger.error(f"Failed to request phone code: {result}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to request verification code: {result.get('error', {}).get('message', 'Unknown error')}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error requesting phone code: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error requesting phone code: {str(e)}"
+        )
+
+@router.post("/phone/verify-code-auth")
+async def verify_phone_code_authenticated(
+    phone_number_id: str,
+    otp_code: str,
+    current_business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db)
+):
+    """
+    AUTHENTICATED VERSION: Verify phone number with OTP code for authenticated business.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Verifying phone code for authenticated business: {current_business.business_name}")
+    
+    if not current_business.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp Business API not configured. Complete onboarding first."
+        )
+    
+    try:
+        url = f"https://graph.facebook.com/v22.0/{phone_number_id}/verify_code"
+        headers = {
+            "Authorization": f"Bearer {current_business.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {"code": otp_code}
+        
+        response = requests.post(url, headers=headers, json=data)
+        result = response.json()
+        
+        if response.status_code == 200 and result.get("success"):
+            # Update business profile with verification status
+            if current_business.whatsapp_profile:
+                current_business.whatsapp_profile["phone_verified"] = True
+                current_business.whatsapp_profile["phone_verified_at"] = str(time.time())
+                db.commit()
+            
+            main_logger.info(f"Phone number verified successfully for business: {current_business.business_name}")
+            return {
+                "success": True,
+                "message": "Phone number verified successfully!",
+                "phone_number_id": phone_number_id
+            }
+        else:
+            main_logger.error(f"Failed to verify phone code: {result}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to verify phone number: {result.get('error', {}).get('message', 'Invalid verification code')}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error verifying phone code: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error verifying phone code: {str(e)}"
+        )
+
+@router.post("/test-messaging-auth")
+async def test_whatsapp_messaging_authenticated(
+    recipient_phone: str,
+    test_message: str = "Hello! This is a test message from WhatsApp Business API.",
+    current_business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db)
+):
+    """
+    AUTHENTICATED VERSION: Test WhatsApp messaging for authenticated business.
+    Use this endpoint in production instead of the public version.
+    """
+    main_logger.info(f"Testing messaging for authenticated business: {current_business.business_name}")
+    
+    if not current_business.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp Business API not configured. Complete onboarding first."
+        )
+    
+    if not current_business.whatsapp_profile:
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp profile not found. Complete onboarding first."
+        )
+    
+    phone_number_id = current_business.whatsapp_profile.get("phone_number_id")
+    if not phone_number_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number ID not found in WhatsApp profile."
+        )
+    
+    try:
+        # Normalize the recipient phone number
+        normalized_phone = normalize_phone_number(recipient_phone)
+        if not normalized_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid phone number format. Please provide a valid international phone number."
+            )
+        
+        # Send test message via WhatsApp Business API
+        url = f"https://graph.facebook.com/v22.0/{phone_number_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {current_business.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "messaging_product": "whatsapp",
+            "to": normalized_phone,
+            "type": "text",
+            "text": {"body": test_message}
+        }
+        
+        response = requests.post(url, json=data, headers=headers)
+        result = response.json()
+        
+        if response.status_code == 200 and result.get("messages"):
+            message_id = result["messages"][0]["id"]
+            main_logger.info(f"Test message sent successfully for business: {current_business.business_name}, message_id: {message_id}")
+            
+            return {
+                "success": True,
+                "message": "Test message sent successfully!",
+                "recipient": normalized_phone,
+                "message_id": message_id,
+                "phone_number_id": phone_number_id
+            }
+        else:
+            main_logger.error(f"Failed to send test message: {result}")
+            error_message = result.get("error", {}).get("message", "Unknown error")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to send test message: {error_message}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        main_logger.error(f"Error sending test message: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error sending test message: {str(e)}"
+        )
+
+# =============================================================================
+# END OF AUTHENTICATED ENDPOINTS
+# =============================================================================

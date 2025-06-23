@@ -74,10 +74,22 @@ class AuthService:
         }
 
         main_logger.debug(f"OTP generated for {business_data.email}: {otp}")
-        body = f"Dear Business Owner,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
-
-        email_util.send_email(business_data.email, "OTP Verification", body)
-        main_logger.info(f"OTP sent to {business_data.email}")
+        
+        # Send OTP email using the new email utility
+        email_sent = email_util.send_otp_email(
+            recipient_email=business_data.email,
+            otp=otp,
+            business_name=business_data.business_name
+        )
+        
+        if not email_sent:
+            main_logger.error(f"Failed to send OTP email to {business_data.email}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to send OTP email. Please try again or contact support."
+            )
+        
+        main_logger.info(f"OTP sent successfully to {business_data.email}")
 
         return {
             "message": "OTP sent to your email. Please verify to complete registration."
@@ -175,10 +187,25 @@ class AuthService:
 
         otp_storage[request.email]["otp"] = otp
         otp_storage[request.email]["expiry"] = expiry
-        body = f"Dear Business Owner,\n\nYour OTP for registration is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
+        
+        # Get business name from stored data for personalization
+        business_name = stored_otp_data.get("data", {}).get("business_name", "Business Owner")
+        
+        # Send OTP email using the new email utility
+        email_sent = email_util.send_otp_email(
+            recipient_email=request.email,
+            otp=otp,
+            business_name=business_name
+        )
+        
+        if not email_sent:
+            main_logger.error(f"Failed to resend OTP email to {request.email}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to resend OTP email. Please try again or contact support."
+            )
 
-        email_util.send_email(request.email, "Registration OTP", body)
-        main_logger.info(f"OTP resent to {request.email}")
+        main_logger.info(f"OTP resent successfully to {request.email}")
         return {
             "message": "OTP has been resent to your email. Please verify to complete registration."
         }
@@ -201,13 +228,21 @@ class AuthService:
         # Construct the reset password URL
         reset_link = f"{settings.FRONTEND_RESET_PASSWORD_URL}/{business.id}/{reset_token}"
         
-        # Send email with the reset link
-        subject = "Reset Your Password"
-        body = f"Dear {business.business_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nThis link is valid for a limited time.\n\nBest regards,\nYour App Team"
+        # Send password reset email using the new email utility
+        email_sent = email_util.send_password_reset_email(
+            recipient_email=business.email,
+            reset_link=reset_link,
+            business_name=business.business_name
+        )
         
-        email_util.send_email(business.email, subject, body)
+        if not email_sent:
+            main_logger.error(f"Failed to send password reset email to {request.email}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to send password reset email. Please try again or contact support."
+            )
         
-        main_logger.info(f"Password reset link sent to {request.email}")
+        main_logger.info(f"Password reset link sent successfully to {request.email}")
         return {
             "message": "Reset password link has been sent to your email."
         }

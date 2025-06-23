@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
+import time
 
 from ..schemas.auth import (
     Token,
@@ -19,8 +20,9 @@ from ..schemas.auth import (
 )
 from ..services.auth_service import AuthService
 from ..core.dependencies import get_auth_service, get_current_business
-
-from ..logger import main_logger  # Ensure you have a logging setup
+from ..utils import email_util
+from ..logger import main_logger
+from ..core.config import settings
 
 router = APIRouter()
 
@@ -203,3 +205,62 @@ def get_business_info(current_business: Business = Depends(get_current_business)
     """Gets the complete business information."""
     main_logger.info(f"Fetching business information for {current_business.email}")
     return current_business
+
+
+@router.post("/test-email")
+async def test_email_configuration(
+    recipient_email: str,
+    current_business: Business = Depends(get_current_business)
+):
+    """
+    Test endpoint to verify email configuration is working.
+    Only accessible by authenticated users.
+    """
+    main_logger.info(f"Testing email configuration for business: {current_business.business_name}")
+    
+    try:
+        # Send a test email
+        email_sent = email_util.send_email(
+            recipient_email=recipient_email,
+            subject="Email Configuration Test - TimeGlobe",
+            body=f"""Hello {current_business.business_name},
+
+This is a test email to verify that the email configuration is working correctly.
+
+Email sent from: TimeGlobe System
+Business: {current_business.business_name}
+Email: {current_business.email}
+Test performed at: {time.strftime('%Y-%m-%d %H:%M:%S')}
+
+If you received this email, the configuration is working properly!
+
+Best regards,
+TimeGlobe Team""",
+            sender_name="TimeGlobe Test"
+        )
+        
+        if email_sent:
+            main_logger.info(f"Test email sent successfully to {recipient_email}")
+            return {
+                "success": True,
+                "message": f"Test email sent successfully to {recipient_email}",
+                "smtp_server": settings.SMTP_SERVER,
+                "smtp_port": settings.SMTP_PORT,
+                "email_from": settings.EMAIL_FROM
+            }
+        else:
+            main_logger.error(f"Failed to send test email to {recipient_email}")
+            return {
+                "success": False,
+                "message": "Failed to send test email. Check server logs for details.",
+                "smtp_server": settings.SMTP_SERVER,
+                "smtp_port": settings.SMTP_PORT,
+                "email_from": settings.EMAIL_FROM
+            }
+            
+    except Exception as e:
+        main_logger.error(f"Error in test email endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Email test failed: {str(e)}"
+        )
