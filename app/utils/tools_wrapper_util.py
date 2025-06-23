@@ -933,7 +933,7 @@ def updateProfileName(fullNm: str, firstNm: str = None, lastNm: str = None, mobi
 
 def updateProfileEmail(email: str, mobile_number: str = None):
     """Update only the email in the existing user profile"""
-    logger.info(f"Tool called: updateProfileEmail(email={email})")
+    logger.debug(f"Tool called: updateProfileEmail(email={email}, mobile_number={mobile_number})")
     start_time = time.time()
     try:
         # Validate parameters using centralized validation
@@ -942,15 +942,18 @@ def updateProfileEmail(email: str, mobile_number: str = None):
             email=email,
             mobile_number=mobile_number
         )
+        logger.debug(f"Validated parameters: {validated_params}")
         
         # Call the TimeGlobe service to update profile email
         service = _get_timeglobe_service()
+        logger.debug("Calling TimeGlobe service to update email")
         result = service.update_profile_email(
             mobile_number=validated_params.get("mobile_number", ""),
             email=validated_params["email"]
         )
         
         execution_time = time.time() - start_time
+        logger.debug(f"TimeGlobe service response: {result}")
         
         if result.get("code") == 0:
             logger.info(f"updateProfileEmail() completed successfully in {execution_time:.2f}s")
@@ -965,7 +968,7 @@ def updateProfileEmail(email: str, mobile_number: str = None):
         return {"status": "error", "message": f"Validation error: {str(e)}"}
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(f"Error in updateProfileEmail: {str(e)} - took {execution_time:.2f}s")
+        logger.error(f"Error in updateProfileEmail: {str(e)} - took {execution_time:.2f}s", exc_info=True)
         return {"status": "error", "message": str(e)}
 
 def updateProfileSalutation(salutationCd: str, mobile_number: str = None):

@@ -164,17 +164,25 @@ class MessageQueue:
                 profile = contacts[0].get('profile', {})
                 profile_name = profile.get('name', '')
             
-            # Format phone number
+            # Validate sender number
             if not sender_number:
                 logger.error("No sender number found")
                 return
                 
+            # Format phone number
             formatted_number = "".join(filter(str.isdigit, sender_number))
             
             logger.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
             
             # Process the message
-            await self._process_message_universal(formatted_number, message_body.lower(), message_id, business_phone_number, service, worker_id)
+            await self._process_message_universal(
+                formatted_number, 
+                message_body.lower(), 
+                message_id, 
+                business_phone_number, 
+                service, 
+                worker_id
+            )
             
         except Exception as e:
             logger.error(f"Error processing WhatsApp message: {str(e)}")
@@ -182,29 +190,30 @@ class MessageQueue:
     async def _process_message_universal(self, number: str, incoming_msg: str, message_id: str, business_phone_number: str, service: WhatsAppBusinessService, worker_id: int):
         """Universal message processor for WhatsApp Business API."""
         try:
-            # Process the message with your AI assistant
+            # Process the message with AI assistant
             logger.info(f"Worker {worker_id} generating response for message ID: {message_id} from user: {number}")
             from ..utils.tools_wrapper_util import get_response_from_gpt, format_response
             
+            # Generate and format response
             response = get_response_from_gpt(incoming_msg, number)
-            
-            if response:
-                # Format the response
-                formatted_response = format_response(response)
-                
-                # Send the response using WhatsApp Business API service
-                if not business_phone_number:
-                    logger.error(f"No business phone number available for message ID: {message_id}")
-                    return
-                
-                resp = service.send_message(number, formatted_response, business_phone_number)
-                
-                if resp.get('success'):
-                    logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
-                else:
-                    logger.error(f"Worker {worker_id} failed to send response for message ID: {message_id}: {resp.get('error', 'Unknown error')}")
-            else:
+            if not response:
                 logger.error(f"No response generated for message ID: {message_id}")
+                return
+                
+            formatted_response = format_response(response)
+            
+            # Validate business phone number
+            if not business_phone_number:
+                logger.error(f"No business phone number available for message ID: {message_id}")
+                return
+            
+            # Send the response
+            resp = service.send_message(number, formatted_response, business_phone_number)
+            
+            if resp.get('success'):
+                logger.info(f"Worker {worker_id} sent response for message ID: {message_id}")
+            else:
+                logger.error(f"Worker {worker_id} failed to send response for message ID: {message_id}: {resp.get('error', 'Unknown error')}")
                 
         except Exception as e:
             logger.error(f"Error in message processing for message ID {message_id}: {str(e)}")

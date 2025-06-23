@@ -16,9 +16,10 @@ from datetime import timedelta
 from .utils.timezone_util import BERLIN_TZ
 
 
-# Set up logging
+# Set up logging with debug level
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG,
+    format="%(asctime)s - [%(threadName)s] - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s() - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class ChatAgent:
         """Initialize the ChatAgent with API key and model name."""
         # Use the provided API key or fall back to the one from settings
         api_key = api_key or settings.OPENAI_API_KEY
+        logger.debug(f'Initializing ChatAgent with model: {model}')
         logger.info(f'Using OpenAI API key from settings: {api_key[:5]}...' if api_key else 'No API key provided')
         self.client = OpenAI(api_key=api_key)
         self.model = model
@@ -39,17 +41,21 @@ class ChatAgent:
         
         # Load available functions from the tools wrapper
         self.available_functions = self._get_available_functions()
+        logger.debug(f'Loaded {len(self.available_functions)} available functions')
         
         # Initialize repository if db is provided
         self.conversation_repo = ConversationRepository(db) if db else None
+        logger.debug('Conversation repository initialized' if self.conversation_repo else 'No conversation repository')
 
     def _get_available_functions(self) -> List[Dict[str, Any]]:
         """Define the functions available to the model."""
+        logger.debug('Getting available functions from Tools schema')
         return Tools
 
     def _get_function_mapping(self) -> Dict[str, Callable]:
         """Get cached function mapping or create a new one."""
         if self._function_mapping is None:
+            logger.debug('Creating new function mapping')
             # Import only once when needed
             from .utils.tools_wrapper_util import (
                 getSites,
@@ -84,6 +90,7 @@ class ChatAgent:
                 "updateProfileSalutation": updateProfileSalutation,
                 "updateDataProtection": updateDataProtection,
             }
+            logger.debug(f'Created function mapping with {len(self._function_mapping)} functions')
         
         return self._function_mapping
 
@@ -100,6 +107,8 @@ class ChatAgent:
         business_phone = message_cache.get_business_phone(user_id)
         if business_phone:
             logger.info(f"Found business phone number for user {user_id}: {business_phone}")
+        else:
+            logger.debug(f"No business phone found for user {user_id}")
         
         for tool_call in tool_calls:
             # Handle different object formats
@@ -107,6 +116,7 @@ class ChatAgent:
                 function_name = tool_call.function.name
                 function_args = json.loads(tool_call.function.arguments)
                 tool_call_id = tool_call.id
+                logger.debug(f"Processing tool call: {function_name} with args: {function_args}")
             except AttributeError as e:
                 logger.error(f"Error accessing function attributes as object: {str(e)}")
                 try:
@@ -114,6 +124,7 @@ class ChatAgent:
                     function_name = tool_call["function"]["name"]
                     function_args = json.loads(tool_call["function"]["arguments"])
                     tool_call_id = tool_call["id"]
+                    logger.debug(f"Successfully accessed tool call as dictionary: {function_name}")
                 except Exception as e2:
                     logger.error(f"Both object and dict access failed: {str(e2)}")
                     continue
@@ -134,43 +145,47 @@ class ChatAgent:
                 if function_name == "bookAppointment":
                     # Add customerId if not provided
                     if "customerId" not in function_args:
+                        logger.debug(f"Adding customerId={user_id} to bookAppointment call")
                         function_args["customerId"] = user_id
                     
                     # Add business_phone_number if available
                     if business_phone and "business_phone_number" not in function_args:
-                        logger.info(f"Adding business phone {business_phone} to bookAppointment call")
+                        logger.debug(f"Adding business phone {business_phone} to bookAppointment call")
                         function_args["business_phone_number"] = business_phone
                         
                 elif function_name == "cancelAppointment":
                     # Add mobileNumber if needed by the wrapper
+                    logger.debug(f"Adding mobileNumber={user_id} to cancelAppointment call")
                     function_args["mobileNumber"] = user_id
                 elif function_name == "getProfile" or function_name == "getOrders":
                     # These functions have a mobile_number parameter
                     if not function_args:
                         function_args = {}
                     function_args["mobile_number"] = user_id
-                    logger.info(f"Adding mobile_number={user_id} to {function_name} call")
+                    logger.debug(f"Adding mobile_number={user_id} to {function_name} call")
                 elif function_name == "getBookableCustomers":
                     # This function has a mobile_number parameter
                     if "mobile_number" not in function_args:
                         function_args["mobile_number"] = user_id
-                        logger.info(f"Adding mobile_number={user_id} to {function_name} call")
+                        logger.debug(f"Adding mobile_number={user_id} to {function_name} call")
                 elif function_name == "store_profile":
                     # For store_profile, ensure mobile_number is set
                     if "mobile_number" not in function_args:
                         function_args["mobile_number"] = user_id
+                        logger.debug(f"Adding mobile_number={user_id} to store_profile call")
                 elif function_name in ["updateProfileName", "updateProfileEmail", "updateProfileSalutation", "updateDataProtection"]:
                     # For update profile functions, ensure mobile_number is set
                     if "mobile_number" not in function_args:
                         function_args["mobile_number"] = user_id
-                        logger.info(f"Adding mobile_number={user_id} to {function_name} call")
+                        logger.debug(f"Adding mobile_number={user_id} to {function_name} call")
                 
-                # Debug logging
-                logger.info(f"Calling function {function_name} with args: {function_args}")
+                # Debug logging before function call
+                logger.debug(f"Calling function {function_name} with final args: {function_args}")
                 
                 # Execute the function with proper error handling
                 try:
                     function_response = function_to_call(**function_args)
+                    logger.debug(f"Function {function_name} response: {function_response}")
                 except TypeError as type_error:
                     # Handle parameter mismatches more gracefully
                     logger.error(f"TypeError in {function_name}: {str(type_error)}")
@@ -178,11 +193,11 @@ class ChatAgent:
                     # Special handling for common parameter errors
                     if function_name == "getProfile" and "mobile_number" in str(type_error):
                         # Try calling without parameters
-                        logger.info("Retrying getProfile without any parameters")
+                        logger.debug("Retrying getProfile without any parameters")
                         function_response = getProfile()
                     elif function_name == "getOrders" and "mobile_number" in str(type_error):
                         # Try calling without parameters
-                        logger.info("Retrying getOrders without any parameters")
+                        logger.debug("Retrying getOrders without any parameters")
                         function_response = getOrders()
                     else:
                         # If unsure how to fix, return error
@@ -197,7 +212,7 @@ class ChatAgent:
                 logger.info(f"Successfully executed {function_name} for user {user_id}")
             except Exception as e:
                 error_message = f"Error executing {function_name}: {str(e)}"
-                logger.error(error_message)
+                logger.error(error_message, exc_info=True)  # Include full traceback
                 results.append({
                     "tool_call_id": tool_call_id,
                     "role": "tool",

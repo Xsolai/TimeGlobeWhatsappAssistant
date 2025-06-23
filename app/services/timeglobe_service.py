@@ -801,20 +801,22 @@ class TimeGlobeService:
         Returns:
             dict: Response containing success/error status and message
         """
-        main_logger.debug(f"Updating email for mobile number: {mobile_number}")
+        main_logger.debug(f"Updating email for mobile number: {mobile_number} to {email}")
 
         # Ensure mobile number is properly formatted
         if mobile_number.startswith("0"):
             mobile_number = mobile_number[1:]  # Remove leading zero
+            main_logger.debug(f"Removed leading zero from mobile number: {mobile_number}")
         if not mobile_number.startswith("+"):
             mobile_number = "+" + mobile_number
+            main_logger.debug(f"Added + prefix to mobile number: {mobile_number}")
 
         # Create the payload with just the email field
         payload = {
             "email": email
         }
 
-        main_logger.debug(f"Sending email update to API: {payload}")
+        main_logger.debug(f"Sending email update to API with payload: {payload}")
 
         try:
             response = self.request(
@@ -825,7 +827,7 @@ class TimeGlobeService:
                 mobile_number=mobile_number,
             )
 
-            main_logger.debug(f"API response for update_profile_email: {response}")
+            main_logger.debug(f"Raw API response for update_profile_email: {response}")
 
             if response and isinstance(response, dict):
                 code = response.get("code")
@@ -834,16 +836,17 @@ class TimeGlobeService:
                 if code == 0:
                     main_logger.info(f"Email updated successfully for: {mobile_number}")
                     # Update email in local database
+                    main_logger.debug("Updating email in local database")
                     self.timeglobe_repo.update_customer_email(mobile_number, email)
                     return {"code": 0, "message": "Email updated successfully"}
                 else:
-                    main_logger.error(f"API returned error code: {code}")
+                    main_logger.error(f"API returned error code: {code}, full response: {response}")
                     return response
             else:
                 main_logger.error(f"Invalid response from API: {response}")
                 return {"code": -1, "message": "Invalid response from API"}
         except Exception as e:
-            main_logger.error(f"Error updating email: {str(e)}")
+            main_logger.error(f"Error updating email: {str(e)}", exc_info=True)
             return {"code": -1, "message": f"Error: {str(e)}"}
 
     def update_profile_name(self, mobile_number: str, full_name: str, first_name: str = None, last_name: str = None):
