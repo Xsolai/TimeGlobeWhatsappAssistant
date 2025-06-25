@@ -769,6 +769,7 @@ def bookAppointment(siteCd: str, reminderSms: bool, reminderEmail: bool, positio
     if not positions or len(positions) == 0:
         return {"status": "error", "message": "No positions specified"}
     
+    logger.info(f"bookAppointment wrapper called with customerId={customerId}, business_phone_number={business_phone_number}")
     # Pass all positions to the booking function
     return book_appointment(
         mobileNumber=customerId,
