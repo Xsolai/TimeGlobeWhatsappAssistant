@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Any, Optional
 from ..services.whatsapp_business_service import WhatsAppBusinessService
 from ..db.session import SessionLocal
+from .message_cache import MessageCache
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +143,9 @@ class MessageQueue:
             timestamp = message.get('timestamp', '')
             sender_number = message.get('from')
             
-            logger.info(f"Worker {worker_id} processing message - ID: {message_id}, Type: {message_type}, From: {sender_number}")
+            logger.info("------------------------------------")
+            logger.info(f"[QUEUE FLOW] Worker {worker_id} processing message - ID: {message_id}, Type: {message_type}, From: {sender_number}")
+            logger.info("------------------------------------")
             
             # Only process text messages
             if message_type != 'text':
@@ -172,7 +175,14 @@ class MessageQueue:
             # Format phone number
             formatted_number = "".join(filter(str.isdigit, sender_number))
             
-            logger.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
+            # Store business phone in cache
+            message_cache = MessageCache.get_instance()
+            message_cache.set_business_phone(formatted_number, business_phone_number)
+            
+            logger.info("------------------------------------")
+            logger.info(f"[QUEUE FLOW] Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
+            logger.info(f"[QUEUE FLOW] Stored business phone {business_phone_number} for user {formatted_number}")
+            logger.info("------------------------------------")
             
             # Process the message
             await self._process_message_universal(
