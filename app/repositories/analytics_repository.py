@@ -17,6 +17,11 @@ class AnalyticsRepository:
     def get_appointments_by_timeframe(self, business_phone: str, start_date: datetime, end_date: datetime):
         """Return appointment and service counts grouped by day for a date range."""
         try:
+            # Normalize business phone number - remove + prefix if present
+            if business_phone and business_phone.startswith('+'):
+                business_phone = business_phone[1:]
+                main_logger.info(f"Normalized business phone number to: {business_phone}")
+
             # Count unique appointments and total services for each day
             query = (
                 self.db.query(
@@ -274,6 +279,11 @@ class AnalyticsRepository:
             Dictionary with summary metrics
         """
         try:
+            # Normalize business phone number - remove + prefix if present
+            if business_phone and business_phone.startswith('+'):
+                business_phone = business_phone[1:]
+                main_logger.info(f"Normalized business phone number to: {business_phone}")
+
             # Use provided start and end dates for filtering
             
             
@@ -481,6 +491,11 @@ class AnalyticsRepository:
             List of dictionaries with recent appointment details.
         """
         try:
+            # Normalize business phone number - remove + prefix if present
+            if business_phone and business_phone.startswith('+'):
+                business_phone = business_phone[1:]
+                main_logger.info(f"Normalized business phone number to: {business_phone}")
+
             query = (
                 self.db.query(
                     BookModel.id.label('booking_id'),

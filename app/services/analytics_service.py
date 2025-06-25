@@ -26,6 +26,11 @@ class AnalyticsService:
             Dictionary with all dashboard components
         """
         try:
+            # Normalize business phone number - remove + prefix if present
+            if business_phone and business_phone.startswith('+'):
+                business_phone = business_phone[1:]
+                main_logger.info(f"Normalized business phone number to: {business_phone}")
+
             # Determine the date range based on the month parameter
             if month:
                 try:
