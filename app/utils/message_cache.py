@@ -86,7 +86,7 @@ class MessageCache:
             self.logger.warning(f"Invalid parameters for set_business_phone: user={user_number}, phone={business_phone}")
             return False
         
-        self.logger.debug(f"Storing business phone {business_phone} for user {user_number}")
+        self.logger.info(f"Storing business phone {business_phone} for user {user_number}")
         self.business_phones[user_number] = business_phone
         return True
         
