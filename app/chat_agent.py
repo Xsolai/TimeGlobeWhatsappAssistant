@@ -106,9 +106,13 @@ class ChatAgent:
         message_cache = MessageCache.get_instance()
         business_phone = message_cache.get_business_phone(user_id)
         if business_phone:
-            logger.info(f"Found business phone number for user {user_id}: {business_phone}")
+            logger.info("------------------------------------")
+            logger.info(f"[CHAT FLOW] Found business phone number for user {user_id}: {business_phone}")
+            logger.info("------------------------------------")
         else:
-            logger.debug(f"No business phone found for user {user_id}")
+            logger.debug("------------------------------------")
+            logger.debug(f"[CHAT FLOW] No business phone found for user {user_id}")
+            logger.debug("------------------------------------")
         
         for tool_call in tool_calls:
             # Handle different object formats

@@ -83,24 +83,34 @@ class MessageCache:
     def set_business_phone(self, user_number, business_phone):
         """Store the business phone number for a user"""
         if not user_number or not business_phone:
-            self.logger.warning(f"Invalid parameters for set_business_phone: user={user_number}, phone={business_phone}")
+            self.logger.warning("------------------------------------")
+            self.logger.warning(f"[CACHE FLOW] Invalid parameters for set_business_phone: user={user_number}, phone={business_phone}")
+            self.logger.warning("------------------------------------")
             return False
         
-        self.logger.info(f"Storing business phone {business_phone} for user {user_number}")
+        self.logger.info("------------------------------------")
+        self.logger.info(f"[CACHE FLOW] Storing business phone {business_phone} for user {user_number}")
+        self.logger.info("------------------------------------")
         self.business_phones[user_number] = business_phone
         return True
         
     def get_business_phone(self, user_number):
         """Get the stored business phone number for a user"""
         if not user_number:
-            self.logger.warning("Empty user_number passed to get_business_phone")
+            self.logger.warning("------------------------------------")
+            self.logger.warning("[CACHE FLOW] Empty user_number passed to get_business_phone")
+            self.logger.warning("------------------------------------")
             return None
         
         business_phone = self.business_phones.get(user_number)
         if not business_phone:
-            self.logger.debug(f"No business phone found for user {user_number}")
+            self.logger.debug("------------------------------------")
+            self.logger.debug(f"[CACHE FLOW] No business phone found for user {user_number}")
+            self.logger.debug("------------------------------------")
         else:
-            self.logger.debug(f"Retrieved business phone {business_phone} for user {user_number}")
+            self.logger.debug("------------------------------------")
+            self.logger.debug(f"[CACHE FLOW] Retrieved business phone {business_phone} for user {user_number}")
+            self.logger.debug("------------------------------------")
             
         return business_phone
     

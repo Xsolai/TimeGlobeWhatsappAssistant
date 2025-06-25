@@ -144,7 +144,9 @@ async def process_webhook_value(value: dict, service):
         business_phone_number = metadata.get('display_phone_number')
         phone_number_id = metadata.get('phone_number_id')
         
-        logging.info(f"Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
+        logging.info("------------------------------------")
+        logging.info(f"[WEBHOOK FLOW] Received webhook with Business phone: {business_phone_number}, Phone ID: {phone_number_id}")
+        logging.info("------------------------------------")
         
         # Process messages
         messages = value.get('messages', [])
@@ -166,7 +168,9 @@ async def process_whatsapp_message(message: dict, value: dict, business_phone_nu
         timestamp = message.get('timestamp', '')
         sender_number = message.get('from')
         
-        logging.info(f"Processing message - ID: {message_id}, Type: {message_type}, From: {sender_number}")
+        logging.info("------------------------------------")
+        logging.info(f"[WEBHOOK FLOW] Processing message - ID: {message_id}, Type: {message_type}, From: {sender_number}")
+        logging.info("------------------------------------")
         
         # Only process text messages
         if message_type != 'text':
@@ -198,14 +202,19 @@ async def process_whatsapp_message(message: dict, value: dict, business_phone_nu
         # Check for duplicate messages
         message_cache = MessageCache.get_instance()
         if message_cache.is_processed(message_id):
-            logging.warning(f"DUPLICATE MESSAGE DETECTED - Skipping message ID: {message_id}")
+            logging.info("------------------------------------")
+            logging.warning(f"[WEBHOOK FLOW] DUPLICATE MESSAGE DETECTED - Skipping message ID: {message_id}")
+            logging.info("------------------------------------")
             return
         
         # Mark as processed
         message_cache.mark_as_processed(message_id)
         message_cache.set_business_phone(formatted_number, business_phone_number)
         
-        logging.info(f"Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
+        logging.info("------------------------------------")
+        logging.info(f"[WEBHOOK FLOW] Message from {formatted_number} (contact: {profile_name}): '{message_body}'")
+        logging.info(f"[WEBHOOK FLOW] Successfully stored business phone {business_phone_number} for user {formatted_number}")
+        logging.info("------------------------------------")
         
         # Process the message with business phone number
         await process_message_universal(formatted_number, message_body.lower(), message_id, service, business_phone_number)
