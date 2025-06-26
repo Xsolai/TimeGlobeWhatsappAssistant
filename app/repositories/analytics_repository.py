@@ -14,13 +14,6 @@ class AnalyticsRepository:
     
     def __init__(self, db: Session):
         self.db = db
-        self.cutoff_date = datetime(2025, 4, 1)
-        
-    def _adjust_time(self, dt: datetime) -> datetime:
-        """Add 2 hours to times after April 1st, 2025"""
-        if dt and dt >= self.cutoff_date:
-            return dt + timedelta(hours=2)
-        return dt
         
     def get_appointments_by_timeframe(self, business_phone: str, start_date: datetime, end_date: datetime):
         """Return appointment and service counts grouped by day for a date range."""
@@ -33,13 +26,7 @@ class AnalyticsRepository:
             # Count unique appointments, total services, and cancelled appointments for each day
             query = (
                 self.db.query(
-                    func.date(
-                        case(
-                            (BookModel.created_at >= self.cutoff_date,
-                             BookModel.created_at + timedelta(hours=2)),
-                            else_=BookModel.created_at
-                        )
-                    ).label("date"),
+                    func.date(BookModel.created_at).label("date"),
                     func.count(func.distinct(BookModel.id)).label("count"),
                     func.count(BookingDetail.id).label("services"),
                     func.sum(
@@ -55,24 +42,8 @@ class AnalyticsRepository:
                     BookModel.created_at >= start_date,
                     BookModel.created_at <= end_date,
                 )
-                .group_by(
-                    func.date(
-                        case(
-                            (BookModel.created_at >= self.cutoff_date,
-                             BookModel.created_at + timedelta(hours=2)),
-                            else_=BookModel.created_at
-                        )
-                    )
-                )
-                .order_by(
-                    func.date(
-                        case(
-                            (BookModel.created_at >= self.cutoff_date,
-                             BookModel.created_at + timedelta(hours=2)),
-                            else_=BookModel.created_at
-                        )
-                    )
-                )
+                .group_by(func.date(BookModel.created_at))
+                .order_by(func.date(BookModel.created_at))
             )
 
             results = query.all()
@@ -333,25 +304,15 @@ class AnalyticsRepository:
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (
-                                case(
-                                    (BookModel.cancelled_at >= self.cutoff_date,
-                                     BookModel.cancelled_at + timedelta(hours=2)),
-                                    else_=BookModel.cancelled_at
-                                ).between(start_date, end_date),
-                                1
-                            ),
+                            (BookModel.cancelled_at.between(start_date, end_date), 1),
                             else_=0
                         )
                     ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    case(
-                        (BookModel.created_at >= self.cutoff_date,
-                         BookModel.created_at + timedelta(hours=2)),
-                        else_=BookModel.created_at
-                    ).between(start_date, end_date)
+                    BookModel.created_at >= start_date,
+                    BookModel.created_at <= end_date
                 )
                 .first()
             )
@@ -366,25 +327,15 @@ class AnalyticsRepository:
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (
-                                case(
-                                    (BookModel.cancelled_at >= self.cutoff_date,
-                                     BookModel.cancelled_at + timedelta(hours=2)),
-                                    else_=BookModel.cancelled_at
-                                ).between(previous_start_date, previous_end_date),
-                                1
-                            ),
+                            (BookModel.cancelled_at.between(previous_start_date, previous_end_date), 1),
                             else_=0
                         )
                     ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    case(
-                        (BookModel.created_at >= self.cutoff_date,
-                         BookModel.created_at + timedelta(hours=2)),
-                        else_=BookModel.created_at
-                    ).between(previous_start_date, previous_end_date)
+                    BookModel.created_at >= previous_start_date,
+                    BookModel.created_at <= previous_end_date
                 )
                 .first()
             )
@@ -399,25 +350,15 @@ class AnalyticsRepository:
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (
-                                case(
-                                    (BookModel.cancelled_at >= self.cutoff_date,
-                                     BookModel.cancelled_at + timedelta(hours=2)),
-                                    else_=BookModel.cancelled_at
-                                ).between(today_start, today_end),
-                                1
-                            ),
+                            (BookModel.cancelled_at.between(today_start, today_end), 1),
                             else_=0
                         )
                     ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    case(
-                        (BookModel.created_at >= self.cutoff_date,
-                         BookModel.created_at + timedelta(hours=2)),
-                        else_=BookModel.created_at
-                    ).between(today_start, today_end)
+                    BookModel.created_at >= today_start,
+                    BookModel.created_at <= today_end
                 )
                 .first()
             )
@@ -440,11 +381,7 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    case(
-                        (BookingDetail.created_at >= self.cutoff_date,
-                         BookingDetail.created_at + timedelta(hours=2)),
-                        else_=BookingDetail.created_at
-                    ).between(today_start, today_end),
+                    func.date(BookingDetail.created_at) == today,
                     BookModel.cancelled_at.is_(None)  # Only count services for non-cancelled appointments
                 )
                 .scalar() or 0
@@ -597,20 +534,8 @@ class AnalyticsRepository:
                 self.db.query(
                     BookModel.id.label('booking_id'),
                     BookingDetail.item_nm.label('service_name'),
-                    func.date(
-                        case(
-                            (BookingDetail.created_at >= self.cutoff_date,
-                             BookingDetail.created_at + timedelta(hours=2)),
-                            else_=BookingDetail.created_at
-                        )
-                    ).label('appointment_date'),
-                    func.time(
-                        case(
-                            (BookingDetail.created_at >= self.cutoff_date,
-                             BookingDetail.created_at + timedelta(hours=2)),
-                            else_=BookingDetail.created_at
-                        )
-                    ).label('appointment_time'),
+                    func.date(BookingDetail.created_at).label('appointment_date'),
+                    func.time(BookingDetail.created_at).label('appointment_time'),
                     CustomerModel.first_name.label('customer_first_name'),
                     CustomerModel.last_name.label('customer_last_name'),
                     CustomerModel.mobile_number.label('customer_phone'),
