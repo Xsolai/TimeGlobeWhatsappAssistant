@@ -225,13 +225,13 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(order_id: int):
+def cancel_appointment(order_id: int, mobileNumber: str, siteCd: str):
     """Cancel an appointment with the given order ID."""
     logger.info(f"Tool called: cancel_appointment(order_id={order_id})")
     start_time = time.time()
     
     try:
-        result = _get_timeglobe_service().cancel_appointment(order_id)
+        result = _get_timeglobe_service().cancel_appointment(order_id, mobileNumber, siteCd)
         
         execution_time = time.time() - start_time
         logger.info(f"cancel_appointment() completed in {execution_time:.2f}s")
@@ -853,9 +853,9 @@ def cancelAppointment(siteCd: str, orderId: int, mobileNumber: str = ""):
         execution_time = time.time() - start_time
         logger.info(f"cancelAppointment validation completed in {execution_time:.2f}s")
         
-    # The mobileNumber will be provided by the handler
+        # The mobileNumber will be provided by the handler
         return cancel_appointment(
-            orderId=str(validated_params["orderId"]), 
+            order_id=validated_params["orderId"],  # Changed from orderId to order_id
             mobileNumber=mobileNumber, 
             siteCd=validated_params["siteCd"]
         )
