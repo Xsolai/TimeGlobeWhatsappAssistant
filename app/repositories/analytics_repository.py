@@ -23,6 +23,10 @@ class AnalyticsRepository:
                 business_phone = business_phone[1:]
                 main_logger.info(f"Normalized business phone number to: {business_phone}")
 
+            # Define the cutoff date (April 1st, 2025)
+            cutoff_date = datetime(2025, 4, 1)
+            main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+
             # Count unique appointments, total services, and cancelled appointments for each day
             query = (
                 self.db.query(
@@ -34,7 +38,8 @@ class AnalyticsRepository:
                             (BookModel.cancelled_at.between(start_date, end_date), 1),
                             else_=0
                         )
-                    ).label("cancelled_count")
+                    ).label("cancelled_count"),
+                    func.min(BookingDetail.created_at).label("min_time"),  # Get earliest appointment time for the day
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
@@ -48,15 +53,32 @@ class AnalyticsRepository:
 
             results = query.all()
 
-            return [
-                {
-                    "date": str(row.date), 
+            adjusted_appointments = []
+            for row in results:
+                # Get the base date from the result
+                base_date = datetime.strptime(str(row.date), "%Y-%m-%d")
+                
+                # If we have a min_time, use it to determine the hour adjustment
+                if row.min_time:
+                    hours_to_add = 2 if row.min_time >= cutoff_date else 1
+                    adjusted_date = base_date + timedelta(hours=hours_to_add)
+                    
+                    main_logger.info(
+                        f"Date {base_date.strftime('%Y-%m-%d')}: Adjusting time - "
+                        f"Original: {base_date.strftime('%Y-%m-%d %H:%M')} → "
+                        f"Adjusted: {adjusted_date.strftime('%Y-%m-%d %H:%M')} (+{hours_to_add} hour{'s' if hours_to_add > 1 else ''})"
+                    )
+                else:
+                    adjusted_date = base_date
+                
+                adjusted_appointments.append({
+                    "date": adjusted_date.strftime("%Y-%m-%d"), 
                     "count": row.count, 
                     "services": row.services,
                     "cancelled": row.cancelled_count or 0
-                }
-                for row in results
-            ]
+                })
+            
+            return adjusted_appointments
             
         except Exception as e:
             main_logger.error(f"Error getting appointments by timeframe: {str(e)}")
@@ -530,6 +552,10 @@ class AnalyticsRepository:
                 business_phone = business_phone[1:]
                 main_logger.info(f"Normalized business phone number to: {business_phone}")
 
+            # Define the cutoff date (April 1st, 2025)
+            cutoff_date = datetime(2025, 4, 1)
+            main_logger.info(f"Using cutoff date: {cutoff_date.strftime('%Y-%m-%d')}")
+
             query = (
                 self.db.query(
                     BookModel.id.label('booking_id'),
@@ -550,18 +576,34 @@ class AnalyticsRepository:
             
             results = query.all()
             
-            return [
-                {
+            adjusted_appointments = []
+            for row in results:
+                # Parse the appointment datetime
+                appointment_date = datetime.strptime(str(row.appointment_date), "%Y-%m-%d")
+                appointment_time = datetime.strptime(str(row.appointment_time), "%H:%M:%S").time()
+                appointment_datetime = datetime.combine(appointment_date, appointment_time)
+                
+                # Adjust the time based on cutoff date
+                hours_to_add = 2 if appointment_datetime >= cutoff_date else 1
+                adjusted_datetime = appointment_datetime + timedelta(hours=hours_to_add)
+                
+                main_logger.info(
+                    f"Appointment {row.booking_id}: Adjusting time - "
+                    f"Original: {appointment_datetime.strftime('%Y-%m-%d %H:%M')} → "
+                    f"Adjusted: {adjusted_datetime.strftime('%Y-%m-%d %H:%M')} (+{hours_to_add} hour{'s' if hours_to_add > 1 else ''})"
+                )
+                
+                adjusted_appointments.append({
                     "booking_id": row.booking_id,
                     "service_name": row.service_name or "Unknown Service",
-                    "appointment_date": str(row.appointment_date),
-                    "appointment_time": str(row.appointment_time),
+                    "appointment_date": adjusted_datetime.strftime("%Y-%m-%d"),
+                    "appointment_time": adjusted_datetime.strftime("%H:%M:%S"),
                     "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
                     "customer_phone": row.customer_phone,
                     "status": AppointmentStatus.BOOKED.value if row.status is None else row.status.value
-                }
-                for row in results
-            ]
+                })
+            
+            return adjusted_appointments
             
         except Exception as e:
             main_logger.error(f"Error getting recent appointments: {str(e)}")
