@@ -37,7 +37,7 @@ import { useAuth } from '../contexts/AuthContext';
 import UserMenu from '../components/UserMenu';
 import Logo from '../components/Logo';
 import TopBar from '../components/TopBar';
-import analyticsService, { DashboardData, DateRangeData } from '../services/analyticsService';
+import analyticsService from '../services/analyticsService';
 import authService from '../services/authService';
 import {
   LineChart,
@@ -49,6 +49,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import useCountUp from '../hooks/useCountUp';
+import { DashboardData, DateRangeData, AppointmentActivity } from '../types';
 
 // Utility function to format date string
 const formatDate = (dateString: string) => {
@@ -362,6 +363,10 @@ const DashboardPage: React.FC = () => {
   const todayAppointmentsEnd = dashboardData?.summary?.today_appointments || 0;
   const todayAppointments = useCountUp({ end: todayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
 
+  // Example for "Stornierte Termine Heute"
+  const todayCancelledEnd = dashboardData?.summary?.today_cancelled || 0;
+  const todayCancelled = useCountUp({ end: todayCancelledEnd, duration: 3500, startOnMount: !!dashboardData });
+
   // Example for "Gebuchte Leistungen Heute"
   const servicesBookedTodayEnd = dashboardData?.summary?.todays_services || 0;
   const servicesBookedToday = useCountUp({ end: servicesBookedTodayEnd, duration: 3500, startOnMount: !!dashboardData });
@@ -375,6 +380,10 @@ const DashboardPage: React.FC = () => {
   // Example for "Termine" in month overview
   const thirtyDayAppointmentsEnd = dashboardData?.summary?.monthly_appointments || 0;
   const thirtyDayAppointments = useCountUp({ end: thirtyDayAppointmentsEnd, duration: 3500, startOnMount: !!dashboardData });
+
+  // Example for "Stornierte Termine" in month overview
+  const monthlyCancelledEnd = dashboardData?.summary?.monthly_cancelled || 0;
+  const monthlyCancelled = useCountUp({ end: monthlyCancelledEnd, duration: 3500, startOnMount: !!dashboardData });
 
   // Example for "Gebuchte Services" in month overview
   const monthlyServicesBookedEnd = dashboardData?.summary?.monthly_services_booked || 0;
@@ -535,9 +544,24 @@ const DashboardPage: React.FC = () => {
                               {getDayTitle('appointments', selectedDate)}
                             </Typography>
                           </Box>
-                          <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
-                            {todayAppointments}
-                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <Box>
+                              <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                                {todayAppointments}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Bestätigt
+                              </Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="h5" sx={{ color: '#f44336' }}>
+                                {todayCancelled}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Storniert
+                              </Typography>
+                            </Box>
+                          </Box>
                         </Paper>
                       </Box>
 
@@ -640,9 +664,24 @@ const DashboardPage: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               Termine
                             </Typography>
-                            <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
-                              {thirtyDayAppointments}
-                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                              <Box>
+                                <Typography variant="h4" sx={{ fontWeight: 500, color: '#1976D2' }}>
+                                  {thirtyDayAppointments}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Bestätigt
+                                </Typography>
+                              </Box>
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography variant="h5" sx={{ color: '#f44336' }}>
+                                  {monthlyCancelled}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Storniert
+                                </Typography>
+                              </Box>
+                            </Box>
                           </Box>
                           <Box>
                             <Typography variant="body2" color="text.secondary">
@@ -692,7 +731,9 @@ const DashboardPage: React.FC = () => {
                                 <RechartsTooltip
                                   formatter={(value: number, name: string) => [
                                     value,
-                                    name === 'count' ? 'Termine' : 'Services'
+                                    name === 'count' ? 'Termine' : 
+                                    name === 'services' ? 'Services' : 
+                                    'Storniert'
                                   ]}
                                   labelFormatter={(label: string) => {
                                     return new Date(label).toLocaleDateString('de-DE', {
@@ -714,6 +755,14 @@ const DashboardPage: React.FC = () => {
                                   type="monotone"
                                   dataKey="services"
                                   stroke="#FF9800"
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="cancelled"
+                                  stroke="#f44336"
                                   strokeWidth={2}
                                   dot={{ r: 3 }}
                                   activeDot={{ r: 5 }}
@@ -823,24 +872,48 @@ const DashboardPage: React.FC = () => {
                   <Stack spacing={2}>
                     {processedActivities.map((activity) => (
                       <Box
-                        key={activity.booking_id} // booking_id bleibt der Key für den gruppierten Termin
+                        key={activity.booking_id}
                         sx={{
                           p: 2,
                           borderRadius: 1,
-                          backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                          backgroundColor: activity.status === 'cancelled' ? 
+                            'rgba(244, 67, 54, 0.04)' : 'rgba(25, 118, 210, 0.04)',
                           transition: 'all 0.2s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                            backgroundColor: activity.status === 'cancelled' ? 
+                              'rgba(244, 67, 54, 0.08)' : 'rgba(25, 118, 210, 0.08)',
                             transform: 'translateY(-2px)',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                           }
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 500, flex: 1 }}>
-                            {/* Zeigt jetzt kommagetrennte Service-Namen an */}
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              fontWeight: 500, 
+                              flex: 1,
+                              textDecoration: activity.status === 'cancelled' ? 'line-through' : 'none',
+                              color: activity.status === 'cancelled' ? '#f44336' : 'inherit'
+                            }}
+                          >
                             {activity.service_names.join(', ')}
                           </Typography>
+                          {activity.status === 'cancelled' && (
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: '#f44336',
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1,
+                                ml: 1
+                              }}
+                            >
+                              Storniert
+                            </Typography>
+                          )}
                         </Box>
                         
                         <Typography variant="body2" sx={{

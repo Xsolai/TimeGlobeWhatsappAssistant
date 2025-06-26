@@ -23,7 +23,8 @@ import Logo from '../components/Logo';
 import TopBar from '../components/TopBar';
 import authService from '../services/authService';
 import { Visibility, VisibilityOff, ContentCopy } from '@mui/icons-material';
-import analyticsService, { DashboardData, DateRangeData } from '../services/analyticsService';
+import analyticsService from '../services/analyticsService';
+import { DashboardData, DateRangeData } from '../types';
 
 // Define a more complete business interface
 interface BusinessDetails {

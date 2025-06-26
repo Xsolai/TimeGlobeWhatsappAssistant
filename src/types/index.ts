@@ -23,4 +23,44 @@ export enum OnboardingStep {
   COMPANY_INFO = 'companyInfo',
   CONTRACT = 'contract',
   CONFIRMATION = 'confirmation'
+}
+
+export interface DateRangeData {
+  available_dates: string[];
+}
+
+export interface DashboardSummary {
+  today_appointments?: number;
+  today_cancelled?: number;
+  todays_services?: number;
+  costs_today?: number;
+  costs_last_30_days?: number;
+  monthly_appointments: number;
+  monthly_cancelled: number;
+  monthly_services_booked: number;
+  monthly_growth_rate: number;
+}
+
+export interface AppointmentActivity {
+  booking_id: number;
+  service_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  customer_name: string;
+  customer_phone: string;
+  status: 'booked' | 'cancelled';
+  service_names?: string[];
+}
+
+export interface TimeSeriesData {
+  date: string;
+  count: number;
+  services: number;
+  cancelled: number;
+}
+
+export interface DashboardData {
+  summary: DashboardSummary;
+  recent_appointments: AppointmentActivity[];
+  appointment_time_series: TimeSeriesData[];
 } 
