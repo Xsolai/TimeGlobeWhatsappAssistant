@@ -29,10 +29,12 @@ class AnalyticsRepository:
                     func.date(BookModel.created_at).label("date"),
                     func.count(func.distinct(BookModel.id)).label("count"),
                     func.count(BookingDetail.id).label("services"),
-                    func.sum(case(
-                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
-                        else_=0
-                    )).label("cancelled_count")
+                    func.sum(
+                        case(
+                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            else_=0
+                        )
+                    ).label("cancelled_count")
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
@@ -300,10 +302,12 @@ class AnalyticsRepository:
             thirty_day_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.sum(case(
-                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
-                        else_=0
-                    )).label('cancelled')
+                    func.sum(
+                        case(
+                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            else_=0
+                        )
+                    ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
@@ -322,10 +326,12 @@ class AnalyticsRepository:
             previous_thirty_day_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.sum(case(
-                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
-                        else_=0
-                    )).label('cancelled')
+                    func.sum(
+                        case(
+                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            else_=0
+                        )
+                    ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
@@ -339,10 +345,12 @@ class AnalyticsRepository:
             today_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.sum(case(
-                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
-                        else_=0
-                    )).label('cancelled')
+                    func.sum(
+                        case(
+                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            else_=0
+                        )
+                    ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
@@ -546,7 +554,7 @@ class AnalyticsRepository:
                     "appointment_time": str(row.appointment_time),
                     "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
                     "customer_phone": row.customer_phone,
-                    "status": str(row.status.value) if row.status else str(AppointmentStatus.BOOKED.value)
+                    "status": AppointmentStatus.BOOKED.value if row.status is None else row.status.value
                 }
                 for row in results
             ]
