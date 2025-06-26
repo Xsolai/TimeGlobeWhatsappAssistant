@@ -216,6 +216,7 @@ class TimeGlobeRepository:
             appointment = self.db.query(BookModel).filter(BookModel.order_id == order_id).first()
             if appointment:
                 appointment.status = AppointmentStatus.CANCELLED
+                appointment.cancelled_at = datetime.now()
                 self.db.commit()
                 main_logger.info(f"Successfully cancelled appointment with order_id: {order_id}")
                 return True

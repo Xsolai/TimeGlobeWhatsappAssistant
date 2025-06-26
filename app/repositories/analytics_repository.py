@@ -31,7 +31,7 @@ class AnalyticsRepository:
                     func.count(BookingDetail.id).label("services"),
                     func.sum(
                         case(
-                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            (BookModel.cancelled_at.between(start_date, end_date), 1),
                             else_=0
                         )
                     ).label("cancelled_count")
@@ -304,7 +304,7 @@ class AnalyticsRepository:
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            (BookModel.cancelled_at.between(start_date, end_date), 1),
                             else_=0
                         )
                     ).label('cancelled')
@@ -317,8 +317,7 @@ class AnalyticsRepository:
                 .first()
             )
             
-            # Appointments booked in the previous period (for comparison, relative to the specified range)
-            # Calculate the duration of the specified range
+            # Appointments booked in the previous period (for comparison)
             duration = end_date - start_date
             previous_end_date = start_date - timedelta(days=1)
             previous_start_date = previous_end_date - duration
@@ -328,7 +327,7 @@ class AnalyticsRepository:
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            (BookModel.cancelled_at.between(previous_start_date, previous_end_date), 1),
                             else_=0
                         )
                     ).label('cancelled')
@@ -341,20 +340,25 @@ class AnalyticsRepository:
                 .first()
             )
             
-            # Calculate appointments count from BookModel for today (for costs)
+            # Calculate appointments count from BookModel for today
+            today = datetime.now().date()
+            today_start = datetime.combine(today, datetime.min.time())
+            today_end = datetime.combine(today, datetime.max.time())
+            
             today_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
                     func.sum(
                         case(
-                            (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                            (BookModel.cancelled_at.between(today_start, today_end), 1),
                             else_=0
                         )
                     ).label('cancelled')
                 )
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookModel.created_at) == datetime.now().date()
+                    BookModel.created_at >= today_start,
+                    BookModel.created_at <= today_end
                 )
                 .first()
             )
@@ -377,8 +381,8 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.created_at) == datetime.now().date(),
-                    BookModel.status != AppointmentStatus.CANCELLED  # Only count services for non-cancelled appointments
+                    func.date(BookingDetail.created_at) == today,
+                    BookModel.cancelled_at.is_(None)  # Only count services for non-cancelled appointments
                 )
                 .scalar() or 0
             )

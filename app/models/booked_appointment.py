@@ -13,6 +13,7 @@ class BookModel(Base):
     business_phone_number = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
     status = Column(Enum(AppointmentStatus), default=AppointmentStatus.BOOKED, nullable=False)
+    cancelled_at = Column(DateTime, nullable=True)
 
     booking_details = relationship("BookingDetail", back_populates="book")
     customer = relationship("CustomerModel", back_populates="appointments")
@@ -20,4 +21,5 @@ class BookModel(Base):
     __table_args__ = (
         Index('idx_appointment_business_date', 'business_phone_number', 'created_at'),
         Index('idx_appointment_customer_date', 'customer_id', 'created_at'),
+        Index('idx_appointment_cancelled_date', 'business_phone_number', 'cancelled_at'),
     )

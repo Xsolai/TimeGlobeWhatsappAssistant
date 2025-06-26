@@ -16,6 +16,7 @@ from ..schemas.analytics_schemas import (
 from typing import Optional, List
 from ..models.booked_appointment import BookModel
 from ..models.appointment_status import AppointmentStatus
+from datetime import datetime
 
 router = APIRouter()
 
@@ -334,8 +335,9 @@ async def cancel_appointment(
                 status_code=404
             )
         
-        # Update the status
+        # Update the status and set cancelled_at timestamp
         appointment.status = AppointmentStatus.CANCELLED
+        appointment.cancelled_at = datetime.now()
         db.commit()
         
         return {
