@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, distinct, extract
+from sqlalchemy import func, desc, distinct, extract, case
 from datetime import datetime, timedelta
 from ..models.booked_appointment import BookModel
 from ..models.booking_detail import BookingDetail
@@ -29,9 +29,9 @@ class AnalyticsRepository:
                     func.date(BookModel.created_at).label("date"),
                     func.count(func.distinct(BookModel.id)).label("count"),
                     func.count(BookingDetail.id).label("services"),
-                    func.count(func.case(
-                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
-                        else_=None
+                    func.sum(case(
+                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
+                        else_=0
                     )).label("cancelled_count")
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
@@ -51,7 +51,7 @@ class AnalyticsRepository:
                     "date": str(row.date), 
                     "count": row.count, 
                     "services": row.services,
-                    "cancelled": row.cancelled_count
+                    "cancelled": row.cancelled_count or 0
                 }
                 for row in results
             ]
@@ -300,9 +300,9 @@ class AnalyticsRepository:
             thirty_day_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.count(func.case(
-                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
-                        else_=None
+                    func.sum(case(
+                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
+                        else_=0
                     )).label('cancelled')
                 )
                 .filter(
@@ -322,9 +322,9 @@ class AnalyticsRepository:
             previous_thirty_day_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.count(func.case(
-                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
-                        else_=None
+                    func.sum(case(
+                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
+                        else_=0
                     )).label('cancelled')
                 )
                 .filter(
@@ -339,9 +339,9 @@ class AnalyticsRepository:
             today_appointments = (
                 self.db.query(
                     func.count(BookModel.id).label('total'),
-                    func.count(func.case(
-                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
-                        else_=None
+                    func.sum(case(
+                        [(BookModel.status == AppointmentStatus.CANCELLED, 1)],
+                        else_=0
                     )).label('cancelled')
                 )
                 .filter(
@@ -353,15 +353,15 @@ class AnalyticsRepository:
             
             # Calculate costs (only for non-cancelled appointments)
             cost_per_appointment = 0.99
-            costs_today = round((today_appointments.total - today_appointments.cancelled) * cost_per_appointment, 2)
-            costs_last_30_days = round((thirty_day_appointments.total - thirty_day_appointments.cancelled) * cost_per_appointment, 2)
+            costs_today = round((today_appointments.total - (today_appointments.cancelled or 0)) * cost_per_appointment, 2)
+            costs_last_30_days = round((thirty_day_appointments.total - (thirty_day_appointments.cancelled or 0)) * cost_per_appointment, 2)
 
             # Calculate growth rate based on the specified range and the previous period
             growth_rate = 0
             if previous_thirty_day_appointments.total > 0:
-                current_active = thirty_day_appointments.total - thirty_day_appointments.cancelled
-                previous_active = previous_thirty_day_appointments.total - previous_thirty_day_appointments.cancelled
-                growth_rate = ((current_active - previous_active) / previous_active) * 100
+                current_active = thirty_day_appointments.total - (thirty_day_appointments.cancelled or 0)
+                previous_active = previous_thirty_day_appointments.total - (previous_thirty_day_appointments.cancelled or 0)
+                growth_rate = ((current_active - previous_active) / previous_active) * 100 if previous_active > 0 else 0
             
             # Calculate today's services from BookingDetail table
             today_services = (
@@ -376,10 +376,10 @@ class AnalyticsRepository:
             )
                 
             return {
-                "today_appointments": today_appointments.total,
-                "today_cancelled": today_appointments.cancelled,
-                "thirty_day_appointments": thirty_day_appointments.total,
-                "thirty_day_cancelled": thirty_day_appointments.cancelled,
+                "today_appointments": today_appointments.total or 0,
+                "today_cancelled": today_appointments.cancelled or 0,
+                "thirty_day_appointments": thirty_day_appointments.total or 0,
+                "thirty_day_cancelled": thirty_day_appointments.cancelled or 0,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "todays_services_count": today_services,
                 "costs_today_calculated": costs_today,
@@ -546,7 +546,7 @@ class AnalyticsRepository:
                     "appointment_time": str(row.appointment_time),
                     "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
                     "customer_phone": row.customer_phone,
-                    "status": row.status.value if row.status else AppointmentStatus.BOOKED.value
+                    "status": str(row.status.value) if row.status else str(AppointmentStatus.BOOKED.value)
                 }
                 for row in results
             ]
