@@ -14,7 +14,7 @@ from ..schemas.analytics_schemas import (
     CustomerListResponse
 )
 from typing import Optional, List
-from ..models.book_model import BookModel
+from ..models.booked_appointment import BookModel
 from ..models.appointment_status import AppointmentStatus
 
 router = APIRouter()
