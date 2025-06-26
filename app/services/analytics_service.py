@@ -78,10 +78,12 @@ class AnalyticsService:
             dashboard_data = {
                 "summary": {
                     "today_appointments": summary["today_appointments"],
+                    "today_cancelled": summary["today_cancelled"],
                     "todays_services": summary["todays_services_count"],
                     "costs_today": summary["costs_today_calculated"],
                     "costs_last_30_days": summary["costs_last_30_days_calculated"],
                     "monthly_appointments": summary["thirty_day_appointments"],
+                    "monthly_cancelled": summary["thirty_day_cancelled"],
                     "monthly_services_booked": revenue["services_booked"],
                     "monthly_growth_rate": summary["thirty_day_growth_rate"]
                 },
@@ -128,14 +130,19 @@ class AnalyticsService:
 
             # Yesterday's appointment count for completeness
             yesterday = end_date - timedelta(days=1)
-            yesterday_count = (
-                self.db.query(func.count(BookModel.id))
+            yesterday_stats = (
+                self.db.query(
+                    func.count(BookModel.id).label('total'),
+                    func.count(func.case(
+                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                        else_=None
+                    )).label('cancelled')
+                )
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     func.date(BookModel.created_at) == yesterday.date(),
                 )
-                .scalar()
-                or 0
+                .first()
             )
             
             return {
@@ -145,8 +152,11 @@ class AnalyticsService:
                     "busiest_times": busy_times,
                     "appointment_counts": {
                         "today": summary["today_appointments"],
-                        "yesterday": yesterday_count,
+                        "today_cancelled": summary["today_cancelled"],
+                        "yesterday": yesterday_stats.total,
+                        "yesterday_cancelled": yesterday_stats.cancelled,
                         "last_30_days": summary["thirty_day_appointments"],
+                        "last_30_days_cancelled": summary["thirty_day_cancelled"],
                         "growth_rate": summary["thirty_day_growth_rate"],
                     },
                 }

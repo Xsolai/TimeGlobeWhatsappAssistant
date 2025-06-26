@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..models.customer_model import CustomerModel
 from ..models.booked_appointment import BookModel
 from ..models.booking_detail import BookingDetail
+from ..models.appointment_status import AppointmentStatus
 from datetime import datetime
 from ..logger import (
     main_logger,
@@ -160,7 +161,8 @@ class TimeGlobeRepository:
                 order_id=order_id,
                 site_cd=site_cd,
                 customer_id=customer.id,
-                business_phone_number=business_phone_number
+                business_phone_number=business_phone_number,
+                status=AppointmentStatus.BOOKED  # Set initial status as BOOKED
             )
             
             main_logger.info(f"Creating booking with business phone: {business_phone_number}")
@@ -200,28 +202,30 @@ class TimeGlobeRepository:
             main_logger.error(f"Database error while saving appointment: {str(e)}")
             raise Exception(f"Database error {str(e)}")
 
-    def delete_booking(self, order_id: int):
+    def cancel_appointment(self, order_id: int) -> bool:
+        """
+        Cancel an appointment by updating its status
+        
+        Args:
+            order_id: The order ID of the appointment to cancel
+            
+        Returns:
+            bool: True if cancellation was successful, False otherwise
+        """
         try:
-            main_logger.info(f"Deleting booking for order_id: {order_id}")
-            booking = (
-                self.db.query(BookModel).filter(BookModel.order_id == order_id).first()
-            )
-
-            if not booking:
-                main_logger.warning(f"No booking found with order_id: {order_id}")
-                raise Exception("Booking not found")
-
-            self.db.query(BookingDetail).filter(
-                BookingDetail.book_id == booking.id
-            ).delete()
-            self.db.delete(booking)
-            self.db.commit()
-            main_logger.info(f"Booking deleted successfully for order_id: {order_id}")
-
+            appointment = self.db.query(BookModel).filter(BookModel.order_id == order_id).first()
+            if appointment:
+                appointment.status = AppointmentStatus.CANCELLED
+                self.db.commit()
+                main_logger.info(f"Successfully cancelled appointment with order_id: {order_id}")
+                return True
+            else:
+                main_logger.warning(f"No appointment found with order_id: {order_id}")
+                return False
         except Exception as e:
             self.db.rollback()
-            main_logger.error(f"Database error while deleting booking: {str(e)}")
-            # raise Exception(f"Database error: {str(e)}")
+            main_logger.error(f"Error cancelling appointment: {str(e)}")
+            return False
 
     def update_customer_email(self, mobile_number: str, email: str):
         """

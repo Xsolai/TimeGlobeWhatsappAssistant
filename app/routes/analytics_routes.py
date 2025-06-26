@@ -14,6 +14,8 @@ from ..schemas.analytics_schemas import (
     CustomerListResponse
 )
 from typing import Optional, List
+from ..models.book_model import BookModel
+from ..models.appointment_status import AppointmentStatus
 
 router = APIRouter()
 
@@ -299,4 +301,51 @@ async def get_available_analytics_dates(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve available dates: {str(e)}"
+        )
+
+@router.put("/appointments/{appointment_id}/cancel", status_code=status.HTTP_200_OK)
+async def cancel_appointment(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current_business: Business = Depends(get_current_business)
+):
+    """
+    Cancel an appointment
+    
+    Path Parameters:
+    - appointment_id: ID of the appointment to cancel
+    
+    Returns:
+        Success message if appointment was cancelled
+    """
+    try:
+        # Get the appointment
+        appointment = db.query(BookModel).filter(
+            BookModel.id == appointment_id,
+            BookModel.business_phone_number == current_business.whatsapp_number
+        ).first()
+        
+        if not appointment:
+            return JSONResponse(
+                content={
+                    "status": "error",
+                    "message": "Appointment not found"
+                },
+                status_code=404
+            )
+        
+        # Update the status
+        appointment.status = AppointmentStatus.CANCELLED
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": "Appointment cancelled successfully"
+        }
+        
+    except Exception as e:
+        main_logger.error(f"Error cancelling appointment: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel appointment: {str(e)}"
         ) 

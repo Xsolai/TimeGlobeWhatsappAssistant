@@ -11,6 +11,7 @@ class DailyAppointment(BaseModel):
     date: str
     count: int
     services: int
+    cancelled: int
     
 # Service popularity data
 class ServicePopularity(BaseModel):
@@ -50,10 +51,12 @@ class RevenueEstimates(BaseModel):
 # Summary metrics
 class DashboardSummary(BaseModel):
     today_appointments: int
+    today_cancelled: int
     todays_services: int
     costs_today: float
     costs_last_30_days: float
     monthly_appointments: int
+    monthly_cancelled: int
     monthly_services_booked: int
     monthly_growth_rate: float
     
@@ -84,6 +87,7 @@ class RecentAppointment(BaseModel):
     appointment_time: str
     customer_name: str
     customer_phone: str
+    status: str
 
 # Complete dashboard response
 class DashboardData(BaseModel):
@@ -98,8 +102,11 @@ class DashboardResponse(BaseResponse):
 # Appointment analysis data
 class AppointmentCounts(BaseModel):
     today: int
+    today_cancelled: int
     yesterday: int
+    yesterday_cancelled: int
     last_30_days: int
+    last_30_days_cancelled: int
     growth_rate: float
     
 class AppointmentAnalyticsData(BaseModel):

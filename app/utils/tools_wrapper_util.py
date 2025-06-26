@@ -225,42 +225,21 @@ def book_appointment(
         return {"status": "error", "message": str(e)}
 
 
-def cancel_appointment(orderId, mobileNumber, siteCd):
-    """Cancel an existing appointment"""
-    logger.info(f"Tool called: cancel_appointment(orderId={orderId},sitecode={siteCd})")
-    
+def cancel_appointment(order_id: int):
+    """Cancel an appointment with the given order ID."""
+    logger.info(f"Tool called: cancel_appointment(order_id={order_id})")
     start_time = time.time()
-    try:    
-        if not orderId:
-            logger.warning("cancel_appointment() called without orderId")
-            return {"status": "error", "message": "orderId is required"}
-
-        result = _get_timeglobe_service().cancel_appointment(
-            orderId=orderId, mobileNumber=mobileNumber, siteCd=siteCd
-        )
+    
+    try:
+        result = _get_timeglobe_service().cancel_appointment(order_id)
+        
         execution_time = time.time() - start_time
-
-        if result.get("code") == 0:
-            logger.info(
-                f"cancel_appointment() - appointment cancelled successfully - took {execution_time:.2f}s"
-            )
-            return {
-                "status": "success",
-                "message": "your appointment has been cancelled.",
-            }
-        else:
-            logger.warning(
-                f"cancel_appointment() - invalid appointment ID - took {execution_time:.2f}s"
-            )
-            return {
-                "status": "success",
-                "cancellation_result": "The provided id is not valid appointment id",
-            }
+        logger.info(f"cancel_appointment() completed in {execution_time:.2f}s")
+        
+        return result
     except Exception as e:
         execution_time = time.time() - start_time
-        logger.error(
-            f"Error in cancel_appointment(): {str(e)} - took {execution_time:.2f}s"
-        )
+        logger.error(f"Error in cancel_appointment(): {str(e)} - took {execution_time:.2f}s")
         return {"status": "error", "message": str(e)}
 
 

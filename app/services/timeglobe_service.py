@@ -583,10 +583,16 @@ class TimeGlobeService:
         )
         if response.get("code") == 0:
             main_logger.info(f"Appointment canceled successfully: {orderId}")
-            self.timeglobe_repo.delete_booking(orderId)
+            # Update the appointment status instead of deleting
+            try:
+                self.timeglobe_repo.cancel_appointment(orderId)
+                main_logger.info(f"Updated appointment status to cancelled: {orderId}")
+            except Exception as e:
+                main_logger.error(f"Error updating appointment status: {str(e)}")
         else:
             main_logger.error(f"Failed to cancel appointment: {orderId}")
         return response
+
     def validate_auth_key(self, auth_key: str):
         """
         Validates a TimeGlobe authentication key by making an API call and returns customerCd if valid

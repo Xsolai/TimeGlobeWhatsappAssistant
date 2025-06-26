@@ -22,12 +22,16 @@ class AnalyticsRepository:
                 business_phone = business_phone[1:]
                 main_logger.info(f"Normalized business phone number to: {business_phone}")
 
-            # Count unique appointments and total services for each day
+            # Count unique appointments, total services, and cancelled appointments for each day
             query = (
                 self.db.query(
                     func.date(BookModel.created_at).label("date"),
                     func.count(func.distinct(BookModel.id)).label("count"),
-                    func.count(BookingDetail.id).label("services")
+                    func.count(BookingDetail.id).label("services"),
+                    func.count(func.case(
+                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                        else_=None
+                    )).label("cancelled_count")
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .filter(
@@ -42,7 +46,12 @@ class AnalyticsRepository:
             results = query.all()
 
             return [
-                {"date": str(row.date), "count": row.count, "services": row.services}
+                {
+                    "date": str(row.date), 
+                    "count": row.count, 
+                    "services": row.services,
+                    "cancelled": row.cancelled_count
+                }
                 for row in results
             ]
             
@@ -286,16 +295,21 @@ class AnalyticsRepository:
 
             # Use provided start and end dates for filtering
             
-            
             # Appointments booked in the specified date range
             thirty_day_appointments = (
-                self.db.query(func.count(BookModel.id))
+                self.db.query(
+                    func.count(BookModel.id).label('total'),
+                    func.count(func.case(
+                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                        else_=None
+                    )).label('cancelled')
+                )
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     BookModel.created_at >= start_date,
                     BookModel.created_at <= end_date
                 )
-                .scalar() or 0
+                .first()
             )
             
             # Appointments booked in the previous period (for comparison, relative to the specified range)
@@ -305,46 +319,48 @@ class AnalyticsRepository:
             previous_start_date = previous_end_date - duration
 
             previous_thirty_day_appointments = (
-                self.db.query(func.count(BookModel.id))
+                self.db.query(
+                    func.count(BookModel.id).label('total'),
+                    func.count(func.case(
+                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                        else_=None
+                    )).label('cancelled')
+                )
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     BookModel.created_at >= previous_start_date,
                     BookModel.created_at <= previous_end_date
                 )
-                .scalar() or 0
+                .first()
             )
             
             # Calculate appointments count from BookModel for today (for costs)
-            appointments_today_count = (
-                self.db.query(func.count(BookModel.id))
+            today_appointments = (
+                self.db.query(
+                    func.count(BookModel.id).label('total'),
+                    func.count(func.case(
+                        (BookModel.status == AppointmentStatus.CANCELLED, 1),
+                        else_=None
+                    )).label('cancelled')
+                )
                 .filter(
                     BookModel.business_phone_number == business_phone,
                     func.date(BookModel.created_at) == datetime.now().date()
                 )
-                .scalar() or 0
+                .first()
             )
             
-            # Calculate appointments count from BookModel for the specified date range (for costs)
-            appointments_last_30_days_count = (
-                self.db.query(func.count(BookModel.id))
-                .filter(
-                    BookModel.business_phone_number == business_phone,
-                    BookModel.created_at >= start_date,
-                    BookModel.created_at <= end_date
-                )
-                .scalar() or 0
-            )
-            
-            # Calculate costs
+            # Calculate costs (only for non-cancelled appointments)
             cost_per_appointment = 0.99
-            costs_today = round(appointments_today_count * cost_per_appointment, 2)
-            costs_last_30_days = round(appointments_last_30_days_count * cost_per_appointment, 2)
+            costs_today = round((today_appointments.total - today_appointments.cancelled) * cost_per_appointment, 2)
+            costs_last_30_days = round((thirty_day_appointments.total - thirty_day_appointments.cancelled) * cost_per_appointment, 2)
 
             # Calculate growth rate based on the specified range and the previous period
             growth_rate = 0
-            if previous_thirty_day_appointments > 0:
-                growth_rate = ((thirty_day_appointments - previous_thirty_day_appointments)
-                              / previous_thirty_day_appointments) * 100
+            if previous_thirty_day_appointments.total > 0:
+                current_active = thirty_day_appointments.total - thirty_day_appointments.cancelled
+                previous_active = previous_thirty_day_appointments.total - previous_thirty_day_appointments.cancelled
+                growth_rate = ((current_active - previous_active) / previous_active) * 100
             
             # Calculate today's services from BookingDetail table
             today_services = (
@@ -352,14 +368,17 @@ class AnalyticsRepository:
                 .join(BookModel, BookModel.id == BookingDetail.book_id)
                 .filter(
                     BookModel.business_phone_number == business_phone,
-                    func.date(BookingDetail.created_at) == datetime.now().date()
+                    func.date(BookingDetail.created_at) == datetime.now().date(),
+                    BookModel.status != AppointmentStatus.CANCELLED  # Only count services for non-cancelled appointments
                 )
                 .scalar() or 0
             )
                 
             return {
-                "today_appointments": appointments_today_count,
-                "thirty_day_appointments": appointments_last_30_days_count,
+                "today_appointments": today_appointments.total,
+                "today_cancelled": today_appointments.cancelled,
+                "thirty_day_appointments": thirty_day_appointments.total,
+                "thirty_day_cancelled": thirty_day_appointments.cancelled,
                 "thirty_day_growth_rate": round(growth_rate, 2),
                 "todays_services_count": today_services,
                 "costs_today_calculated": costs_today,
@@ -370,7 +389,9 @@ class AnalyticsRepository:
             main_logger.error(f"Error getting dashboard summary: {str(e)}")
             return {
                 "today_appointments": 0,
+                "today_cancelled": 0,
                 "thirty_day_appointments": 0,
+                "thirty_day_cancelled": 0,
                 "thirty_day_growth_rate": 0,
                 "todays_services_count": 0,
                 "costs_today_calculated": 0,
@@ -504,7 +525,8 @@ class AnalyticsRepository:
                     func.time(BookingDetail.created_at).label('appointment_time'),
                     CustomerModel.first_name.label('customer_first_name'),
                     CustomerModel.last_name.label('customer_last_name'),
-                    CustomerModel.mobile_number.label('customer_phone')
+                    CustomerModel.mobile_number.label('customer_phone'),
+                    BookModel.status.label('status')
                 )
                 .join(BookingDetail, BookModel.id == BookingDetail.book_id)
                 .join(CustomerModel, BookModel.customer_id == CustomerModel.id)
@@ -522,7 +544,8 @@ class AnalyticsRepository:
                     "appointment_date": str(row.appointment_date),
                     "appointment_time": str(row.appointment_time),
                     "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
-                    "customer_phone": row.customer_phone
+                    "customer_phone": row.customer_phone,
+                    "status": row.status.value if row.status else "booked"
                 }
                 for row in results
             ]

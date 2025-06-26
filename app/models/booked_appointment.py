@@ -1,8 +1,8 @@
 from .base import Base
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Index
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Index, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime
-
+from .appointment_status import AppointmentStatus
 
 class BookModel(Base):
     __tablename__ = "BookedAppointment"
@@ -12,6 +12,7 @@ class BookModel(Base):
     customer_id = Column(Integer, ForeignKey("Customers.id"), nullable=False, index=True)
     business_phone_number = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
+    status = Column(Enum(AppointmentStatus), default=AppointmentStatus.BOOKED, nullable=False)
 
     booking_details = relationship("BookingDetail", back_populates="book")
     customer = relationship("CustomerModel", back_populates="appointments")
