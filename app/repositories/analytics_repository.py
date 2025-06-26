@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from ..models.booked_appointment import BookModel
 from ..models.booking_detail import BookingDetail
 from ..models.customer_model import CustomerModel
+from ..models.appointment_status import AppointmentStatus
 from ..logger import main_logger
 from ..models.business_model import Business
 from typing import List
@@ -545,7 +546,7 @@ class AnalyticsRepository:
                     "appointment_time": str(row.appointment_time),
                     "customer_name": f"{row.customer_first_name} {row.customer_last_name}".strip(),
                     "customer_phone": row.customer_phone,
-                    "status": row.status.value if row.status else "booked"
+                    "status": row.status.value if row.status else AppointmentStatus.BOOKED.value
                 }
                 for row in results
             ]
