@@ -434,8 +434,8 @@ class AnalyticsRepository:
             
             # Calculate costs (only for non-cancelled appointments)
             cost_per_appointment = 0.99
-            costs_today = round((today_appointments.total - today_cancelled) * cost_per_appointment, 2)
-            costs_last_30_days = round((thirty_day_appointments.total - thirty_day_cancelled) * cost_per_appointment, 2)
+            costs_today = round(today_appointments.total * cost_per_appointment, 2)
+            costs_last_30_days = round(thirty_day_appointments.total * cost_per_appointment, 2)
 
             # Calculate growth rate based on the specified range and the previous period
             growth_rate = 0
