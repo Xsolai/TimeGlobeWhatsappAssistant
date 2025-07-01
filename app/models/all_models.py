@@ -10,6 +10,7 @@ from .conversation_model import ConversationHistory
 from .main_contract import MainContract
 from .auftragsverarbeitung_contract import AuftragsverarbeitungContract
 from .lastschriftmandat import Lastschriftmandat
+from .reset_token import ResetToken
 
 
 # This file imports all models to ensure they are registered with SQLAlchemy
@@ -25,5 +26,6 @@ __all__ = [
     'ConversationHistory',
     'MainContract',
     'AuftragsverarbeitungContract',
-    'Lastschriftmandat'
+    'Lastschriftmandat',
+    'ResetToken'
 ] 

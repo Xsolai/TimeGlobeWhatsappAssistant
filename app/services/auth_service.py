@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Optional, Dict
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 from ..repositories.business_repository import BusinessRepository
 from ..utils.security_util import verify_password, create_access_token, decode_token
 from ..schemas.auth import (
@@ -13,24 +14,26 @@ from ..schemas.auth import (
     ForgetPasswordRequest,
 )
 from ..models.business_model import Business
+from ..models.reset_token import ResetToken
 from ..core.config import settings
 from ..utils import email_util
 from ..services.timeglobe_service import TimeGlobeService
 import secrets, string, time
 from uuid import uuid4
+from datetime import datetime
 from ..logger import main_logger
+from ..utils.timezone_util import BERLIN_TZ
 
 # OAuth2 setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 otp_storage = {}
-# Temporary in-memory storage for reset tokens
-reset_tokens: Dict[str, int] = {}
 
 
 class AuthService:
-    def __init__(self, business_repository: BusinessRepository):
+    def __init__(self, business_repository: BusinessRepository, db: Session = None):
         self.business_repository = business_repository
+        self.db = db or business_repository.db
 
     def authenticate_business(self, email: str, password: str) -> Optional[Business]:
         main_logger.debug(f"Attempting to authenticate business with email: {email}")
@@ -210,9 +213,25 @@ class AuthService:
             "message": "OTP has been resent to your email. Please verify to complete registration."
         }
 
+    def _cleanup_expired_reset_tokens(self):
+        """Remove expired reset tokens from database"""
+        try:
+            expired_count = self.db.query(ResetToken).filter(
+                ResetToken.expires_at < datetime.now(BERLIN_TZ)
+            ).delete()
+            if expired_count > 0:
+                self.db.commit()
+                main_logger.debug(f"Cleaned up {expired_count} expired reset tokens")
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Error cleaning up expired tokens: {e}")
+
     def forget_password(self, request: ForgetPasswordRequest):
         """Handles forgot password flow and sends OTP for password reset."""
         main_logger.debug(f"Processing forget password request for email: {request.email}")
+        
+        # Clean up expired tokens first
+        self._cleanup_expired_reset_tokens()
         
         # Check if business exists
         business = self.business_repository.get_by_email(request.email)
@@ -220,51 +239,105 @@ class AuthService:
             main_logger.warning(f"No business found with email: {request.email}")
             raise HTTPException(status_code=404, detail="No business found with this email.")
         
-        # Generate a unique reset token
-        reset_token = str(uuid4())
-        # Store the reset token associated with the business ID
-        reset_tokens[reset_token] = business.id
-        
-        # Construct the reset password URL
-        reset_link = f"{settings.FRONTEND_RESET_PASSWORD_URL}/{business.id}/{reset_token}"
-        
-        # Send password reset email using the new email utility
-        email_sent = email_util.send_password_reset_email(
-            recipient_email=business.email,
-            reset_link=reset_link,
-            business_name=business.business_name
-        )
-        
-        if not email_sent:
-            main_logger.error(f"Failed to send password reset email to {request.email}")
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to send password reset email. Please try again or contact support."
+        try:
+            # Generate a unique reset token
+            reset_token_str = str(uuid4())
+            
+            # Create and save reset token to database
+            reset_token = ResetToken(
+                token=reset_token_str,
+                business_id=business.id
             )
-        
-        main_logger.info(f"Password reset link sent successfully to {request.email}")
-        return {
-            "message": "Reset password link has been sent to your email."
-        }
+            
+            self.db.add(reset_token)
+            self.db.commit()
+            
+            main_logger.info(f"Generated reset token for business {business.email}: {reset_token_str[:8]}... (expires in 24h)")
+            
+            # Construct the reset password URL
+            reset_link = f"{settings.FRONTEND_RESET_PASSWORD_URL}/{business.id}/{reset_token_str}"
+            
+            # Send password reset email using the new email utility
+            email_sent = email_util.send_password_reset_email(
+                recipient_email=business.email,
+                reset_link=reset_link,
+                business_name=business.business_name
+            )
+            
+            if not email_sent:
+                # Remove the token if email failed to send
+                self.db.delete(reset_token)
+                self.db.commit()
+                main_logger.error(f"Failed to send password reset email to {request.email}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to send password reset email. Please try again or contact support."
+                )
+            
+            main_logger.info(f"Password reset link sent successfully to {request.email}")
+            return {
+                "message": "Reset password link has been sent to your email."
+            }
+            
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Error creating reset token: {e}")
+            raise HTTPException(status_code=500, detail="Failed to process password reset request")
 
     def reset_password(self, data: ResetPasswordRequest):
-        main_logger.debug("Processing reset password request")
-        if data.token not in reset_tokens:
-            main_logger.warning(f"Invalid or expired reset token: {data.token}")
+        main_logger.info(f"Processing reset password request for token: {data.token[:8]}...")
+        
+        # Clean up expired tokens first
+        self._cleanup_expired_reset_tokens()
+        
+        try:
+            # Find the reset token in database
+            reset_token = self.db.query(ResetToken).filter(
+                ResetToken.token == data.token,
+                ResetToken.used_at.is_(None)
+            ).first()
+            
+            if not reset_token:
+                main_logger.warning(f"Reset token not found: {data.token[:8]}...")
+                raise HTTPException(
+                    status_code=400, detail="Invalid or expired reset token"
+                )
+            
+            # Check if token is expired
+            if reset_token.is_expired:
+                main_logger.warning(f"Reset token expired: {data.token[:8]}...")
+                raise HTTPException(
+                    status_code=400, detail="Reset token has expired"
+                )
+            
+            main_logger.info(f"Found valid reset token for business ID: {reset_token.business_id}")
+            
+            # Get business record
+            business = self.business_repository.get_by_id(reset_token.business_id)
+            if not business:
+                main_logger.error(f"Business not found for ID: {reset_token.business_id}")
+                raise HTTPException(status_code=404, detail="Business not found")
+
+            # Update password
+            main_logger.info(f"Updating password for business: {business.email}")
+            self.business_repository.update_password(reset_token.business_id, data.new_password)
+            
+            # Mark token as used
+            reset_token.used_at = datetime.now(BERLIN_TZ)
+            self.db.commit()
+            
+            main_logger.info(f"Password reset successfully for business: {business.email}")
+            return {"message": "Password has been reset successfully"}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            main_logger.error(f"Failed to reset password: {str(e)}")
             raise HTTPException(
-                status_code=400, detail="Invalid or expired reset token"
+                status_code=500, 
+                detail="Failed to update password. Please try again."
             )
-
-        business_id = reset_tokens[data.token]
-        business = self.business_repository.get_by_id(business_id)
-        if not business:
-            main_logger.warning(f"Business not found for ID: {business_id}")
-            raise HTTPException(status_code=404, detail="Business not found")
-
-        self.business_repository.update_password(business_id, data.new_password)
-        reset_tokens.pop(data.token)
-        main_logger.info(f"Password reset for business: {business.email}")
-        return {"message": "Password has been reset successfully"}
 
     def validate_timeglobe_auth_key(self, auth_key: str, business_email: str) -> dict:
         """

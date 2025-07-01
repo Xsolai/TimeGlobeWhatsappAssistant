@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import time
+from datetime import datetime
 
 from ..schemas.auth import (
     Token,
@@ -23,6 +24,8 @@ from ..core.dependencies import get_auth_service, get_current_business
 from ..utils import email_util
 from ..logger import main_logger
 from ..core.config import settings
+from ..models.reset_token import ResetToken
+from ..utils.timezone_util import BERLIN_TZ
 
 router = APIRouter()
 
@@ -264,3 +267,43 @@ TimeGlobe Team""",
             status_code=500,
             detail=f"Email test failed: {str(e)}"
         )
+
+
+@router.get("/debug/reset-tokens")
+def debug_reset_tokens(
+    current_business: Business = Depends(get_current_business),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Debug endpoint to show active reset tokens.
+    Only accessible by authenticated users.
+    """
+    main_logger.info(f"Debug reset tokens requested by {current_business.email}")
+    
+    # Clean up expired tokens first
+    auth_service._cleanup_expired_reset_tokens()
+    
+    # Get all active reset tokens from database
+    reset_tokens = auth_service.db.query(ResetToken).filter(
+        ResetToken.used_at.is_(None)
+    ).all()
+    
+    current_time = datetime.now(BERLIN_TZ)
+    token_info = []
+    
+    for token in reset_tokens:
+        token_info.append({
+            "token_preview": token.token[:8] + "...",
+            "business_id": token.business_id,
+            "created_at": token.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "expires_at": token.expires_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "is_expired": token.is_expired,
+            "is_used": token.is_used,
+            "seconds_until_expiry": max(0, int((token.expires_at - current_time).total_seconds()))
+        })
+    
+    return {
+        "total_tokens": len(reset_tokens),
+        "current_time": current_time.strftime('%Y-%m-%d %H:%M:%S'),
+        "tokens": token_info
+    }

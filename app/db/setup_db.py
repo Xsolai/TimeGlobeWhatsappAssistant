@@ -17,7 +17,8 @@ from ..models.all_models import (
     ConversationHistory,
     MainContract,
     AuftragsverarbeitungContract,
-    Lastschriftmandat
+    Lastschriftmandat,
+    ResetToken
 )
 import logging
 

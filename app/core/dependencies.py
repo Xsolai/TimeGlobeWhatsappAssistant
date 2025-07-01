@@ -25,14 +25,17 @@ def get_business_repository(db: Session = Depends(get_db)) -> BusinessRepository
     return BusinessRepository(db)
 
 
-def get_auth_service(business_repository: BusinessRepository = Depends(get_business_repository)) -> AuthService:
-    return AuthService(business_repository)
+def get_auth_service(
+    business_repository: BusinessRepository = Depends(get_business_repository),
+    db: Session = Depends(get_db)
+) -> AuthService:
+    return AuthService(business_repository, db)
 
 
 def get_current_business(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> Business:
-    auth_service = AuthService(BusinessRepository(db))
+    auth_service = AuthService(BusinessRepository(db), db)
     business = auth_service.get_current_business(token)
     return business
 
