@@ -22,7 +22,6 @@ import secrets, string, time
 from uuid import uuid4
 from datetime import datetime
 from ..logger import main_logger
-from ..utils.timezone_util import BERLIN_TZ
 
 # OAuth2 setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -217,7 +216,7 @@ class AuthService:
         """Remove expired reset tokens from database"""
         try:
             expired_count = self.db.query(ResetToken).filter(
-                ResetToken.expires_at < datetime.now(BERLIN_TZ)
+                ResetToken.expires_at < datetime.utcnow()
             ).delete()
             if expired_count > 0:
                 self.db.commit()
@@ -323,7 +322,7 @@ class AuthService:
             self.business_repository.update_password(reset_token.business_id, data.new_password)
             
             # Mark token as used
-            reset_token.used_at = datetime.now(BERLIN_TZ)
+            reset_token.used_at = datetime.utcnow()
             self.db.commit()
             
             main_logger.info(f"Password reset successfully for business: {business.email}")
