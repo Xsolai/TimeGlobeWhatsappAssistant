@@ -178,13 +178,14 @@ class TimeGlobeService:
         customer_cd = self.get_customer_cd(mobile_number)
         payload = {"customerCd": customer_cd}
         response = self.request("POST", "/browse/getSites", mobile_number=mobile_number, data=payload)
-        sites = []
-        for item in response.get("sites"):
-            sites.append(
-                {"salon name": item.get("siteNm"), "siteCd": item.get("siteCd")}
-            )
-        main_logger.info(f"Successfully fetched {len(sites)} salons")
-        return sites
+        #sites = []
+        #for item in response.get("sites"):
+        #    sites.append(
+        #        {"salon name": item.get("siteNm"), "siteCd": item.get("siteCd")}
+        #    )
+        #main_logger.info(f"Successfully fetched {len(sites)} salons")
+        #return sites
+        return response
     
     def get_config(self, mobile_number: str = None):
         """Retrieve the customer config from time globe"""

@@ -54,10 +54,10 @@ def get_sites():
     logger.info("Tool called: get_sites()")
     start_time = time.time()
     try:
-        sites = _get_timeglobe_service().get_sites()
+        response = _get_timeglobe_service().get_sites()
         execution_time = time.time() - start_time
         logger.info(f"get_sites() completed successfully in {execution_time:.2f}s")
-        return {"status": "success", "sites": sites}
+        return {"status": "success", "response": response}
     except Exception as e:
         execution_time = time.time() - start_time
         logger.error(f"Error in get_sites(): {str(e)} - took {execution_time:.2f}s")
