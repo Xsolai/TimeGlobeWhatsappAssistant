@@ -70,7 +70,7 @@ Tools=[
                     },
                     "week": {
                         "type": "integer",
-                        "description": "Filtert nach der gewünschten Woche (0 = aktuelle Woche, 1 = nächste Woche, usw.). Wird IMMER in Kombination mit dem 'dateSearchString'-Parameter verwendet. Wichtig hierbei ist, dass die ausgewählte Woche immer die Woche ist, in der der 'dateSearchString' liegt."
+                        "description": "PFLICHTPARAMETER: Bestimmt die Kalenderwoche für die Terminsuche (0 = aktuelle Woche, 1 = nächste Woche, 2 = übernächste Woche, usw.). WICHTIG: Dieser Parameter muss immer korrekt zur Kalenderwoche des gewünschten Datums im 'dateSearchString' passen. Beispiel: Wenn der Kunde einen Termin am 21. Januar möchte und dieser Tag in der nächsten Woche liegt, dann muss 'week': 1 gesetzt werden."
                     },
                     "positions": {
                         "type": "array",
@@ -95,7 +95,7 @@ Tools=[
                         "items": {
                             "type": "string"
                         },
-                        "description": "Ein Array von Strings, um Terminvorschläge nach bestimmten Tagen zu filtern. Wird IMMER in Kombination mit dem 'week'-Parameter verwendet. Formatiere die Tages-Strings als \"TTT\" (z.B. [\"02T\"] für den 2. Tag des Monats, oder [\"14T\", \"15T\"] für den 14. und 15. Tag). Wenn angegeben, werden nur Termine zurückgeliefert, deren 'beginTs' mindestens einem der Tages-Strings entspricht. Wichtig hierbei ist, dass die ausgewählte Woche immer die Woche ist, in der der 'dateSearchString' liegt."
+                        "description": "PFLICHTPARAMETER: Array von Tages-Filtern im Format [\"TTT\"] (z.B. [\"21T\"] für den 21. Tag des Monats). KRITISCH: Die hier angegebenen Tage müssen in der durch 'week' definierten Kalenderwoche liegen! Beispiel: Für einen Termin am 21. Januar - wenn dieser Tag in Woche 1 liegt, dann 'week': 1 UND 'dateSearchString': [\"21T\"]. Falsche Kombination führt zu leeren Ergebnissen. Bei mehreren gewünschten Tagen: [\"21T\", \"22T\", \"23T\"]."
                     }
                 },
                 "required": ["siteCd", "week", "positions", "dateSearchString"]
