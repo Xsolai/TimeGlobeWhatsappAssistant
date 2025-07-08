@@ -70,7 +70,7 @@ Tools=[
                     },
                     "week": {
                         "type": "integer",
-                        "description": "Die gewünschte Woche (0 = aktuelle Woche, 1 = nächste Woche, usw.)."
+                        "description": "Filtert nach der gewünschten Woche (0 = aktuelle Woche, 1 = nächste Woche, usw.). Wird IMMER in Kombination mit dem 'dateSearchString'-Parameter verwendet. Wichtig hierbei ist, dass die ausgewählte Woche immer die Woche ist, in der der 'dateSearchString' liegt."
                     },
                     "positions": {
                         "type": "array",
@@ -95,10 +95,10 @@ Tools=[
                         "items": {
                             "type": "string"
                         },
-                        "description": "Optional: Ein Array von Strings, um Terminvorschläge serverseitig nach bestimmten Tagen zu filtern. Wird in Kombination mit dem 'week'-Parameter verwendet. Formatiere die Tages-Strings als \"TTT\" (z.B. [\"02T\"] für den 2. Tag des Monats, oder [\"14T\", \"15T\"] für den 14. und 15. Tag). Wenn angegeben, werden nur Termine zurückgeliefert, deren 'beginTs' mindestens einem der Tages-Strings entspricht."
+                        "description": "Ein Array von Strings, um Terminvorschläge nach bestimmten Tagen zu filtern. Wird IMMER in Kombination mit dem 'week'-Parameter verwendet. Formatiere die Tages-Strings als \"TTT\" (z.B. [\"02T\"] für den 2. Tag des Monats, oder [\"14T\", \"15T\"] für den 14. und 15. Tag). Wenn angegeben, werden nur Termine zurückgeliefert, deren 'beginTs' mindestens einem der Tages-Strings entspricht. Wichtig hierbei ist, dass die ausgewählte Woche immer die Woche ist, in der der 'dateSearchString' liegt."
                     }
                 },
-                "required": ["siteCd", "week", "positions"]
+                "required": ["siteCd", "week", "positions", "dateSearchString"]
             }
         }
     },
@@ -147,16 +147,6 @@ Tools=[
                             },
                             "required": ["ordinalPosition", "beginTs", "durationMillis", "employeeId", "itemNo", "itemNm"]
                         }
-                    },
-                    "reminderSms": {
-                        "type": "boolean",
-                        "description": "Ob eine SMS-Erinnerung gesendet werden soll. Standard: true.",
-                        "default": True
-                    },
-                    "reminderEmail": {
-                        "type": "boolean", 
-                        "description": "Ob eine E-Mail-Erinnerung gesendet werden soll. Standard: true.",
-                        "default": True
                     }
                 },
                 "required": ["siteCd", "positions"]
@@ -205,23 +195,6 @@ Tools=[
                 "type": "object",
                 "properties": {},
                 "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "getBookableCustomers",
-            "description": "Ruft eine Liste der buchbaren Kunden für einen bestimmten Salon ab.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "siteCd": {
-                        "type": "string",
-                        "description": "Der 'siteCd' des jeweiligen Salons aus *getSites*"
-                    }
-                },
-                "required": ["siteCd"]
             }
         }
     },
