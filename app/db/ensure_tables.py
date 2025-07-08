@@ -29,7 +29,14 @@ def verify_tables():
     Verify all models are registered and all tables exist in the database.
     Creates missing tables if necessary.
     """
-    engine = create_engine(settings.DATABASE_URL)
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_size=20,          # Increased from default 5 to 20
+        max_overflow=30,       # Increased from default 10 to 30
+        pool_timeout=30,       # Connection timeout in seconds
+        pool_recycle=3600,     # Recycle connections after 1 hour
+        pool_pre_ping=True     # Validate connections before use
+    )
     inspector = inspect(engine)
     
     # Get all table names defined in models

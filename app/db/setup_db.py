@@ -29,7 +29,14 @@ def setup_database():
     Ensure all tables are created in the database.
     This function should be called during application startup.
     """
-    engine = create_engine(settings.DATABASE_URL)
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_size=20,          # Increased from default 5 to 20
+        max_overflow=30,       # Increased from default 10 to 30
+        pool_timeout=30,       # Connection timeout in seconds
+        pool_recycle=3600,     # Recycle connections after 1 hour
+        pool_pre_ping=True     # Validate connections before use
+    )
     
     # Create tables if they don't exist
     Base.metadata.create_all(bind=engine)
